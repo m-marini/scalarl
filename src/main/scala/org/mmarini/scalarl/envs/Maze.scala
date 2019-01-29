@@ -53,12 +53,12 @@ case class Maze(width: Int, height: Int, walls: Array[Boolean], initial: MazePos
   lazy val map: INDArray = {
     val activation = Nd4j.zeros(Array(height, width), 'c')
     for {
-      x <- 0 to width
-      y <- 0 to height
+      x <- 0 until width
+      y <- 0 until height
       pos = MazePos(x, y)
-      if isValid(pos)
+      if !isValid(pos)
     } {
-      activation.putScalar(Array(y, x), -1)
+      activation.putScalar(Array(y, x), 1)
     }
     activation
   }

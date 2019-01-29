@@ -29,6 +29,43 @@
 
 package org.mmarini.scalarl.envs
 
-import org.mmarini.scalarl.Action
+import org.nd4j.linalg.factory.Nd4j
+import org.scalatest.FunSpec
+import org.scalatest.Matchers
+import org.scalatest.prop.PropertyChecks
 
-case class DiscreteAction(value: Int) extends Action
+class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
+
+  describe("Given an initial maze environment") {
+    val data = List(
+      "|  O       |",
+      "|      X   |",
+      "|  XXXXX   |",
+      "|  X       |",
+      "|    *     |")
+    val env = MazeEnv.fromStrings(data)
+
+    describe("When MazeEnv.reset") {
+      val (_, obs) = env.reset()
+
+      describe("Then observation") {
+        val observation = obs.observation
+        it("should be 1 at 1,0,4 ") {
+          observation.getInt(1, 0, 4) should equal(1)
+        }
+        it("should be 1 at 0,1,2 ") {
+          observation.getInt(0, 1, 2) should equal(1)
+        }
+        it("should be 1 at 0,3,6 ") {
+          observation.getInt(0, 3, 6) should equal(1)
+        }
+      }
+      describe("And actions") {
+        val actions = obs.actions
+        it("should be (1,1,1,0,0,0,1,1)") {
+          actions should equal(Nd4j.create(Array(1, 1, 1, 0, 0, 0, 1, 1).map(_.toDouble)))
+        }
+      }
+    }
+  }
+}
