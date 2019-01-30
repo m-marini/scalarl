@@ -1,6 +1,6 @@
 /.project
 /.classpath
-/project
+/project/target
 /target
 /.worksheet
 /bin/
