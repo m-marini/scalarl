@@ -105,7 +105,7 @@ case class MazeEnv(maze: Maze, subject: MazePos) extends Env {
       (this, observation, NoStepReward, false, Map())
     } else if (maze.isTarget(nextPos)) {
       val next = moveTo(nextPos)
-      (next, next.observation, StepReward, true, Map())
+      (next, next.observation, TargetReward, true, Map())
     } else {
       val next = moveTo(nextPos)
       (next, next.observation, StepReward, false, Map())

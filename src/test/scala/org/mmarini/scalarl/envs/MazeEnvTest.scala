@@ -67,5 +67,137 @@ class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
         }
       }
     }
+
+    describe("When MazeEnv.step") {
+      val (env1, obs, reward, endUp, info) = env.step(0)
+
+      describe("Then observation") {
+        val observation = obs.observation
+        it("should be 0 at 1,0,4 ") {
+          observation.getInt(1, 0, 4) should equal(0)
+        }
+        it("should be 1 at 1,1,4 ") {
+          observation.getInt(1, 1, 4) should equal(1)
+        }
+        it("should be 1 at 0,1,2 ") {
+          observation.getInt(0, 1, 2) should equal(1)
+        }
+        it("should be 1 at 0,3,6 ") {
+          observation.getInt(0, 3, 6) should equal(1)
+        }
+      }
+      describe("And actions") {
+        val actions = obs.actions
+        it("should be (0,0,1,1,1,1,1,0)") {
+          actions should equal(Nd4j.create(Array(0, 0, 1, 1, 1, 1, 1, 0).map(_.toDouble)))
+        }
+      }
+      describe("And reward") {
+        it("should be -1") {
+          reward should equal(-1.0)
+        }
+      }
+      describe("And endUp") {
+        it("should be false") {
+          endUp should equal(false)
+        }
+      }
+    }
+  }
+
+  describe("Given an initial maze environment with subject near wall") {
+    val data = List(
+      "|  O       |",
+      "|      X   |",
+      "|  XXXXX   |",
+      "|  X*      |",
+      "|          |")
+    val env = MazeEnv.fromStrings(data)
+
+    describe("When MazeEnv.reset") {
+      val (_, obs) = env.reset()
+
+      describe("Then observation") {
+        val observation = obs.observation
+        it("should be 1 at 1,1,3") {
+          observation.getInt(1, 1, 3) should equal(1)
+        }
+        it("should be 1 at 0,1,2 ") {
+          observation.getInt(0, 1, 2) should equal(1)
+        }
+        it("should be 1 at 0,3,6 ") {
+          observation.getInt(0, 3, 6) should equal(1)
+        }
+      }
+      describe("And actions") {
+        val actions = obs.actions
+        it("should be (0,0,1,1,1,1,0,0)") {
+          actions should equal(Nd4j.create(Array(0, 0, 1, 1, 1, 1, 0, 0).map(_.toDouble)))
+        }
+      }
+    }
+  }
+
+  describe("Given an initial maze environment with subject near target") {
+    val data = List(
+      "|          |",
+      "|      X   |",
+      "|  XXXXX   |",
+      "|  X*O     |",
+      "|          |")
+    val env = MazeEnv.fromStrings(data)
+
+    describe("When MazeEnv.reset") {
+      val (_, obs) = env.reset()
+
+      describe("Then observation") {
+        val observation = obs.observation
+        it("should be 1 at 1,1,3") {
+          observation.getInt(1, 1, 3) should equal(1)
+        }
+        it("should be 1 at 0,1,2 ") {
+          observation.getInt(0, 1, 2) should equal(1)
+        }
+        it("should be 1 at 0,3,6 ") {
+          observation.getInt(0, 3, 6) should equal(1)
+        }
+      }
+      describe("And actions") {
+        val actions = obs.actions
+        it("should be (0,0,1,1,1,1,0,0)") {
+          actions should equal(Nd4j.create(Array(0, 0, 1, 1, 1, 1, 0, 0).map(_.toDouble)))
+        }
+      }
+    }
+
+    describe("When MazeEnv.step east") {
+      val (env1, obs, reward, endUp, info) = env.step(2)
+
+      describe("Then observation") {
+        val observation = obs.observation
+        it("should be 0 at 1,1,3") {
+          observation.getInt(1, 1, 3) should equal(0)
+        }
+        it("should be 1 at 1,1,4") {
+          observation.getInt(1, 1, 4) should equal(1)
+        }
+        it("should be 1 at 0,1,2 ") {
+          observation.getInt(0, 1, 2) should equal(1)
+        }
+        it("should be 1 at 0,3,6 ") {
+          observation.getInt(0, 3, 6) should equal(1)
+        }
+      }
+      describe("And reward") {
+        it("should be 1") {
+          reward should equal(1.0)
+        }
+      }
+      describe("And endUp") {
+        it("should be true") {
+          endUp should equal(true)
+        }
+      }
+    }
   }
 }
