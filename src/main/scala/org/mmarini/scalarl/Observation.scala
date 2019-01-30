@@ -29,8 +29,11 @@
 
 package org.mmarini.scalarl
 
+import org.nd4j.linalg.api.ndarray.INDArray
+
 trait Observation {
 
-  def actions: Actions
+  def observation: INDArray
 
+  def actions: INDArray
 }

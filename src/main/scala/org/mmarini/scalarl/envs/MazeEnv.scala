@@ -35,6 +35,9 @@ import org.mmarini.scalarl.Observation
 import org.mmarini.scalarl.EndUp
 import org.mmarini.scalarl.Info
 import org.mmarini.scalarl.Reward
+import org.mmarini.scalarl.INDArrayObservation
+import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.indexing.NDArrayIndex
 
 /**
  *
@@ -49,14 +52,14 @@ case class MazeEnv(maze: Maze, subject: MazePos) extends Env {
   private val ClearScreen = "\033[2J"
 
   private val Deltas: Array[(Int, Int)] = Array(
-    (0, -1), //N
-    (1, -1), // NE
+    (0, 1), //N
+    (1, 1), // NE
     (1, 0), // E
-    (1, 1), // SE
-    (0, 1), // S
-    (-1, 1), // SW
+    (1, -1), // SE
+    (0, -1), // S
+    (-1, -1), // SW
     (-1, 0), // W
-    (-1, -1) // NW
+    (-1, 1) // NW
   )
 
   override def render(mode: String, close: Boolean): Env = {
@@ -92,9 +95,7 @@ case class MazeEnv(maze: Maze, subject: MazePos) extends Env {
   }
 
   override def step(action: Action): (Env, Observation, Reward, EndUp, Info) = {
-    require(action.isInstanceOf[DiscreteAction], "Action must be a DiscreteAction")
-    val act = action.asInstanceOf[DiscreteAction].value
-    val delta = if (act >= 0 || act < Deltas.length) Deltas(act) else (0, 0)
+    val delta = if (action >= 0 || action < Deltas.length) Deltas(action) else (0, 0)
     val nextPos = subject.moveBy(delta)
     if (!maze.isValid(nextPos)) {
       // Invalid
@@ -104,7 +105,7 @@ case class MazeEnv(maze: Maze, subject: MazePos) extends Env {
       (this, observation, NoStepReward, false, Map())
     } else if (maze.isTarget(nextPos)) {
       val next = moveTo(nextPos)
-      (next, next.observation, StepReward, true, Map())
+      (next, next.observation, TargetReward, true, Map())
     } else {
       val next = moveTo(nextPos)
       (next, next.observation, StepReward, false, Map())
@@ -112,15 +113,24 @@ case class MazeEnv(maze: Maze, subject: MazePos) extends Env {
   }
 
   private lazy val observation: Observation = {
-    val actions = Deltas.map(subject.moveBy).
-      zipWithIndex.filter {
-        case (pos, action) => maze.isValid(pos)
-      }.map {
-        case (_, action) => DiscreteAction(action)
-      }
-    val activation = maze.map.dup()
-    activation.putScalar(Array(subject.y, subject.x), 1.0)
-    INDArrayObservation(activation, actions.toSet)
+    val actions = Nd4j.zeros(Array(Deltas.length), 'c')
+    for {
+      (delta, action) <- Deltas.zipWithIndex
+      pos = subject.moveBy(delta)
+      if maze.isValid(pos)
+    } {
+      actions.putScalar(action, 1)
+    }
+
+    val shape = 2L +: maze.map.shape()
+    val observation = Nd4j.zeros(shape, 'c')
+
+    val int0 = NDArrayIndex.interval(0, 1)
+    val int1 = NDArrayIndex.all()
+    observation.get(int0, int1, int1).assign(maze.map)
+    observation.putScalar(Array(1, subject.y, subject.x), 1)
+
+    INDArrayObservation(observation = observation, actions = actions)
   }
 
   private def moveTo(nextPos: MazePos): MazeEnv = copy(subject = nextPos)

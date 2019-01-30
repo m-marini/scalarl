@@ -30,7 +30,7 @@
 package org.mmarini
 
 package object scalarl {
-  type Actions = Set[Action]
+  type Action = Int
   type Reward = Double
   type EndUp = Boolean
   type Info = Map[String, Any]

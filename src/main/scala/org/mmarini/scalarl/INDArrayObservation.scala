@@ -27,10 +27,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.envs
+package org.mmarini.scalarl
 
-import org.mmarini.scalarl.Actions
-import org.mmarini.scalarl.Observation
 import org.nd4j.linalg.api.ndarray.INDArray
 
-case class INDArrayObservation(value: INDArray, actions: Actions) extends Observation
+case class INDArrayObservation(observation: INDArray, actions: INDArray) extends Observation
