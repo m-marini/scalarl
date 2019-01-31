@@ -1,6 +1,6 @@
 # Base NN QLearning
 
-In this base solution we consider a NN that learns the Q(s,a) function with single step forward.
+In this base solution we consider a NN that learns the Q(s, a) function with single step forward.
 
 The NN architecture has 4 layers
 
@@ -19,7 +19,7 @@ with a epsilon-greedy policy and records the reward and the new observation from
 
 To apply the RL then it computes the error as 
 
-- delta = R + gamma * max(Q(s(t+1), a) - max(Q(s(t), a)
+- delta = R + gamma * max(Q(s(t+1), a)) - max(Q(s(t), a))
 
 and apply backpropagation for the expected NN output as 
 
