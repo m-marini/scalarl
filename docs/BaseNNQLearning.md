@@ -1,6 +1,6 @@
 # Base NN QLearning
 
-In this base solution we consider a NN that learns the Q(s, a) function with single step forward.
+In this base solution we consider a NN that learns the Q(s, a) function with one step forward.
 
 The NN architecture has 4 layers
 
@@ -9,7 +9,7 @@ The NN architecture has 4 layers
 - Hidden layer with h nodes and tanh activation
 - Output linear layer with a node for each action predicting the Q function
 
-For each step the agent feeds the network with the current observation of state and record the values of Q(s, *).
+For each step the agent feeds the network with the current observation of state and record the output values as Q(s, a).
 
 Then it chooses the action with highest Q value
 
