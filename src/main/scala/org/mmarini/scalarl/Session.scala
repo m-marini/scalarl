@@ -29,11 +29,39 @@
 
 package org.mmarini.scalarl
 
-trait Env {
+/**
+ *
+ */
+class Session(
+  noEpisode:  Int,
+  env:        => Env,
+  agent:      => Agent,
+  renderMode: String   = "human",
+  close:      Boolean  = false,
+  sync:       Long     = 0) {
 
-  def reset(): (Env, Observation)
+  def run() {
+    var _env = env
+    var _agent = agent
 
-  def render(mode: String = "human", close: Boolean = false): Env
-
-  def step(action: Action): (Env, Observation, Reward, EndUp, Info)
+    for { episode <- 1 to noEpisode } {
+      val (env1, obs1) = _env.reset()
+      val env2 = env1.render(renderMode, close)
+      var _endUp = true
+      var _obs = obs1
+      _env = env2
+      do {
+        val obs0 = _obs
+        val (agent1, action) = _agent.chooseAction(obs0)
+        val (env1, obs1, reward, endUp, info) = _env.step(action)
+        _env = env1.render(renderMode, close)
+        println(s"Episode ${episode}")
+        if (sync > 0) Thread.sleep(sync)
+        System.out.flush()
+        _agent = agent1.fit((obs0, action, reward, obs1, endUp, info))
+        _obs = obs1
+        _endUp = endUp
+      } while (!_endUp)
+    }
+  }
 }

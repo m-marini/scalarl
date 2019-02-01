@@ -27,45 +27,11 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.envs
+package org.mmarini.scalarl
 
-import scala.collection.Seq
-import scala.util.Random
+trait Agent {
 
-object Main {
+  def chooseAction(observation: Observation): (Agent, Action)
 
-  val Lines = Seq(
-    "|   O      |",
-    "|          |",
-    "|          |",
-    "|          |",
-    "|   XXX    |",
-    "|          |",
-    "|          |",
-    "|          |",
-    "|     *    |",
-    "|          |")
-
-  def main(args: Array[String]) {
-    var (env, obs) = MazeEnv.fromStrings(Lines).reset();
-    env.render()
-    for { a <- 1 to 1000 } {
-      val actions = obs.actions
-      val actionIndices = for {
-        i <- 0 until actions.size(0).toInt
-        if (actions.getInt(i) > 0)
-      } yield {
-        i
-      }
-      val action = actionIndices(Random.nextInt(actionIndices.length))
-      env.step(action) match {
-        case (e, o, _, _, _) =>
-          env = e
-          obs = o
-      }
-      env.render()
-      Thread.sleep(10)
-    }
-  }
-
+  def fit(Feedback: Feedback): Agent
 }

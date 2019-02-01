@@ -34,4 +34,5 @@ package object scalarl {
   type Reward = Double
   type EndUp = Boolean
   type Info = Map[String, Any]
+  type Feedback = (Observation, Action, Reward, Observation, EndUp, Info)
 }

@@ -27,13 +27,45 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl
+package org.mmarini.scalarl.envs
 
-trait Env {
+import scala.collection.Seq
+import scala.util.Random
+import org.mmarini.scalarl.Env
+import org.mmarini.scalarl.Agent
+import org.mmarini.scalarl.agents.QAgent
+import org.mmarini.scalarl.Session
+import org.mmarini.scalarl.agents.QAgentBuilder
 
-  def reset(): (Env, Observation)
+object MazeMain {
 
-  def render(mode: String = "human", close: Boolean = false): Env
+  val NumEpisodes = 100
+  val NumInputs = 200
+  val NumHidden = 100
+  val NumActions = 8
+  val Sync = 0L
 
-  def step(action: Action): (Env, Observation, Reward, EndUp, Info)
+  val Lines = Seq(
+    "|   O      |",
+    "|          |",
+    "|          |",
+    "|          |",
+    "|   XXX    |",
+    "|          |",
+    "|          |",
+    "|          |",
+    "|     *    |",
+    "|          |")
+
+  private def buildEnv(): Env = MazeEnv.fromStrings(Lines)
+
+  private def buildAgent(): Agent = QAgentBuilder(NumInputs, NumActions).
+    numHiddens1(NumHidden).
+    numHiddens2(NumHidden).
+    build()
+
+  def main(args: Array[String]) {
+    new Session(NumEpisodes, buildEnv, buildAgent, sync = Sync).run()
+  }
+
 }

@@ -38,6 +38,7 @@ import org.mmarini.scalarl.Reward
 import org.mmarini.scalarl.INDArrayObservation
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.indexing.NDArrayIndex
+import org.mmarini.scalarl.Feedback
 
 /**
  *
@@ -62,7 +63,7 @@ case class MazeEnv(maze: Maze, subject: MazePos) extends Env {
     (-1, 1) // NW
   )
 
-  override def render(mode: String, close: Boolean): Env = {
+  override def render(mode: String, close: Boolean): Env = if (mode == "human") {
     val map = for {
       y <- 0 until maze.height
     } yield {
@@ -86,6 +87,8 @@ case class MazeEnv(maze: Maze, subject: MazePos) extends Env {
     val txt = ClearScreen + map.reverse.mkString("\n")
     println(txt)
     this
+  } else {
+    this
   }
 
   override def reset(): (Env, Observation) = {
@@ -95,7 +98,7 @@ case class MazeEnv(maze: Maze, subject: MazePos) extends Env {
   }
 
   override def step(action: Action): (Env, Observation, Reward, EndUp, Info) = {
-    val delta = if (action >= 0 || action < Deltas.length) Deltas(action) else (0, 0)
+    val delta = if (action >= 0 && action < Deltas.length) Deltas(action) else (0, 0)
     val nextPos = subject.moveBy(delta)
     if (!maze.isValid(nextPos)) {
       // Invalid

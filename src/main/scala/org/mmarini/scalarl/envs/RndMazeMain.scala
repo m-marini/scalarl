@@ -27,13 +27,45 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl
+package org.mmarini.scalarl.envs
 
-trait Env {
+import scala.collection.Seq
+import scala.util.Random
 
-  def reset(): (Env, Observation)
+object RndMazeMain {
 
-  def render(mode: String = "human", close: Boolean = false): Env
+  val Lines = Seq(
+    "|   O      |",
+    "|          |",
+    "|          |",
+    "|          |",
+    "|   XXX    |",
+    "|          |",
+    "|          |",
+    "|          |",
+    "|     *    |",
+    "|          |")
 
-  def step(action: Action): (Env, Observation, Reward, EndUp, Info)
+  def main(args: Array[String]) {
+    var (env, obs) = MazeEnv.fromStrings(Lines).reset();
+    env.render()
+    for { a <- 1 to 1000 } {
+      val actions = obs.actions
+      val actionIndices = for {
+        i <- 0 until actions.size(0).toInt
+        if (actions.getInt(i) > 0)
+      } yield {
+        i
+      }
+      val action = actionIndices(Random.nextInt(actionIndices.length))
+      env.step(action) match {
+        case (e, o, _, _, _) =>
+          env = e
+          obs = o
+      }
+      env.render()
+      Thread.sleep(10)
+    }
+  }
+
 }
