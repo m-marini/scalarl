@@ -29,8 +29,15 @@
 
 package org.mmarini.scalarl
 
-/**
- *
+/** The session executes the interactions between the environment and the agent
+ *  
+ *  @constructor Create a [[Session]]
+ *  @param numEpisode the number of episodes of the current session
+ *  @param env the environment  
+ *  @param agent the agent
+ *  @param renderMode the rendering mode of environment
+ *  @param close true if closing rendering window
+ *  @param sync the time interval between each step in millis
  */
 class Session(
   noEpisode:  Int,
@@ -40,6 +47,18 @@ class Session(
   close:      Boolean  = false,
   sync:       Long     = 0) {
 
+  /** Runs the interactions for the number of episodes
+   *     
+   *  Each episode is composed by the
+   *  - reset of environment
+   *  - render of the environment
+   *  - a iteration of
+   *    - choose of action by the agent
+   *    - step the environment with the chosen action
+   *    - render the environment
+   *    - fit the agent
+   *    - until detection of end of episode 
+   */
   def run() {
     var _env = env
     var _agent = agent

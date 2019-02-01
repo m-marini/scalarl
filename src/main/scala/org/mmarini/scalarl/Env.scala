@@ -29,11 +29,38 @@
 
 package org.mmarini.scalarl
 
+/** The environment simulator.
+ *  
+ *  Simulates the environment changing the status by action chosen by an agent
+ *  and notifying the reward to the agent.
+ *  Checks for end of episode by identifing the final states.
+ */
 trait Env {
 
+  /** Returns the environment simulator in reset status and the [Observation] of the reset status */
   def reset(): (Env, Observation)
 
+  /**
+   * Returns the environment simulator after rendering it
+   *
+   * @param mode the rendering mode
+   * 	- "human" for human readable rendering
+   *
+   * @param close true if it closes the rendering window
+   */
   def render(mode: String = "human", close: Boolean = false): Env
 
+  /**
+   * Computes the next status of environment executing an action.
+   *
+   *  It returns a n-uple with:
+   *  - the environment in the next status,
+   *  - the resulting observation,
+   *  - the reward for the action,
+   *  - the endUp flag equals true if end episode
+   *  - the additional information
+   *
+   *  @param action the executing action
+   */
   def step(action: Action): (Env, Observation, Reward, EndUp, Info)
 }

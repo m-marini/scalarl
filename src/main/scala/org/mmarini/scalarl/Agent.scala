@@ -29,9 +29,29 @@
 
 package org.mmarini.scalarl
 
+/** The agent acting in the environment
+ *  
+ *  Generates actions to change the status of environment basing on observation of the environment
+ *  and the internal strategy policy.
+ *  
+ *  Updates its strategy policy to optimize the return value (discount sum of rewards)
+ *  and the observation of resulting environment    
+ */ 
 trait Agent {
 
+  /** Chooses the action to be executed to the environment
+   *  
+   *  Returns the new agent and the chosen action
+   *  
+   *  @observation the observation of environment
+   */
   def chooseAction(observation: Observation): (Agent, Action)
 
-  def fit(Feedback: Feedback): Agent
+  
+  /**
+   * Returns the fit agent by optimizing its strategy policy
+   * 
+   * @param feedback the feedback from the last step
+   */
+  def fit(feedback: Feedback): Agent
 }

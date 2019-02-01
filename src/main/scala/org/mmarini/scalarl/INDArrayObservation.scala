@@ -31,4 +31,11 @@ package org.mmarini.scalarl
 
 import org.nd4j.linalg.api.ndarray.INDArray
 
+/**
+ * The concrete observation of the environment status.
+ *
+ * @constructor Creates the concrete observation
+ * @param observation the environment status observation
+ * @param actions the valid action for the current environment status
+ */
 case class INDArrayObservation(observation: INDArray, actions: INDArray) extends Observation
