@@ -21,6 +21,6 @@ agent:
   gamma: 0.99
   model: maze.model
 session:
-  numEpisodes: 1
+  numEpisodes: 100
   sync: 0
-  mode: human
+  mode: stats

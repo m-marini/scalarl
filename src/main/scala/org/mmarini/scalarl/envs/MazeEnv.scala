@@ -104,6 +104,11 @@ case class MazeEnv(
         s"Episode ${episodeCount} / Step ${stepCount}"
       print(txt)
       this
+    case "stats" =>
+      if (endUp()) {
+        println(s"Episode ${episodeCount} / Step ${stepCount}")
+      }
+      this
     case _ =>
       print(ClearScreen + s"\rEpisode ${episodeCount} / Step ${stepCount}")
       this
@@ -114,6 +119,8 @@ case class MazeEnv(
     val obs = next.observation
     (next, obs)
   }
+
+  private def endUp(): Boolean = maze.isTarget(subject)
 
   override def step(action: Action): (Env, Observation, Reward, EndUp, Info) = {
     val delta = if (action >= 0 && action < Deltas.length) Deltas(action) else (0, 0)

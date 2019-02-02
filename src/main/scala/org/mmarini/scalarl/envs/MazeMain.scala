@@ -82,7 +82,16 @@ object MazeMain {
     val mode = sessionConf.get("mode").map(_.toString).getOrElse("human")
     val _agentConf = agentConf(conf)
     val model = _agentConf("model").toString
-    val session = new Session(numEpisodes, buildEnv(conf), buildAgent(conf), sync = sync, mode = mode).run()
-    session.agent.asInstanceOf[QAgent].writeModel(model)
+    new Session(
+      numEpisodes,
+      buildEnv(conf),
+      buildAgent(conf),
+      sync = sync,
+      mode = mode,
+      onEpisode = Some((session) => {
+        session.agent.asInstanceOf[QAgent].writeModel(model)
+        None.orNull
+      })).run()
+
   }
 }

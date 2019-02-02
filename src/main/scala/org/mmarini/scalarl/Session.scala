@@ -44,9 +44,10 @@ class Session(
   noEpisode: Int,
   env0:      => Env,
   agent0:    => Agent,
-  mode:      String   = "human",
-  close:     Boolean  = false,
-  sync:      Long     = 0) {
+  mode:      String                  = "human",
+  close:     Boolean                 = false,
+  sync:      Long                    = 0,
+  onEpisode: Option[Session => Void] = None) {
 
   private var _env: Env = None.orNull
   private var _agent: Agent = None.orNull
@@ -88,6 +89,7 @@ class Session(
         _obs = obs1
         _endUp = endUp
       } while (!_endUp)
+      onEpisode.foreach(_(this))
     }
     this
   }
