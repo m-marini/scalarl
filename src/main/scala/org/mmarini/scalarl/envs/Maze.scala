@@ -32,7 +32,22 @@ package org.mmarini.scalarl.envs
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
 
-case class Maze(width: Int, height: Int, walls: Array[Boolean], initial: MazePos, target: MazePos) {
+/**
+ * The Maze with walls, initial subject position and target position
+ *
+ * @constructor Create a Maze with width and height, wall map, initial subject position and taregt position
+ * @param width the width of maze
+ * @param height the height of maze
+ * @param walls the wall map
+ * @param initial the initial position of subject
+ * @param target the target position
+ */
+case class Maze(
+  width:   Int,
+  height:  Int,
+  walls:   Array[Boolean],
+  initial: MazePos,
+  target:  MazePos) {
 
   /** Returns the flat position index */
   def index(pos: MazePos): Int = pos.x + pos.y * width
@@ -50,21 +65,25 @@ case class Maze(width: Int, height: Int, walls: Array[Boolean], initial: MazePos
   /** Returns true if the position is valid */
   def isValid(pos: MazePos): Boolean = !(isOuter(pos) || isWall(pos))
 
+  /** Returns the map of wall in the maze */
   lazy val map: INDArray = {
-    val activation = Nd4j.zeros(Array(height, width), 'c')
+    val observation = Nd4j.zeros(Array(height, width), 'c')
     for {
       x <- 0 until width
       y <- 0 until height
       pos = MazePos(x, y)
       if !isValid(pos)
     } {
-      activation.putScalar(Array(y, x), 1)
+      observation.putScalar(Array(y, x), 1)
     }
-    activation
+    observation
   }
 }
 
+/** Factory for [[Maze]] instances */
 object Maze {
+
+  /** Creates a [[Maze]] by parsing a list of lines representing the environment */
   def fromStrings(lines: Seq[String]): Maze = {
     val (w, h) = size(lines)
     val i = MazePos(position(lines, '*'))
@@ -78,6 +97,7 @@ object Maze {
       target = t)
   }
 
+  /** Returns the width and height of maze by parsing the list of lines */
   private def size(lines: Seq[String]): (Int, Int) = {
     val height = lines.length
     require(height > 0, "line 1: There must be at least one line")
@@ -93,6 +113,7 @@ object Maze {
     (width, height)
   }
 
+  /** Returns the position definition by parsing the list of lines */
   private def position(lines: Seq[String], target: Char): (Int, Int) = {
     val indices = for {
       (line, row) <- lines.zipWithIndex
@@ -106,6 +127,7 @@ object Maze {
     }
   }
 
+  /** Returns the wall map by parsing the list of lines */
   private def walls(lines: Seq[String]): Array[Boolean] = {
     val height = lines.length
     val width = lines.head.length() - 2

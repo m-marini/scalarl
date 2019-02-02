@@ -36,36 +36,42 @@ import org.mmarini.scalarl.Agent
 import org.mmarini.scalarl.agents.QAgent
 import org.mmarini.scalarl.Session
 import org.mmarini.scalarl.agents.QAgentBuilder
+import org.yaml.snakeyaml.Yaml
+import java.io.FileReader
+import scala.collection.JavaConverters._
+import scala.collection.JavaConversions._
 
 object MazeMain {
 
-  val NumEpisodes = 100
-  val NumInputs = 200
-  val NumHidden = 100
-  val NumActions = 8
-  val Sync = 0L
+  private def buildEnv(conf: Map[String, Any])(): Env = {
+    val map = conf("env").asInstanceOf[java.util.Map[String, Any]].get("map").asInstanceOf[java.util.List[String]]
+    MazeEnv.fromStrings(map)
+  }
 
-  val Lines = Seq(
-    "|   O      |",
-    "|          |",
-    "|          |",
-    "|          |",
-    "|   XXX    |",
-    "|          |",
-    "|          |",
-    "|          |",
-    "|     *    |",
-    "|          |")
-
-  private def buildEnv(): Env = MazeEnv.fromStrings(Lines)
-
-  private def buildAgent(): Agent = QAgentBuilder(NumInputs, NumActions).
-    numHiddens1(NumHidden).
-    numHiddens2(NumHidden).
-    build()
+  private def buildAgent(conf: Map[String, Any])(): Agent = {
+    val agentConf = conf("agent").asInstanceOf[java.util.Map[String, Any]].toMap
+    val numInputs = agentConf("numInputs").asInstanceOf[Int]
+    val numActions = agentConf("numActions").asInstanceOf[Int]
+    val numHiddens = agentConf("numHiddens").asInstanceOf[Int]
+    val seed = agentConf.get("seed").map(_.asInstanceOf[Int])
+    val builder1 = QAgentBuilder(numInputs, numActions).
+      numHiddens1(numHiddens).
+      numHiddens2(numHiddens)
+    seed.map(s => builder1.seed(s)).getOrElse(builder1).
+      build()
+  }
 
   def main(args: Array[String]) {
-    new Session(NumEpisodes, buildEnv, buildAgent, sync = Sync).run()
+    val conf = loadConfig(if (args.isEmpty) "maze.yaml" else args(0))
+    val sessionConf = conf("session").asInstanceOf[java.util.Map[String, Any]].toMap
+    val numEpisodes = sessionConf("numEpisodes").asInstanceOf[Int]
+    val sync = sessionConf("sync").asInstanceOf[Int]
+    new Session(numEpisodes, buildEnv(conf), buildAgent(conf), sync = sync).run()
+  }
+
+  private def loadConfig(file: String): Map[String, Any] = {
+    val conf = new Yaml().load(new FileReader(file))
+    conf.asInstanceOf[java.util.Map[String, Any]].toMap
   }
 
 }

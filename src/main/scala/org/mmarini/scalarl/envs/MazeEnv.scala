@@ -41,7 +41,16 @@ import org.nd4j.linalg.indexing.NDArrayIndex
 import org.mmarini.scalarl.Feedback
 
 /**
+ * The environment simulating a subject in a maze.
  *
+ * - Reseting the environment the subject is moved in the initial cell.
+ * - The subject is moved according the 8 adjacent cell chose to move and returning a -1 point of reward.
+ * - when the subject reach the target cell the episode end with a one point of reward.
+ * - If the destination cell is outside the maze or is a wall the subject is not moved.
+ *
+ * @constructor Creates a [[MazeEnv]]
+ * @param maze the maze
+ * @param subject the current subject position
  */
 case class MazeEnv(maze: Maze, subject: MazePos) extends Env {
   private val OuterReward = -1.0

@@ -29,8 +29,9 @@
 
 package org.mmarini.scalarl
 
-/** The environment simulator.
- *  
+/**
+ * The environment simulator.
+ *
  *  Simulates the environment changing the status by action chosen by an agent
  *  and notifying the reward to the agent.
  *  Checks for end of episode by identifing the final states.
@@ -44,7 +45,7 @@ trait Env {
    * Returns the environment simulator after rendering it
    *
    * @param mode the rendering mode
-   * 	- "human" for human readable rendering
+   * - "human" for human readable rendering
    *
    * @param close true if it closes the rendering window
    */

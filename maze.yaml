@@ -1,0 +1,21 @@
+---
+env:
+  map:
+  - "|   O      |"
+  - "|          |"
+  - "|          |"
+  - "|          |"
+  - "|   XXX    |"
+  - "|          |"
+  - "|          |"
+  - "|          |"
+  - "|          |"
+  - "|     *    |"
+agent:
+  numInputs: 200
+  numActions: 8
+  numHiddens: 100
+  seed: 1234
+session:
+  numEpisodes: 10
+  sync: 0
