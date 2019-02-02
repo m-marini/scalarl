@@ -39,6 +39,7 @@ import org.mmarini.scalarl.INDArrayObservation
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.indexing.NDArrayIndex
 import org.mmarini.scalarl.Feedback
+import org.nd4j.linalg.api.ops.impl.transforms.comparison.Eps
 
 /**
  * The environment simulating a subject in a maze.
@@ -52,14 +53,18 @@ import org.mmarini.scalarl.Feedback
  * @param maze the maze
  * @param subject the current subject position
  */
-case class MazeEnv(maze: Maze, subject: MazePos) extends Env {
+case class MazeEnv(
+  maze:         Maze,
+  subject:      MazePos,
+  episodeCount: Int     = 0,
+  stepCount:    Int     = 0) extends Env {
   private val OuterReward = -1.0
   private val WallReward = -1.0
   private val TargetReward = 1.0
   private val NoStepReward = -1.0
   private val StepReward = -1.0
 
-  private val ClearScreen = "\033[2J"
+  private val ClearScreen = "\033[2J\033[H"
 
   private val Deltas: Array[(Int, Int)] = Array(
     (0, 1), //N
@@ -72,56 +77,60 @@ case class MazeEnv(maze: Maze, subject: MazePos) extends Env {
     (-1, 1) // NW
   )
 
-  override def render(mode: String, close: Boolean): Env = if (mode == "human") {
-    val map = for {
-      y <- 0 until maze.height
-    } yield {
-      val line = for {
-        x <- 0 until maze.width
-        pos = MazePos(x, y)
+  override def render(mode: String, close: Boolean): Env = mode match {
+    case "human" =>
+      val map = for {
+        y <- 0 until maze.height
       } yield {
-        if (pos == subject) {
-          '*'
-        } else if (pos == maze.target) {
-          'O'
-        } else if (maze.isValid(pos)) {
-          ' '
-        } else {
-          'X'
+        val line = for {
+          x <- 0 until maze.width
+          pos = MazePos(x, y)
+        } yield {
+          if (pos == subject) {
+            '*'
+          } else if (pos == maze.target) {
+            'O'
+          } else if (maze.isValid(pos)) {
+            ' '
+          } else {
+            'X'
+          }
         }
+        "|" + line.mkString + "|"
       }
-      "|" + line.mkString + "|"
-    }
 
-    val txt = ClearScreen + map.reverse.mkString("\n")
-    println(txt)
-    this
-  } else {
-    this
+      val txt = ClearScreen +
+        "\r" + map.reverse.mkString("\n") + "\n" +
+        s"Episode ${episodeCount} / Step ${stepCount}"
+      print(txt)
+      this
+    case _ =>
+      print(ClearScreen + s"\rEpisode ${episodeCount} / Step ${stepCount}")
+      this
   }
 
   override def reset(): (Env, Observation) = {
-    val next = MazeEnv(maze = maze, subject = maze.initial)
-    val obs = observation
+    val next = MazeEnv(maze = maze, subject = maze.initial, episodeCount = episodeCount + 1, stepCount = 0)
+    val obs = next.observation
     (next, obs)
   }
 
   override def step(action: Action): (Env, Observation, Reward, EndUp, Info) = {
     val delta = if (action >= 0 && action < Deltas.length) Deltas(action) else (0, 0)
     val nextPos = subject.moveBy(delta)
-    if (!maze.isValid(nextPos)) {
+    val (pos, reward, endUp, info) = if (!maze.isValid(nextPos)) {
       // Invalid
-      (this, observation, NoStepReward, false, Map())
+      (subject, NoStepReward, false, Map[String, Any]())
     } else if (nextPos.equals((0, 0))) {
       // No move
-      (this, observation, NoStepReward, false, Map())
+      (subject, NoStepReward, false, Map[String, Any]())
     } else if (maze.isTarget(nextPos)) {
-      val next = moveTo(nextPos)
-      (next, next.observation, TargetReward, true, Map())
+      (nextPos, TargetReward, true, Map[String, Any]())
     } else {
-      val next = moveTo(nextPos)
-      (next, next.observation, StepReward, false, Map())
+      (nextPos, StepReward, false, Map[String, Any]())
     }
+    val nextEnv = copy(subject = pos, stepCount = stepCount + 1)
+    (nextEnv, nextEnv.observation, reward, endUp, info)
   }
 
   private lazy val observation: Observation = {
@@ -144,8 +153,6 @@ case class MazeEnv(maze: Maze, subject: MazePos) extends Env {
 
     INDArrayObservation(observation = observation, actions = actions)
   }
-
-  private def moveTo(nextPos: MazePos): MazeEnv = copy(subject = nextPos)
 
 }
 

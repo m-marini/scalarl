@@ -48,6 +48,8 @@ import org.nd4j.linalg.api.rng.DefaultRandom
 import org.nd4j.linalg.lossfunctions.impl.LossMSLE
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.learning.config.Adam
+import org.deeplearning4j.util.ModelSerializer
 
 /**
  * The agent acting in the environment by QLearning T(0) algorithm.
@@ -114,7 +116,8 @@ case class QAgent(net: MultiLayerNetwork, random: Random, epsilon: Double, gamma
       action
     } else {
       // Greedy policy
-      val action = maxIdxWithMask(q(observation), actions)
+      val q0 = q(observation)
+      val action = maxIdxWithMask(q0, actions)
       action
     }
     require(actions.getInt(action) > 0)
@@ -140,6 +143,11 @@ case class QAgent(net: MultiLayerNetwork, random: Random, epsilon: Double, gamma
       this
   }
 
+  def writeModel(file: String): QAgent = {
+    ModelSerializer.writeModel(net, file, true)
+    this
+  }
+
 }
 
 /**
@@ -150,18 +158,20 @@ case class QAgent(net: MultiLayerNetwork, random: Random, epsilon: Double, gamma
  *  @param numActions the total number of actions or output nodes
  *  @param _numHiddens1 the number of hidden nodes in the second layer
  *  @param _numHiddens1 the number of hidden nodes in the third layer
+ *  @param _learningRate the learning rate
  *  @param _epsilon the epsilon value of epsilon-greedy policy
  *  @param _gamma the discount factor for total return
  *  @param _seed the seed of random generators
  */
 case class QAgentBuilder(
-  numInputs:    Int,
-  numActions:   Int,
-  _numHiddens1: Option[Int]    = None,
-  _numHiddens2: Option[Int]    = None,
-  _epsilon:     Option[Double] = None,
-  _gamma:       Option[Double] = None,
-  _seed:        Option[Long]   = None) {
+  numInputs:     Int,
+  numActions:    Int,
+  _numHiddens1:  Option[Int]    = None,
+  _numHiddens2:  Option[Int]    = None,
+  _learningRate: Option[Double] = None,
+  _epsilon:      Option[Double] = None,
+  _gamma:        Option[Double] = None,
+  _seed:         Option[Long]   = None) {
 
   val DefaultEpsilon = 0.01
   val DefaultGamma = 0.99
@@ -179,6 +189,9 @@ case class QAgentBuilder(
   /** Returns the builder with a discount factor of total return */
   def gamma(gamma: Double): QAgentBuilder = copy(_gamma = Some(gamma))
 
+  /** Returns the builder with a learning rate */
+  def learningRate(learningRate: Double): QAgentBuilder = copy(_learningRate = Some(learningRate))
+
   /** Returns the builder with a seed random generator */
   def seed(seed: Long): QAgentBuilder = copy(_seed = Some(seed))
 
@@ -192,6 +205,9 @@ case class QAgentBuilder(
       epsilon = _epsilon.getOrElse(DefaultEpsilon),
       gamma = _gamma.getOrElse(DefaultGamma))
   }
+
+  private def loadNet(file: String): MultiLayerNetwork =
+    ModelSerializer.restoreMultiLayerNetwork(file, true)
 
   /** Returns the built network for the QAgent */
   private def buildNet(): MultiLayerNetwork = {
@@ -210,13 +226,15 @@ case class QAgentBuilder(
     val layer3 = new OutputLayer.Builder().
       nIn(_numHiddens2.getOrElse(DefaultHidden)).
       nOut(numActions).
-      lossFunction(LossFunction.MEAN_SQUARED_LOGARITHMIC_ERROR).
+      lossFunction(LossFunction.MSE).
+      //      lossFunction(LossFunction.MEAN_SQUARED_LOGARITHMIC_ERROR).
       activation(Activation.IDENTITY).
       build()
 
     val conf = new NeuralNetConfiguration.Builder().
       seed(_seed.getOrElse(0)).
       weightInit(WeightInit.XAVIER).
+      updater(new Adam(_learningRate.getOrElse(Adam.DEFAULT_ADAM_LEARNING_RATE))).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
       list(layer1, layer2, layer3).
       build()

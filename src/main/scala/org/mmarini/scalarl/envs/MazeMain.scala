@@ -40,6 +40,7 @@ import org.yaml.snakeyaml.Yaml
 import java.io.FileReader
 import scala.collection.JavaConverters._
 import scala.collection.JavaConversions._
+import org.deeplearning4j.util.ModelSerializer
 
 object MazeMain {
 
@@ -49,24 +50,21 @@ object MazeMain {
   }
 
   private def buildAgent(conf: Map[String, Any])(): Agent = {
-    val agentConf = conf("agent").asInstanceOf[java.util.Map[String, Any]].toMap
-    val numInputs = agentConf("numInputs").asInstanceOf[Int]
-    val numActions = agentConf("numActions").asInstanceOf[Int]
-    val numHiddens = agentConf("numHiddens").asInstanceOf[Int]
-    val seed = agentConf.get("seed").map(_.asInstanceOf[Int])
+    val _agentConf = agentConf(conf)
+    val numInputs = _agentConf("numInputs").asInstanceOf[Int]
+    val numActions = _agentConf("numActions").asInstanceOf[Int]
+    val numHiddens = _agentConf("numHiddens").asInstanceOf[Int]
+    val seed = _agentConf.get("seed").map(_.asInstanceOf[Int])
+    val epsilon = _agentConf("epsilon").asInstanceOf[Double]
+    val gamma = _agentConf("gamma").asInstanceOf[Double]
+    val learningRate = _agentConf("learningRate").asInstanceOf[Double]
     val builder1 = QAgentBuilder(numInputs, numActions).
       numHiddens1(numHiddens).
-      numHiddens2(numHiddens)
-    seed.map(s => builder1.seed(s)).getOrElse(builder1).
-      build()
-  }
-
-  def main(args: Array[String]) {
-    val conf = loadConfig(if (args.isEmpty) "maze.yaml" else args(0))
-    val sessionConf = conf("session").asInstanceOf[java.util.Map[String, Any]].toMap
-    val numEpisodes = sessionConf("numEpisodes").asInstanceOf[Int]
-    val sync = sessionConf("sync").asInstanceOf[Int]
-    new Session(numEpisodes, buildEnv(conf), buildAgent(conf), sync = sync).run()
+      numHiddens2(numHiddens).
+      epsilon(epsilon).
+      gamma(gamma).
+      learningRate(learningRate)
+    seed.map(s => builder1.seed(s)).getOrElse(builder1).build()
   }
 
   private def loadConfig(file: String): Map[String, Any] = {
@@ -74,4 +72,17 @@ object MazeMain {
     conf.asInstanceOf[java.util.Map[String, Any]].toMap
   }
 
+  private def agentConf(conf: Map[String, Any]): Map[String, Any] = conf("agent").asInstanceOf[java.util.Map[String, Any]].toMap
+
+  def main(args: Array[String]) {
+    val conf = loadConfig(if (args.isEmpty) "maze.yaml" else args(0))
+    val sessionConf = conf("session").asInstanceOf[java.util.Map[String, Any]].toMap
+    val numEpisodes = sessionConf("numEpisodes").asInstanceOf[Int]
+    val sync = sessionConf("sync").asInstanceOf[Int]
+    val mode = sessionConf.get("mode").map(_.toString).getOrElse("human")
+    val _agentConf = agentConf(conf)
+    val model = _agentConf("model").toString
+    val session = new Session(numEpisodes, buildEnv(conf), buildAgent(conf), sync = sync, mode = mode).run()
+    session.agent.asInstanceOf[QAgent].writeModel(model)
+  }
 }
