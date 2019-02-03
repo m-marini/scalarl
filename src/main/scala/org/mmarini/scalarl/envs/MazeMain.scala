@@ -60,6 +60,7 @@ object MazeMain {
     val learningRate = _agentConf("learningRate").asInstanceOf[Number].doubleValue()
     val maxAbsGrads = _agentConf("maxAbsGradients").asInstanceOf[Number].doubleValue()
     val maxAbsParams = _agentConf("maxAbsParameters").asInstanceOf[Number].doubleValue()
+    val model = _agentConf("model").toString
     QAgentBuilder(numInputs, numActions).
       numHiddens1(numHiddens).
       numHiddens2(numHiddens).
@@ -69,6 +70,7 @@ object MazeMain {
       maxAbsGradient(maxAbsGrads).
       maxAbsParams(maxAbsParams).
       seed(seed).
+      file(model).
       build()
   }
 

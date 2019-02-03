@@ -53,6 +53,7 @@ import org.deeplearning4j.util.ModelSerializer
 import org.deeplearning4j.nn.api.layers.LayerConstraint
 import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
 import org.deeplearning4j.nn.conf.GradientNormalization
+import java.io.File
 
 /**
  * The agent acting in the environment by QLearning T(0) algorithm.
@@ -165,18 +166,22 @@ case class QAgent(net: MultiLayerNetwork, random: Random, epsilon: Double, gamma
  *  @param _epsilon the epsilon value of epsilon-greedy policy
  *  @param _gamma the discount factor for total return
  *  @param _seed the seed of random generators
+ *  @param _maxAbsParams max absloute value of parameters
+ *  @param _maxAbsGradient max absolute value of gradients
+ *  @param _file the filename of model to load
  */
 case class QAgentBuilder(
   numInputs:       Int,
   numActions:      Int,
-  _numHiddens1:    Int    = 10,
-  _numHiddens2:    Int    = 10,
-  _learningRate:   Double = Adam.DEFAULT_ADAM_LEARNING_RATE,
-  _epsilon:        Double = 1e-2,
-  _gamma:          Double = 0.99,
-  _seed:           Long   = 0L,
-  _maxAbsParams:   Double = 1e3,
-  _maxAbsGradient: Double = 1e2) {
+  _numHiddens1:    Int            = 10,
+  _numHiddens2:    Int            = 10,
+  _learningRate:   Double         = Adam.DEFAULT_ADAM_LEARNING_RATE,
+  _epsilon:        Double         = 1e-2,
+  _gamma:          Double         = 0.99,
+  _seed:           Long           = 0L,
+  _maxAbsParams:   Double         = 1e3,
+  _maxAbsGradient: Double         = 1e2,
+  _file:           Option[String] = None) {
 
   val DefaultEpsilon = 0.01
   val DefaultGamma = 0.99
@@ -205,9 +210,13 @@ case class QAgentBuilder(
   /** Returns the builder with a maximum absolute gradient value */
   def maxAbsParams(value: Double): QAgentBuilder = copy(_maxAbsParams = value)
 
+  /** Returns the builder with filename model to load */
+  def file(file: String): QAgentBuilder = copy(_file = Some(file))
+
   /** Builds and returns the [[QAgent]] */
   def build(): QAgent = {
-    val net = buildNet()
+    val file = _file.map(f => new File(f)).filter(_.canRead())
+    val net = file.map(loadNet).getOrElse(buildNet())
     net.init()
     QAgent(
       net = net,
@@ -216,7 +225,7 @@ case class QAgentBuilder(
       gamma = _gamma)
   }
 
-  private def loadNet(file: String): MultiLayerNetwork =
+  private def loadNet(file: File): MultiLayerNetwork =
     ModelSerializer.restoreMultiLayerNetwork(file, true)
 
   /** Returns the built network for the QAgent */
