@@ -54,17 +54,22 @@ object MazeMain {
     val numInputs = _agentConf("numInputs").asInstanceOf[Int]
     val numActions = _agentConf("numActions").asInstanceOf[Int]
     val numHiddens = _agentConf("numHiddens").asInstanceOf[Int]
-    val seed = _agentConf.get("seed").map(_.asInstanceOf[Int])
-    val epsilon = _agentConf("epsilon").asInstanceOf[Double]
-    val gamma = _agentConf("gamma").asInstanceOf[Double]
-    val learningRate = _agentConf("learningRate").asInstanceOf[Double]
-    val builder1 = QAgentBuilder(numInputs, numActions).
+    val seed = _agentConf("seed").asInstanceOf[Int]
+    val epsilon = _agentConf("epsilon").asInstanceOf[Number].doubleValue()
+    val gamma = _agentConf("gamma").asInstanceOf[Number].doubleValue()
+    val learningRate = _agentConf("learningRate").asInstanceOf[Number].doubleValue()
+    val maxAbsGrads = _agentConf("maxAbsGradients").asInstanceOf[Number].doubleValue()
+    val maxAbsParams = _agentConf("maxAbsParameters").asInstanceOf[Number].doubleValue()
+    QAgentBuilder(numInputs, numActions).
       numHiddens1(numHiddens).
       numHiddens2(numHiddens).
       epsilon(epsilon).
       gamma(gamma).
-      learningRate(learningRate)
-    seed.map(s => builder1.seed(s)).getOrElse(builder1).build()
+      learningRate(learningRate).
+      maxAbsGradient(maxAbsGrads).
+      maxAbsParams(maxAbsParams).
+      seed(seed).
+      build()
   }
 
   private def loadConfig(file: String): Map[String, Any] = {

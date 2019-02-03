@@ -19,6 +19,8 @@ agent:
   learningRate: 1e-3
   epsilon: 0.01
   gamma: 0.99
+  maxAbsGradients: 1
+  maxAbsParameters: 1e3
   model: maze.model
 session:
   numEpisodes: 100

@@ -50,6 +50,9 @@ import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.learning.config.Adam
 import org.deeplearning4j.util.ModelSerializer
+import org.deeplearning4j.nn.api.layers.LayerConstraint
+import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
+import org.deeplearning4j.nn.conf.GradientNormalization
 
 /**
  * The agent acting in the environment by QLearning T(0) algorithm.
@@ -164,36 +167,43 @@ case class QAgent(net: MultiLayerNetwork, random: Random, epsilon: Double, gamma
  *  @param _seed the seed of random generators
  */
 case class QAgentBuilder(
-  numInputs:     Int,
-  numActions:    Int,
-  _numHiddens1:  Option[Int]    = None,
-  _numHiddens2:  Option[Int]    = None,
-  _learningRate: Option[Double] = None,
-  _epsilon:      Option[Double] = None,
-  _gamma:        Option[Double] = None,
-  _seed:         Option[Long]   = None) {
+  numInputs:       Int,
+  numActions:      Int,
+  _numHiddens1:    Int    = 10,
+  _numHiddens2:    Int    = 10,
+  _learningRate:   Double = Adam.DEFAULT_ADAM_LEARNING_RATE,
+  _epsilon:        Double = 1e-2,
+  _gamma:          Double = 0.99,
+  _seed:           Long   = 0L,
+  _maxAbsParams:   Double = 1e3,
+  _maxAbsGradient: Double = 1e2) {
 
   val DefaultEpsilon = 0.01
   val DefaultGamma = 0.99
-  val DefaultHidden = 10
 
   /** Returns the builder with a number of hidden nodes in the second layer */
-  def numHiddens1(numHidden: Int): QAgentBuilder = copy(_numHiddens1 = Some(numHidden))
+  def numHiddens1(numHidden: Int): QAgentBuilder = copy(_numHiddens1 = numHidden)
 
   /** Returns the builder with a number of hidden nodes in the third layer */
-  def numHiddens2(numHidden: Int): QAgentBuilder = copy(_numHiddens2 = Some(numHidden))
+  def numHiddens2(numHidden: Int): QAgentBuilder = copy(_numHiddens2 = numHidden)
 
   /** Returns the builder with epsilon value */
-  def epsilon(epsilon: Double): QAgentBuilder = copy(_epsilon = Some(epsilon))
+  def epsilon(epsilon: Double): QAgentBuilder = copy(_epsilon = epsilon)
 
   /** Returns the builder with a discount factor of total return */
-  def gamma(gamma: Double): QAgentBuilder = copy(_gamma = Some(gamma))
+  def gamma(gamma: Double): QAgentBuilder = copy(_gamma = gamma)
 
   /** Returns the builder with a learning rate */
-  def learningRate(learningRate: Double): QAgentBuilder = copy(_learningRate = Some(learningRate))
+  def learningRate(learningRate: Double): QAgentBuilder = copy(_learningRate = learningRate)
 
   /** Returns the builder with a seed random generator */
-  def seed(seed: Long): QAgentBuilder = copy(_seed = Some(seed))
+  def seed(seed: Long): QAgentBuilder = copy(_seed = seed)
+
+  /** Returns the builder with a maximum absolute gradient value */
+  def maxAbsGradient(value: Double): QAgentBuilder = copy(_maxAbsGradient = value)
+
+  /** Returns the builder with a maximum absolute gradient value */
+  def maxAbsParams(value: Double): QAgentBuilder = copy(_maxAbsParams = value)
 
   /** Builds and returns the [[QAgent]] */
   def build(): QAgent = {
@@ -201,9 +211,9 @@ case class QAgentBuilder(
     net.init()
     QAgent(
       net = net,
-      random = _seed.map(s => new DefaultRandom(s)).getOrElse(new DefaultRandom()),
-      epsilon = _epsilon.getOrElse(DefaultEpsilon),
-      gamma = _gamma.getOrElse(DefaultGamma))
+      random = if (_seed != 0) new DefaultRandom(_seed) else new DefaultRandom(),
+      epsilon = _epsilon,
+      gamma = _gamma)
   }
 
   private def loadNet(file: String): MultiLayerNetwork =
@@ -213,29 +223,31 @@ case class QAgentBuilder(
   private def buildNet(): MultiLayerNetwork = {
     val layer1 = new DenseLayer.Builder().
       nIn(numInputs).
-      nOut(_numHiddens1.getOrElse(DefaultHidden)).
+      nOut(_numHiddens1).
       weightInit(WeightInit.XAVIER).
       activation(Activation.TANH).
       build()
     val layer2 = new DenseLayer.Builder().
-      nIn(_numHiddens1.getOrElse(DefaultHidden)).
-      nOut(_numHiddens2.getOrElse(DefaultHidden)).
+      nIn(_numHiddens1).
+      nOut(_numHiddens2).
       weightInit(WeightInit.XAVIER).
       activation(Activation.TANH).
       build()
     val layer3 = new OutputLayer.Builder().
-      nIn(_numHiddens2.getOrElse(DefaultHidden)).
+      nIn(_numHiddens2).
       nOut(numActions).
       lossFunction(LossFunction.MSE).
-      //      lossFunction(LossFunction.MEAN_SQUARED_LOGARITHMIC_ERROR).
       activation(Activation.IDENTITY).
       build()
 
     val conf = new NeuralNetConfiguration.Builder().
-      seed(_seed.getOrElse(0)).
+      seed(_seed).
       weightInit(WeightInit.XAVIER).
-      updater(new Adam(_learningRate.getOrElse(Adam.DEFAULT_ADAM_LEARNING_RATE))).
+      updater(new Adam(_learningRate)).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
+      constrainAllParameters(new MinMaxNormConstraint(-_maxAbsParams, _maxAbsParams, 1)).
+      gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue).
+      gradientNormalizationThreshold(_maxAbsGradient).
       list(layer1, layer2, layer3).
       build()
 
