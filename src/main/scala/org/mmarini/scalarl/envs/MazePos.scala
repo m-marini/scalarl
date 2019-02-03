@@ -29,13 +29,24 @@
 
 package org.mmarini.scalarl.envs
 
+/**
+ * The cell position in the maze
+ *
+ *  @constructor Creates a position
+ *  @param x the x coordinate
+ *  @param y the y coordinate
+ */
 case class MazePos(x: Int, y: Int) {
 
+  /** Returns the position moved from this position by delta */
   def moveBy(delta: (Int, Int)): MazePos = delta match {
     case (dx, dy) => MazePos(x = x + dx, y = y + dy)
   }
 }
 
+/** The builder of [[MazePos]] */
 object MazePos {
+
+  /** Creates a position by a couple of value (x, y) */
   def apply(pos: (Int, Int)): MazePos = MazePos(pos._1, pos._2)
 }

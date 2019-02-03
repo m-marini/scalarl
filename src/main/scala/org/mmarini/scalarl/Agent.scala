@@ -27,45 +27,32 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.envs
+package org.mmarini.scalarl
 
-import scala.collection.Seq
-import scala.util.Random
+/**
+ * The agent acting in the environment
+ *
+ *  Generates actions to change the status of environment basing on observation of the environment
+ *  and the internal strategy policy.
+ *
+ *  Updates its strategy policy to optimize the return value (discount sum of rewards)
+ *  and the observation of resulting environment
+ */
+trait Agent {
 
-object Main {
+  /**
+   * Chooses the action to be executed to the environment
+   *
+   *  Returns the new agent and the chosen action
+   *
+   *  @observation the observation of environment
+   */
+  def chooseAction(observation: Observation): (Agent, Action)
 
-  val Lines = Seq(
-    "|   O      |",
-    "|          |",
-    "|          |",
-    "|          |",
-    "|   XXX    |",
-    "|          |",
-    "|          |",
-    "|          |",
-    "|     *    |",
-    "|          |")
-
-  def main(args: Array[String]) {
-    var (env, obs) = MazeEnv.fromStrings(Lines).reset();
-    env.render()
-    for { a <- 1 to 1000 } {
-      val actions = obs.actions
-      val actionIndices = for {
-        i <- 0 until actions.size(0).toInt
-        if (actions.getInt(i) > 0)
-      } yield {
-        i
-      }
-      val action = actionIndices(Random.nextInt(actionIndices.length))
-      env.step(action) match {
-        case (e, o, _, _, _) =>
-          env = e
-          obs = o
-      }
-      env.render()
-      Thread.sleep(10)
-    }
-  }
-
+  /**
+   * Returns the fit agent by optimizing its strategy policy
+   *
+   * @param feedback the feedback from the last step
+   */
+  def fit(feedback: Feedback): Agent
 }

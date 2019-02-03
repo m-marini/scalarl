@@ -29,9 +29,23 @@
 
 package org.mmarini
 
+/**
+ * Provides type definitions for common data structures.
+ *
+ */
 package object scalarl {
+  /** Action performed by agent to change status in the environment */
   type Action = Int
+
+  /** Reward received by agent in response to status change */
   type Reward = Double
+
+  /** Flag to signal end of episode */
   type EndUp = Boolean
+
+  /** Additional info during simulation steps */
   type Info = Map[String, Any]
+
+  /** Feedback from environment */
+  type Feedback = (Observation, Action, Reward, Observation, EndUp, Info)
 }

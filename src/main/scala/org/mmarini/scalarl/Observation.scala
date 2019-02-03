@@ -31,9 +31,16 @@ package org.mmarini.scalarl
 
 import org.nd4j.linalg.api.ndarray.INDArray
 
+/** The observation of the environment status. */
 trait Observation {
 
+  /** Returns the tensor of status of environment */
   def observation: INDArray
 
+  /**
+   * Returns the valid actions vector
+   *
+   *  The vector contains the value 1 at valid action indices
+   */
   def actions: INDArray
 }

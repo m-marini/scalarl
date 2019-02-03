@@ -1,0 +1,28 @@
+---
+env:
+  map:
+  - "|   O      |"
+  - "|          |"
+  - "|          |"
+  - "|          |"
+  - "|   XXX    |"
+  - "|          |"
+  - "|          |"
+  - "|          |"
+  - "|          |"
+  - "|     *    |"
+agent:
+  numInputs: 200
+  numActions: 8
+  numHiddens: 100
+  seed: 1234
+  learningRate: 1e-3
+  epsilon: 0.01
+  gamma: 0.99
+  maxAbsGradients: 1
+  maxAbsParameters: 1e3
+  model: maze.model
+session:
+  numEpisodes: 100
+  sync: 0
+  mode: stats
