@@ -29,6 +29,8 @@
 
 package org.mmarini.scalarl
 
+import rx.lang.scala.Observable
+
 /**
  * The agent acting in the environment
  *
@@ -55,4 +57,7 @@ trait Agent {
    * @param feedback the feedback from the last step
    */
   def fit(feedback: Feedback): Agent
+
+  /** Returns the observable of [[AgentKpi]] */
+  def agentKpiObs: Observable[AgentKpi]
 }

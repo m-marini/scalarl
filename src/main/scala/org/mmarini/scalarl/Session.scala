@@ -42,18 +42,17 @@ package org.mmarini.scalarl
  */
 class Session(
   noEpisode: Int,
-  env0:      => Env,
-  agent0:    => Agent,
+  env0:      Env,
+  agent0:    Agent,
   mode:      String                  = "human",
   close:     Boolean                 = false,
   sync:      Long                    = 0,
   onEpisode: Option[Session => Void] = None) {
 
-  private var _env: Env = None.orNull
-  private var _agent: Agent = None.orNull
+  private var _env: Env = env0
+  private var _agent: Agent = agent0
 
   def env: Env = _env
-
   def agent: Agent = _agent
 
   /**
@@ -70,9 +69,6 @@ class Session(
    *    - until detection of end of episode
    */
   def run(): Session = {
-    _env = env0
-    _agent = agent0
-
     for { episode <- 1 to noEpisode } {
       val (env1, obs1) = _env.reset()
       val env2 = env1.render(mode, close)

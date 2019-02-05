@@ -22,6 +22,7 @@ agent:
   maxAbsGradients: 1
   maxAbsParameters: 1e3
   model: maze.model
+  kpis: maze-kpis.csv
 session:
   numEpisodes: 100
   sync: 0

@@ -54,6 +54,12 @@ import org.deeplearning4j.nn.api.layers.LayerConstraint
 import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
 import org.deeplearning4j.nn.conf.GradientNormalization
 import java.io.File
+import org.mmarini.scalarl.AgentKpi
+import rx.lang.scala.Subject
+import rx.lang.scala.Observable
+import org.mmarini.scalarl.AgentKpi
+import org.mmarini.scalarl.DefaultAgentKpi
+import com.typesafe.scalalogging.LazyLogging
 
 /**
  * The agent acting in the environment by QLearning T(0) algorithm.
@@ -64,7 +70,17 @@ import java.io.File
  *  Updates its strategy policy to optimize the return value (discount sum of rewards)
  *  and the observation of resulting environment
  */
-case class QAgent(net: MultiLayerNetwork, random: Random, epsilon: Double, gamma: Double) extends Agent {
+case class QAgent(
+  net:          MultiLayerNetwork,
+  random:       Random,
+  epsilon:      Double,
+  gamma:        Double,
+  episodeCount: Int               = 0,
+  stepCount:    Int               = 0,
+  returnValue:  Double            = 0,
+  discount:     Double            = 1,
+  totalLoss:    Double            = 0,
+  agentKpiSubj: Subject[AgentKpi]) extends Agent {
 
   /**
    * Returns the index containing the max value of a by masking mask
@@ -144,7 +160,31 @@ case class QAgent(net: MultiLayerNetwork, random: Random, epsilon: Double, gamma
       delta.putScalar(action, err)
       val expected = q0.add(delta)
       net.fit(obs0.observation.ravel(), expected)
-      this
+      val newStepCount = stepCount + 1
+      val newDiscount = discount * gamma
+      val newReturnValue = returnValue + reward * discount
+      val newTotalLoss = totalLoss + err
+      if (endUp) {
+        val newEpisodeCount = episodeCount + 1
+        val kpi = DefaultAgentKpi(
+          episodeCount = newEpisodeCount,
+          stepCount = newStepCount,
+          returnValue = newReturnValue,
+          avgLoss = newTotalLoss / newStepCount)
+        agentKpiSubj.onNext(kpi)
+        copy(
+          episodeCount = newEpisodeCount,
+          stepCount = 0,
+          discount = 1,
+          returnValue = 0,
+          totalLoss = 0)
+      } else {
+        copy(
+          stepCount = newStepCount,
+          discount = newDiscount,
+          returnValue = newReturnValue,
+          totalLoss = newTotalLoss)
+      }
   }
 
   def writeModel(file: String): QAgent = {
@@ -152,6 +192,8 @@ case class QAgent(net: MultiLayerNetwork, random: Random, epsilon: Double, gamma
     this
   }
 
+  /** Returns the observable of [[AgentKpi]] */
+  override def agentKpiObs: Observable[AgentKpi] = agentKpiSubj
 }
 
 /**
@@ -181,7 +223,7 @@ case class QAgentBuilder(
   _seed:           Long           = 0L,
   _maxAbsParams:   Double         = 1e3,
   _maxAbsGradient: Double         = 1e2,
-  _file:           Option[String] = None) {
+  _file:           Option[String] = None) extends LazyLogging {
 
   val DefaultEpsilon = 0.01
   val DefaultGamma = 0.99
@@ -222,11 +264,14 @@ case class QAgentBuilder(
       net = net,
       random = if (_seed != 0) new DefaultRandom(_seed) else new DefaultRandom(),
       epsilon = _epsilon,
-      gamma = _gamma)
+      gamma = _gamma,
+      agentKpiSubj = Subject())
   }
 
-  private def loadNet(file: File): MultiLayerNetwork =
+  private def loadNet(file: File): MultiLayerNetwork = {
+    logger.info(s"Loading ${file.toString} ...")
     ModelSerializer.restoreMultiLayerNetwork(file, true)
+  }
 
   /** Returns the built network for the QAgent */
   private def buildNet(): MultiLayerNetwork = {

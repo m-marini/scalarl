@@ -10,3 +10,4 @@
 /.cache-tests
 /data
 /maze.model
+/*.csv
