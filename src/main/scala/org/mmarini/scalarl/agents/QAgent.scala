@@ -163,7 +163,7 @@ case class QAgent(
       val newStepCount = stepCount + 1
       val newDiscount = discount * gamma
       val newReturnValue = returnValue + reward * discount
-      val newTotalLoss = totalLoss + err
+      val newTotalLoss = totalLoss + err * err
       if (endUp) {
         val newEpisodeCount = episodeCount + 1
         val kpi = DefaultAgentKpi(
