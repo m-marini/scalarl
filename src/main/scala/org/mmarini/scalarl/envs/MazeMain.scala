@@ -41,26 +41,28 @@ import java.io.FileReader
 import scala.collection.JavaConverters._
 import scala.collection.JavaConversions._
 import org.deeplearning4j.util.ModelSerializer
+import java.io.FileWriter
+import org.mmarini.scalarl.AgentKpi
+import org.mmarini.scalarl.DefaultAgentKpi
 
 object MazeMain {
 
-  private def buildEnv(conf: Map[String, Any])(): Env = {
-    val map = conf("env").asInstanceOf[java.util.Map[String, Any]].get("map").asInstanceOf[java.util.List[String]]
+  private def buildEnv(conf: Configuration): Env = {
+    val map = conf.getConf("env").getList[String]("map")
     MazeEnv.fromStrings(map)
   }
 
-  private def buildAgent(conf: Map[String, Any])(): Agent = {
-    val _agentConf = agentConf(conf)
-    val numInputs = _agentConf("numInputs").asInstanceOf[Int]
-    val numActions = _agentConf("numActions").asInstanceOf[Int]
-    val numHiddens = _agentConf("numHiddens").asInstanceOf[Int]
-    val seed = _agentConf("seed").asInstanceOf[Int]
-    val epsilon = _agentConf("epsilon").asInstanceOf[Number].doubleValue()
-    val gamma = _agentConf("gamma").asInstanceOf[Number].doubleValue()
-    val learningRate = _agentConf("learningRate").asInstanceOf[Number].doubleValue()
-    val maxAbsGrads = _agentConf("maxAbsGradients").asInstanceOf[Number].doubleValue()
-    val maxAbsParams = _agentConf("maxAbsParameters").asInstanceOf[Number].doubleValue()
-    val model = _agentConf("model").toString
+  private def buildAgent(conf: Configuration): Agent = {
+    val numInputs = conf.getConf("agent").getInt("numInputs").get
+    val numActions = conf.getConf("agent").getInt("numActions").get
+    val numHiddens = conf.getConf("agent").getInt("numHiddens").get
+    val seed = conf.getConf("agent").getLong("seed").get
+    val epsilon = conf.getConf("agent").getDouble("epsilon").get
+    val gamma = conf.getConf("agent").getDouble("gamma").get
+    val learningRate = conf.getConf("agent").getDouble("learningRate").get
+    val maxAbsGrads = conf.getConf("agent").getDouble("maxAbsGradients").get
+    val maxAbsParams = conf.getConf("agent").getDouble("maxAbsParameters").get
+    val model = conf.getConf("agent").getString("model").get
     QAgentBuilder(numInputs, numActions).
       numHiddens1(numHiddens).
       numHiddens2(numHiddens).
@@ -74,22 +76,39 @@ object MazeMain {
       build()
   }
 
-  private def loadConfig(file: String): Map[String, Any] = {
+  private def loadConfig(file: String): Configuration = {
     val conf = new Yaml().load(new FileReader(file))
-    conf.asInstanceOf[java.util.Map[String, Any]].toMap
+    new Configuration(conf.asInstanceOf[java.util.Map[String, Any]].toMap)
   }
 
-  private def agentConf(conf: Map[String, Any]): Map[String, Any] = conf("agent").asInstanceOf[java.util.Map[String, Any]].toMap
+  private def agentConf(conf: Map[String, Any]) = conf("agent").asInstanceOf[java.util.Map[String, Any]].toMap
+  private def sessionConf(conf: Map[String, Any]) = conf("session").asInstanceOf[java.util.Map[String, Any]].toMap
+
+  private def writerCvsHeader(file: String)(header: Seq[String]) {
+    val fw = new FileWriter(file)
+    fw.write(header.mkString(",") + "\n")
+    fw.close();
+  }
+  private def writeCvsRecord(file: String)(kpi: AgentKpi) {
+    val fw = new FileWriter(file, true)
+    val record = Seq(
+      kpi.asInstanceOf[DefaultAgentKpi].episodeCount.toString,
+      kpi.stepCount().toString,
+      kpi.returnValue().toString,
+      kpi.avgLoss().toString)
+    fw.write(record.mkString(",") + "\n")
+    fw.close();
+  }
 
   def main(args: Array[String]) {
     val conf = loadConfig(if (args.isEmpty) "maze.yaml" else args(0))
-    val sessionConf = conf("session").asInstanceOf[java.util.Map[String, Any]].toMap
-    val numEpisodes = sessionConf("numEpisodes").asInstanceOf[Int]
-    val sync = sessionConf("sync").asInstanceOf[Int]
-    val mode = sessionConf.get("mode").map(_.toString).getOrElse("human")
-    val _agentConf = agentConf(conf)
-    val model = _agentConf("model").toString
-    new Session(
+    val numEpisodes = conf.getConf("session").getInt("numEpisodes").get
+    val sync = conf.getConf("session").getLong("sync").get
+    val mode = conf.getConf("session").getString("mode").get
+    val model = conf.getConf("agent").getString("model").get
+    val kpis = conf.getConf("agent").getString("kpis").get
+    writerCvsHeader(kpis)(Seq("Episode", "StepCount", "ReturnValue", "AvgLoss"))
+    val session = new Session(
       numEpisodes,
       buildEnv(conf),
       buildAgent(conf),
@@ -98,7 +117,39 @@ object MazeMain {
       onEpisode = Some((session) => {
         session.agent.asInstanceOf[QAgent].writeModel(model)
         None.orNull
-      })).run()
+      }))
+    session.agent.agentKpiObs.subscribe(writeCvsRecord(kpis)_)
+    session.run()
+  }
+}
 
+class Configuration(conf: Map[String, Any]) {
+  def getConf(key: String): Configuration = conf.get(key) match {
+    case Some(m: java.util.Map[String, Any]) => new Configuration(m.toMap)
+    case _                                   => new Configuration(Map())
+  }
+
+  def getNumber(key: String): Option[Number] = conf.get(key) match {
+    case Some(n: Number) => Some(n)
+    case _               => None
+  }
+
+  def getInt(key: String): Option[Int] = getNumber(key).map(_.intValue())
+
+  def getLong(key: String): Option[Long] = getNumber(key).map(_.longValue())
+
+  def getDouble(key: String): Option[Double] = getNumber(key).map(_.doubleValue())
+
+  def getString(key: String): Option[String] = conf.get(key) match {
+    case Some(s: String) => Some(s)
+    case _               => None
+  }
+
+  def getList[T](key: String): List[T] = {
+    val x = conf.get(key)
+    x match {
+      case Some(l: java.util.List[T]) => l.asInstanceOf[java.util.List[T]].toList
+      case _                          => List()
+    }
   }
 }

@@ -5,10 +5,10 @@ env:
   - "|          |"
   - "|          |"
   - "|          |"
-  - "|   XXX    |"
+  - "|XXXXXX    |"
   - "|          |"
   - "|          |"
-  - "|          |"
+  - "|    XXXXXX|"
   - "|          |"
   - "|     *    |"
 agent:
@@ -17,12 +17,13 @@ agent:
   numHiddens: 100
   seed: 1234
   learningRate: 1e-3
-  epsilon: 0.01
-  gamma: 0.99
+  epsilon: 0.03
+  gamma: 0.999
   maxAbsGradients: 1
   maxAbsParameters: 1e3
   model: maze.model
+  kpis: maze-kpis.csv
 session:
-  numEpisodes: 100
+  numEpisodes: 300
   sync: 0
   mode: stats
