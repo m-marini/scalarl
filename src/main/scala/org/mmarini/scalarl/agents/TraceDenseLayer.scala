@@ -31,11 +31,13 @@ package org.mmarini.scalarl.agents
 
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.indexing.NDArrayIndex
 
 /**
  */
 class TraceDenseLayer(weights: INDArray, bias: INDArray, traces: INDArray) {
 
+  /** Returns the output of layer given an input */
   def forward(input: INDArray): INDArray = {
     val z = input.mmul(weights)
     val bb = bias.broadcast(z.shape(): _*)
@@ -43,14 +45,38 @@ class TraceDenseLayer(weights: INDArray, bias: INDArray, traces: INDArray) {
     y
   }
 
+  /** Returns the gradient of weights and bias given the input and output of layer */
   def gradient(data: (INDArray, INDArray)): (INDArray, INDArray) = data match {
     case (input, output) =>
       val n = input.size(0)
       require(n == output.size(0))
       val ni = input.size(1)
       val no = output.size(1)
-      val dBias = Nd4j.ones(n, no)
-      val dWeights = input.broadcast(n, ni, no)
-      (dWeights, dBias)
+      val bGrad = Nd4j.ones(n, no)
+      val wGrad1 = Nd4j.zeros(n, ni, 1)
+      wGrad1.put(Array(NDArrayIndex.all, NDArrayIndex.all, NDArrayIndex.point(0)), input)
+      val wGrad = wGrad1.broadcast(n, ni, no)
+      (wGrad, bGrad)
   }
+
+  /**
+   * Returns the layer by updating traces given input and output of layer
+   */
+  def updateTraces(data: (INDArray, INDArray)): TraceDenseLayer = data match {
+    case (input, output) =>
+      val (wGrad, bGrad) = gradient((input, output))
+      this
+  }
+
+  /**
+   * Returns the input error given the input, output and output error of the layer
+   *
+   * Updates the layer parameters applying the gradient descendant algorithm
+   */
+  def backward(data: (INDArray, INDArray, INDArray)): INDArray = data match {
+    case (input, output, error) =>
+      updateTraces((input, output))
+       ???
+  }
+
 }

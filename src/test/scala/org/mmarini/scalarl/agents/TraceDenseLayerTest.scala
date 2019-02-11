@@ -122,7 +122,15 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
             }
 
             gradW.rank() should be(3)
-            gradB.shape() should be(Array(noSamples, noInputs, noOutputs))
+            gradW.shape() should be(Array(noSamples, noInputs, noOutputs))
+            for {
+              i <- 0 until noSamples
+              j <- 0 until noInputs
+              k <- 0 until noOutputs
+            } {
+              gradW.getDouble(i.toLong, j.toLong, k.toLong) should be(input.getDouble(i.toLong, j.toLong))
+            }
+
           }
       }
   }
