@@ -71,6 +71,28 @@ class TraceDenseLayer(
   }
 
   /**
+   * Returns the backward errors and mask after updating the layer parameters given the input, output, output, errors
+   * and output mask
+   */
+  def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): (INDArray, INDArray) = {
+    this.updateTraces(input, output, mask)
+
+    val ni = weights.size(0)
+    val no = weights.size(1)
+
+    val dWeights = weightTraces.mul(learningRate).muli(errors.broadcast(ni, no))
+    val dBias = biasTraces.mul(learningRate).muli(errors)
+
+    val inpErrors = errors.mmul(weights.transpose())
+
+    weights.addi(dWeights)
+    bias.addi(dBias)
+
+    val inpMask = Nd4j.ones(input.shape(): _*)
+    (inpErrors, inpMask)
+  }
+
+  /**
    * Returns the layer by updating traces given input, output and output mask of layer
    */
   def updateTraces(input: INDArray, output: INDArray, mask: INDArray): TraceDenseLayer = {
@@ -82,14 +104,6 @@ class TraceDenseLayer(
     weightTraces.addi(wGrad)
     biasTraces.addi(bGrad)
     this
-  }
-
-  /**
-   * Returns the backward errors after updating the layer parameters given the input, output, output, errors
-   * and output mask
-   */
-  def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): INDArray = {
-    ???
   }
 }
 
