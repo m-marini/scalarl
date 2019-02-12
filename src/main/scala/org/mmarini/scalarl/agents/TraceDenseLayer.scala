@@ -43,10 +43,10 @@ class TraceDenseLayer(
   val biasTraces:   INDArray,
   val gamma:        Double,
   val lambda:       Double,
-  val learningRate: Double) {
+  val learningRate: Double) extends TraceLayer {
 
   /** Returns the output of layer given an input */
-  def forward(input: INDArray): INDArray = {
+  override def forward(input: INDArray): INDArray = {
     val z = input.mmul(weights)
     val y = z.add(bias)
     y
@@ -64,7 +64,7 @@ class TraceDenseLayer(
   /**
    * Returns the layer by updating traces given input, output and output mask of layer
    */
-  def clearTraces(): TraceDenseLayer = {
+  override def clearTraces(): TraceLayer = {
     weightTraces.put(Array(NDArrayIndex.all), 0.0)
     biasTraces.put(Array(NDArrayIndex.all), 0.0)
     this
@@ -74,7 +74,7 @@ class TraceDenseLayer(
    * Returns the backward errors and mask after updating the layer parameters given the input, output, output, errors
    * and output mask
    */
-  def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): (INDArray, INDArray) = {
+  override def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): (INDArray, INDArray) = {
     this.updateTraces(input, output, mask)
 
     val ni = weights.size(0)
