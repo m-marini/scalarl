@@ -8,7 +8,7 @@ to update the layer parameters.
 The forward propagation of the network is the same of classical network
 
 ```math
-y(j) = Sum (x(i) * w(i, j)) + b(j) among i = 1 ... n
+y(i) = Sum (x(j) * w(j, i)) + b(i) among j = 1 ... n
 
 ```
 
@@ -18,7 +18,6 @@ The gradients for weights and bias are
 
 ```math
 grad(Y, w(i, j)) = x(i)
-
 grad(Y, b(j)) = 1
 ```
 
@@ -32,36 +31,32 @@ allowing the network to learn from the past events.
 
 Let be
 
-- w(i, j) the weights of neural network for i-th input and j-th output
-- b(j) the bias of j-th output
-- Ew(i, j) the weights eligibility trace after updating for i-th input and j-th output
-- Eb(j) the bias eligibility trace after updating and j-th output
-- delta(j) the errors for the j-th output
-- alpha the learing rate hyperparamter
-- gamma the reward discount rate
-- lambda the TD hyparameter
+- `w(i, j)` the weights of neural network for i-th input and j-th output
+- `b(j)` the bias of j-th output
+- `Ew(i, j)` the weights eligibility trace after updating for i-th input and j-th output
+- `Eb(j)` the bias eligibility trace after updating and j-th output
+- `delta(j)` the errors for the j-th output
+- `alpha` the learing rate hyperparamter
+- `gamma` the reward discount rate
+- `lambda` the TD hyparameter
 
 The update parameter equations are
 
 ```math
 Ew'(i, j) <- Ew(i, j) * gamma * lambda + grad(Y, w(i, j))
-
 Eb'(j) <- Eb(j) * gamma * lambda + grad(Y, b(j))
 
 w'(i, j) <- w(i, j) + Ew'(i, j) * delta(j)_ * alpha
-
 b'(j) <- b(j) + Eb'(j) * e_j * alpha
 ```
 
-the concretely become
+that concretely become
 
 ```math
 Ew'(i, j) <- Ew(i, j) * gamma * lambda + X(i)
-
 Eb'(i, j) <- Eb(j) * gamma * lambda  + 1
 
 w'(i, j) <- w(i, j) + alpha * Ew'(i, j) * delta(j)
-
 b'(j) <- b(j) + alpha * Eb'(j) * delta(j)
 ```
 
@@ -71,7 +66,6 @@ The backward propagation of errors in the input are
 
 ```math
 delta'(i) = Sum( diff(y(j), x(i)) * delta(j)) among j = 1 ... m
-
 delta'(i) = Sum( w(i, j) * delta(j)) among j = 1 ... m
 ```
 
@@ -107,3 +101,15 @@ so the backpropagated error mask is a ones vectors.
 ```math
 M'(i) = ones(n)
 ```
+
+## MSE Loss function
+
+The MSE Loss function is define as
+
+```math
+L = 1 / 2  * Sum ((Y(i) - y(i))^2), among i = 1 ... m
+
+diff(L, y(i)) = Y(i) - y(i)
+```
+
+where `Y(i)` is the expected output

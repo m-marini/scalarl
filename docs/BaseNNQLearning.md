@@ -13,15 +13,20 @@ For each step the agent feeds the network with the current observation of state 
 
 Then it chooses the action with highest Q value
 
-- a = max(Q(s(t), a))
+```math
+a = max(Q(s(t), a))
+```
 
 with a epsilon-greedy policy and records the reward and the new observation from environment.
 
 To apply the RL then it computes the error as 
 
-- delta = R + gamma * max(Q(s(t+1), a)) - max(Q(s(t), a))
-
+```math
+delta = R + gamma * max(Q(s(t+1), a)) - max(Q(s(t), a))
+```
 and apply backpropagation for the expected NN output as 
 
-- Q(s(t), a) = Q(s(t), a) + delta, if a is the taken action
+```math
+Q(s(t), a) = Q(s(t), a) + delta, if a is the taken action
 - Q(s(t), a) = Q(s(t), a), otherwise
+```

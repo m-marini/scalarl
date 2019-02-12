@@ -125,4 +125,21 @@ object TraceDenseLayer {
       lambda = lambda,
       learningRate = learningRate)
   }
+
+  def apply(
+    noInputs:     Long,
+    noOutputs:    Long,
+    gamma:        Double,
+    lambda:       Double,
+    learningRate: Double): TraceDenseLayer = {
+    // Xavier initialization
+    val weights = Nd4j.randn(noInputs, noOutputs).muli(2.0 / (noInputs + noOutputs))
+    val bias = Nd4j.zeros(1L, noOutputs)
+    TraceDenseLayer(
+      weights = weights,
+      bias = bias,
+      gamma = gamma,
+      lambda = lambda,
+      learningRate = learningRate)
+  }
 }
