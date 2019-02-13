@@ -68,11 +68,12 @@ import rx.lang.scala.Subject
  *  Updates its strategy policy to optimize the return value (discount sum of rewards)
  *  and the observation of resulting environment
  */
-case class TDQAgent(
-  net:          MultiLayerNetwork,
+case class TraceTDQAgent(
+  net:          TraceNetwork,
   random:       Random,
   epsilon:      Double,
   gamma:        Double,
+  lambda:       Double,
   episodeCount: Int               = 0,
   stepCount:    Int               = 0,
   returnValue:  Double            = 0,
@@ -113,8 +114,8 @@ case class TDQAgent(
    * @param observationt the observation
    */
   private def q(observation: Observation): INDArray = {
-    val out = net.feedForward(observation.observation)
-    out.get(out.size() - 1)
+    val out = net.forward(observation.observation.ravel())
+    out.last
   }
 
   /**
@@ -149,44 +150,45 @@ case class TDQAgent(
    */
   def fit(feedback: Feedback): Agent = feedback match {
     case (obs0, action, reward, obs1, endUp, _) =>
-      val q0 = q(obs0)
-      val q1 = q(obs1)
-      val v0 = maxWithMask(q0, obs0.actions)
-      val v1 = maxWithMask(q1, obs1.actions)
-      val err = reward + gamma * v1 - v0
-      val delta = Nd4j.zeros(q0.shape(): _*)
-      delta.putScalar(action, err)
-      val expected = q0.add(delta)
-      net.fit(obs0.observation, expected)
-      val newStepCount = stepCount + 1
-      val newDiscount = discount * gamma
-      val newReturnValue = returnValue + reward * discount
-      val newTotalLoss = totalLoss + err * err
-      if (endUp) {
-        val newEpisodeCount = episodeCount + 1
-        val kpi = DefaultAgentKpi(
-          episodeCount = newEpisodeCount,
-          stepCount = newStepCount,
-          returnValue = newReturnValue,
-          avgLoss = newTotalLoss / newStepCount)
-        agentKpiSubj.onNext(kpi)
-        copy(
-          episodeCount = newEpisodeCount,
-          stepCount = 0,
-          discount = 1,
-          returnValue = 0,
-          totalLoss = 0)
-      } else {
-        copy(
-          stepCount = newStepCount,
-          discount = newDiscount,
-          returnValue = newReturnValue,
-          totalLoss = newTotalLoss)
-      }
+      //      val q0 = q(obs0)
+      //      val q1 = q(obs1)
+      //      val v0 = maxWithMask(q0, obs0.actions)
+      //      val v1 = maxWithMask(q1, obs1.actions)
+      //      val err = reward + gamma * v1 - v0
+      //      val delta = Nd4j.zeros(q0.shape(): _*)
+      //      delta.putScalar(action, err)
+      //      val expected = q0.add(delta)
+      //      net.fit(obs0.observation.ravel(), expected)
+      //      val newStepCount = stepCount + 1
+      //      val newDiscount = discount * gamma
+      //      val newReturnValue = returnValue + reward * discount
+      //      val newTotalLoss = totalLoss + err * err
+      //      if (endUp) {
+      //        val newEpisodeCount = episodeCount + 1
+      //        val kpi = DefaultAgentKpi(
+      //          episodeCount = newEpisodeCount,
+      //          stepCount = newStepCount,
+      //          returnValue = newReturnValue,
+      //          avgLoss = newTotalLoss / newStepCount)
+      //        agentKpiSubj.onNext(kpi)
+      //        copy(
+      //          episodeCount = newEpisodeCount,
+      //          stepCount = 0,
+      //          discount = 1,
+      //          returnValue = 0,
+      //          totalLoss = 0)
+      //      } else {
+      //        copy(
+      //          stepCount = newStepCount,
+      //          discount = newDiscount,
+      //          returnValue = newReturnValue,
+      //          totalLoss = newTotalLoss)
+      //      }
+      ???
   }
 
-  def writeModel(file: String): TDQAgent = {
-    ModelSerializer.writeModel(net, file, true)
+  def writeModel(file: String): TraceTDQAgent = {
+    //    ModelSerializer.writeModel(net, file, true)
     this
   }
 
@@ -210,7 +212,7 @@ case class TDQAgent(
  *  @param _maxAbsGradient max absolute value of gradients
  *  @param _file the filename of model to load
  */
-case class TDQAgentBuilder(
+case class TraceTDQAgentBuilder(
   numInputs:       Int,
   numActions:      Int,
   _numHiddens1:    Int            = 10,
@@ -227,43 +229,44 @@ case class TDQAgentBuilder(
   val DefaultGamma = 0.99
 
   /** Returns the builder with a number of hidden nodes in the second layer */
-  def numHiddens1(numHidden: Int): TDQAgentBuilder = copy(_numHiddens1 = numHidden)
+  def numHiddens1(numHidden: Int): TraceTDQAgentBuilder = copy(_numHiddens1 = numHidden)
 
   /** Returns the builder with a number of hidden nodes in the third layer */
-  def numHiddens2(numHidden: Int): TDQAgentBuilder = copy(_numHiddens2 = numHidden)
+  def numHiddens2(numHidden: Int): TraceTDQAgentBuilder = copy(_numHiddens2 = numHidden)
 
   /** Returns the builder with epsilon value */
-  def epsilon(epsilon: Double): TDQAgentBuilder = copy(_epsilon = epsilon)
+  def epsilon(epsilon: Double): TraceTDQAgentBuilder = copy(_epsilon = epsilon)
 
   /** Returns the builder with a discount factor of total return */
-  def gamma(gamma: Double): TDQAgentBuilder = copy(_gamma = gamma)
+  def gamma(gamma: Double): TraceTDQAgentBuilder = copy(_gamma = gamma)
 
   /** Returns the builder with a learning rate */
-  def learningRate(learningRate: Double): TDQAgentBuilder = copy(_learningRate = learningRate)
+  def learningRate(learningRate: Double): TraceTDQAgentBuilder = copy(_learningRate = learningRate)
 
   /** Returns the builder with a seed random generator */
-  def seed(seed: Long): TDQAgentBuilder = copy(_seed = seed)
+  def seed(seed: Long): TraceTDQAgentBuilder = copy(_seed = seed)
 
   /** Returns the builder with a maximum absolute gradient value */
-  def maxAbsGradient(value: Double): TDQAgentBuilder = copy(_maxAbsGradient = value)
+  def maxAbsGradient(value: Double): TraceTDQAgentBuilder = copy(_maxAbsGradient = value)
 
   /** Returns the builder with a maximum absolute gradient value */
-  def maxAbsParams(value: Double): TDQAgentBuilder = copy(_maxAbsParams = value)
+  def maxAbsParams(value: Double): TraceTDQAgentBuilder = copy(_maxAbsParams = value)
 
   /** Returns the builder with filename model to load */
-  def file(file: String): TDQAgentBuilder = copy(_file = Some(file))
+  def file(file: String): TraceTDQAgentBuilder = copy(_file = Some(file))
 
   /** Builds and returns the [[QAgent]] */
-  def build(): TDQAgent = {
+  def build(): TraceTDQAgent = {
     val file = _file.map(f => new File(f)).filter(_.canRead())
     val net = file.map(loadNet).getOrElse(buildNet())
     net.init()
-    TDQAgent(
-      net = net,
-      random = if (_seed != 0) new DefaultRandom(_seed) else new DefaultRandom(),
-      epsilon = _epsilon,
-      gamma = _gamma,
-      agentKpiSubj = Subject())
+    //    TraceTDQAgent(
+    //      net = net,
+    //      random = if (_seed != 0) new DefaultRandom(_seed) else new DefaultRandom(),
+    //      epsilon = _epsilon,
+    //      gamma = _gamma,
+    //      agentKpiSubj = Subject())
+    ???
   }
 
   private def loadNet(file: File): MultiLayerNetwork = {

@@ -32,7 +32,7 @@ import org.nd4j.linalg.api.ndarray.INDArray
 
 class TraceNetwork(
   val layers: Array[TraceLayer],
-  val loss:   LossFunction      = LossFunctions.MSE) {
+  val loss:   TraceLossFunction = LossFunctions.MSE) {
 
   def forward(input: INDArray): Array[INDArray] = {
     val (result, _) = layers.foldLeft((Array(input), input)) {

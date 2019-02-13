@@ -36,14 +36,14 @@ import org.nd4j.linalg.indexing.INDArrayIndex
 
 /**
  */
-trait LossFunction {
+trait TraceLossFunction {
   def apply(labels: INDArray, output: INDArray, mask: INDArray): Double
 
   def gradient(labels: INDArray, output: INDArray, mask: INDArray): INDArray
 }
 
 object LossFunctions {
-  val MSE: LossFunction = new LossFunction() {
+  val MSE: TraceLossFunction = new TraceLossFunction() {
 
     override def apply(labels: INDArray, output: INDArray, mask: INDArray): Double =
       labels.mul(mask).distance2(output.mul(mask)) / 2
