@@ -158,7 +158,7 @@ case class MazeEnv(
     observation.get(int0, int1, int1).assign(maze.map)
     observation.putScalar(Array(1, subject.y, subject.x), 1)
 
-    INDArrayObservation(observation = observation, actions = actions)
+    INDArrayObservation(observation = observation.ravel(), actions = actions)
   }
 
 }
