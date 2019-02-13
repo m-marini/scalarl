@@ -82,6 +82,7 @@ case class QAgent(
   totalLoss:    Double            = 0,
   agentKpiSubj: Subject[AgentKpi]) extends Agent {
 
+  
   /**
    * Returns the index containing the max value of a by masking mask
    *
@@ -115,7 +116,7 @@ case class QAgent(
    * @param observationt the observation
    */
   private def q(observation: Observation): INDArray = {
-    val out = net.feedForward(observation.observation.ravel())
+    val out = net.feedForward(observation.observation)
     out.get(out.size() - 1)
   }
 
@@ -159,7 +160,7 @@ case class QAgent(
       val delta = Nd4j.zeros(q0.shape(): _*)
       delta.putScalar(action, err)
       val expected = q0.add(delta)
-      net.fit(obs0.observation.ravel(), expected)
+      net.fit(obs0.observation, expected)
       val newStepCount = stepCount + 1
       val newDiscount = discount * gamma
       val newReturnValue = returnValue + reward * discount
