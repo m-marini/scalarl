@@ -44,9 +44,10 @@ import org.nd4j.linalg.api.ops.impl.transforms.Tanh
 class TraceNetworkTest extends PropSpec with PropertyChecks with Matchers {
   val MaxInputs = 5
   val MaxOutputs = 5
+  val Eps = 1e-3
 
   def createNetwork(n: Long, m: Long): TraceNetwork = {
-    val layer1 = TraceDenseLayer(n, m, gamma = 0.9, lambda = 0.9, learningRate = 1e-3)
+    val layer1 = TraceDenseLayer(n, m, gamma = 0.0, lambda = 0.0, learningRate = 1e-3)
     val layer2 = new TraceTanhLayer()
     new TraceNetwork(Array(layer1, layer2))
   }
@@ -80,9 +81,37 @@ class TraceNetworkTest extends PropSpec with PropertyChecks with Matchers {
             val output = nn.forward(input)
             val expected = createExpected(input, nn)
 
-            output(0).distance1(expected(0)) should be < 1e-6
-            output(1).distance1(expected(1)) should be < 1e-6
-            output(2).distance1(expected(2)) should be < 1e-6
+            output(0).distance1(expected(0)) should be < Eps
+            output(1).distance1(expected(1)) should be < Eps
+            output(2).distance1(expected(2)) should be < Eps
+          }
+      }
+  }
+
+  def createLabels(n: Long): INDArray = Nd4j.randn(1L, n)
+
+  property(s"""Given a TraceNetwork
+    When backward invoked
+      and forward again
+    Then should return a smaller loss value""") {
+    forAll(
+      (Gen.choose(1L, MaxInputs), "noInputs"),
+      (Gen.choose(1L, MaxOutputs), "noOutputs")) {
+        (noInputs, noOutputs) =>
+          whenever(noInputs >= 1 && noOutputs >= 1) {
+            val input = createInput(noInputs)
+            val nn = createNetwork(noInputs, noOutputs)
+            val labels = createLabels(noOutputs)
+
+            val output = nn.forward(input)
+            val mask = Nd4j.ones(labels.shape(): _*)
+            val expectedError = output.last.distance2(labels) / 2
+            val initError = nn.backward(input, labels, mask)
+
+            initError should be(expectedError +- Eps)
+
+            val nextError = nn.backward(input, labels, mask)
+            nextError should be < initError
           }
       }
   }

@@ -26,39 +26,29 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 package org.mmarini.scalarl.agents
 
 import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.indexing.NDArrayIndex
+import org.nd4j.linalg.indexing.INDArrayIndex
 
-class TraceNetwork(
-  val layers: Array[TraceLayer],
-  val loss:   LossFunction      = LossFunctions.MSE) {
+/**
+ */
+trait LossFunction {
+  def apply(labels: INDArray, output: INDArray, mask: INDArray): Double
 
-  def forward(input: INDArray): Array[INDArray] = {
-    val (result, _) = layers.foldLeft((Array(input), input)) {
-      case ((result, input), layer) =>
-        val out = layer.forward(input)
-        (result :+ out, out)
-    }
-    result
-  }
+  def gradient(labels: INDArray, output: INDArray, mask: INDArray): INDArray
+}
 
-  /**
-   * Returns the loss value and update the network fitting the labels with mask given an input
-   */
-  def backward(input: INDArray, labels: INDArray, mask: INDArray): Double = {
-    val activations = forward(input)
-    val inOut = activations.zip(activations.tail).zip(layers)
-    val errors = loss.gradient(labels, activations.last, mask)
-    inOut.reverse.foldLeft((errors, mask)) {
-      case ((error, mask), ((in, out), layer)) =>
-        layer.backward(in, out, error, mask)
-    }
-    loss(labels, activations.last, mask)
-  }
+object LossFunctions {
+  val MSE: LossFunction = new LossFunction() {
 
-  def clearTraces(): TraceNetwork = {
-    layers.foreach(_.clearTraces())
-    this
+    override def apply(labels: INDArray, output: INDArray, mask: INDArray): Double =
+      labels.mul(mask).distance2(output.mul(mask)) / 2
+
+    override def gradient(labels: INDArray, output: INDArray, mask: INDArray): INDArray =
+      labels.sub(output).muli(mask)
   }
 }
