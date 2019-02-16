@@ -155,7 +155,7 @@ case class QAgent(
       val q0 = q(obs0)
       val q1 = q(obs1)
       val v0 = maxWithMask(q0, obs0.actions)
-      val v1 = maxWithMask(q1, obs1.actions)
+      val v1 = if (endUp) 0.0 else maxWithMask(q1, obs1.actions)
       val err = reward + gamma * v1 - v0
       val delta = Nd4j.zeros(q0.shape(): _*)
       delta.putScalar(action, err)
