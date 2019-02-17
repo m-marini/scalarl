@@ -29,36 +29,31 @@
 
 package org.mmarini.scalarl.agents
 
-import org.mmarini.scalarl.Agent
-import org.mmarini.scalarl.Observation
-import org.mmarini.scalarl.Action
-import org.mmarini.scalarl.Feedback
-import org.deeplearning4j.nn.conf.NeuralNetConfiguration
-import org.nd4j.linalg.learning.config.Sgd
+import java.io.File
+
 import org.deeplearning4j.nn.api.OptimizationAlgorithm
+import org.deeplearning4j.nn.conf.GradientNormalization
+import org.deeplearning4j.nn.conf.NeuralNetConfiguration
+import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
 import org.deeplearning4j.nn.conf.layers.DenseLayer
 import org.deeplearning4j.nn.conf.layers.OutputLayer
-import org.nd4j.linalg.activations.Activation
-import org.deeplearning4j.nn.conf.MultiLayerConfiguration
-import org.deeplearning4j.nn.weights.WeightInit
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
-import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.api.rng.Random
-import org.nd4j.linalg.api.rng.DefaultRandom
-import org.nd4j.linalg.lossfunctions.impl.LossMSLE
-import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
-import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.learning.config.Adam
+import org.deeplearning4j.nn.weights.WeightInit
 import org.deeplearning4j.util.ModelSerializer
-import org.deeplearning4j.nn.api.layers.LayerConstraint
-import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
-import org.deeplearning4j.nn.conf.GradientNormalization
-import java.io.File
-import org.mmarini.scalarl.AgentKpi
-import rx.lang.scala.Subject
-import rx.lang.scala.Observable
+import org.mmarini.scalarl.Action
+import org.mmarini.scalarl.Agent
 import org.mmarini.scalarl.AgentKpi
 import org.mmarini.scalarl.DefaultAgentKpi
+import org.mmarini.scalarl.Feedback
+import org.mmarini.scalarl.Observation
+import org.nd4j.linalg.activations.Activation
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.api.rng.DefaultRandom
+import org.nd4j.linalg.api.rng.Random
+import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.learning.config.Adam
+import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
+
 import com.typesafe.scalalogging.LazyLogging
 
 /**
@@ -80,9 +75,8 @@ case class QAgent(
   returnValue:  Double            = 0,
   discount:     Double            = 1,
   totalLoss:    Double            = 0,
-  agentKpiSubj: Subject[AgentKpi]) extends Agent {
+  agentKpi:     Option[AgentKpi]  = None) extends Agent {
 
-  
   /**
    * Returns the index containing the max value of a by masking mask
    *
@@ -115,9 +109,10 @@ case class QAgent(
    *
    * @param observationt the observation
    */
-  private def q(observation: Observation): INDArray = {
+  def q(observation: Observation): INDArray = {
     val out = net.feedForward(observation.observation)
-    out.get(out.size() - 1)
+    val q = out.get(out.size() - 1)
+    q
   }
 
   /**
@@ -155,12 +150,17 @@ case class QAgent(
       val q0 = q(obs0)
       val q1 = q(obs1)
       val v0 = maxWithMask(q0, obs0.actions)
-      val v1 = if (endUp) 0.0 else maxWithMask(q1, obs1.actions)
+      val v1 = if (endUp) {
+        0.0
+      } else {
+        maxWithMask(q1, obs1.actions)
+      }
       val err = reward + gamma * v1 - v0
       val delta = Nd4j.zeros(q0.shape(): _*)
       delta.putScalar(action, err)
       val expected = q0.add(delta)
       net.fit(obs0.observation, expected)
+      val newV0 = q(obs0)
       val newStepCount = stepCount + 1
       val newDiscount = discount * gamma
       val newReturnValue = returnValue + reward * discount
@@ -172,13 +172,13 @@ case class QAgent(
           stepCount = newStepCount,
           returnValue = newReturnValue,
           avgLoss = newTotalLoss / newStepCount)
-        agentKpiSubj.onNext(kpi)
         copy(
           episodeCount = newEpisodeCount,
           stepCount = 0,
           discount = 1,
           returnValue = 0,
-          totalLoss = 0)
+          totalLoss = 0,
+          agentKpi = Some(kpi))
       } else {
         copy(
           stepCount = newStepCount,
@@ -193,8 +193,6 @@ case class QAgent(
     this
   }
 
-  /** Returns the observable of [[AgentKpi]] */
-  override def agentKpiObs: Observable[AgentKpi] = agentKpiSubj
 }
 
 /**
@@ -265,8 +263,7 @@ case class QAgentBuilder(
       net = net,
       random = if (_seed != 0) new DefaultRandom(_seed) else new DefaultRandom(),
       epsilon = _epsilon,
-      gamma = _gamma,
-      agentKpiSubj = Subject())
+      gamma = _gamma)
   }
 
   private def loadNet(file: File): MultiLayerNetwork = {

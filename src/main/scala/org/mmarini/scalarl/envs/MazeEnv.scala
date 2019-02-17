@@ -40,6 +40,7 @@ import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.indexing.NDArrayIndex
 import org.mmarini.scalarl.Feedback
 import org.nd4j.linalg.api.ops.impl.transforms.comparison.Eps
+import org.mmarini.scalarl.Observation
 
 /**
  * The environment simulating a subject in a maze.
@@ -140,7 +141,7 @@ case class MazeEnv(
     (nextEnv, nextEnv.observation, reward, endUp, info)
   }
 
-  private lazy val observation: Observation = {
+  private def observation(subject: MazePos): Observation = {
     val actions = Nd4j.zeros(Array(Deltas.length), 'c')
     for {
       (delta, action) <- Deltas.zipWithIndex
@@ -159,6 +160,15 @@ case class MazeEnv(
     observation.putScalar(Array(1, subject.y, subject.x), 1)
 
     INDArrayObservation(observation = observation.ravel(), actions = actions)
+  }
+
+  private lazy val observation: Observation = observation(subject)
+
+  def dumpStates: Seq[Observation] = for {
+    y <- 0 until maze.height
+    x <- 0 until maze.width
+  } yield {
+    observation(MazePos(x, y))
   }
 
 }

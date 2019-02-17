@@ -23,7 +23,7 @@ endfunction
 
 function [STEP RET ERR] = loadFile(file)
   R = csvread(file);
-  STEP = R(2 : end, 2);
-  RET = R(2 : end, 3);
-  ERR = R(2 : end, 4);
+  STEP = R(:, 2);
+  RET = R(:, 3);
+  ERR = R(:, 4);
 endfunction
