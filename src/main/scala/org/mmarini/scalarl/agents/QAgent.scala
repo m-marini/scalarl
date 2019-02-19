@@ -30,6 +30,7 @@
 package org.mmarini.scalarl.agents
 
 import java.io.File
+import org.mmarini.scalarl.FileUtils._
 
 import org.deeplearning4j.nn.api.OptimizationAlgorithm
 import org.deeplearning4j.nn.conf.GradientNormalization
@@ -75,7 +76,8 @@ case class QAgent(
   returnValue:  Double            = 0,
   discount:     Double            = 1,
   totalLoss:    Double            = 0,
-  agentKpi:     Option[AgentKpi]  = None) extends Agent {
+  agentKpi:     Option[AgentKpi]  = None,
+  trace:        Option[String]    = None) extends Agent {
 
   /**
    * Returns the index containing the max value of a by masking mask
@@ -160,11 +162,16 @@ case class QAgent(
       delta.putScalar(action, err)
       val expected = q0.add(delta)
       net.fit(obs0.observation, expected)
-      val newV0 = q(obs0)
+      val newQ0 = q(obs0)
       val newStepCount = stepCount + 1
       val newDiscount = discount * gamma
       val newReturnValue = returnValue + reward * discount
       val newTotalLoss = totalLoss + err * err
+      trace.foreach(file => {
+        val actRewVect = Nd4j.create(Array(Array(action.toDouble, reward)))
+        val traceData = Nd4j.hstack(obs0.observation, q0, actRewVect, obs1.observation, q1, newQ0)
+        withFile(file, true)(w => writeINDArray(w)(traceData))
+      })
       if (endUp) {
         val newEpisodeCount = episodeCount + 1
         val kpi = DefaultAgentKpi(
@@ -222,7 +229,8 @@ case class QAgentBuilder(
   _seed:           Long           = 0L,
   _maxAbsParams:   Double         = 1e3,
   _maxAbsGradient: Double         = 1e2,
-  _file:           Option[String] = None) extends LazyLogging {
+  _file:           Option[String] = None,
+  _trace:          Option[String] = None) extends LazyLogging {
 
   val DefaultEpsilon = 0.01
   val DefaultGamma = 0.99
@@ -254,6 +262,9 @@ case class QAgentBuilder(
   /** Returns the builder with filename model to load */
   def file(file: String): QAgentBuilder = copy(_file = Some(file))
 
+  /** Returns the builder with trace filename */
+  def trace(file: Option[String]): QAgentBuilder = copy(_trace = file)
+
   /** Builds and returns the [[QAgent]] */
   def build(): QAgent = {
     val file = _file.map(f => new File(f)).filter(_.canRead())
@@ -263,7 +274,8 @@ case class QAgentBuilder(
       net = net,
       random = if (_seed != 0) new DefaultRandom(_seed) else new DefaultRandom(),
       epsilon = _epsilon,
-      gamma = _gamma)
+      gamma = _gamma,
+      trace = _trace)
   }
 
   private def loadNet(file: File): MultiLayerNetwork = {

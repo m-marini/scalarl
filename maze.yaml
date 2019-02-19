@@ -23,6 +23,7 @@ agent:
   maxAbsParameters: 1e3
   model: maze.model
   dump: maze-dump.csv
+  trace: trace.csv
 session:
   numEpisodes: 10
   sync: 0

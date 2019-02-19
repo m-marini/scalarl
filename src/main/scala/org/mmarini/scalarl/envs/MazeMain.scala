@@ -67,6 +67,7 @@ object MazeMain {
     val maxAbsGrads = conf.getConf("agent").getDouble("maxAbsGradients").get
     val maxAbsParams = conf.getConf("agent").getDouble("maxAbsParameters").get
     val model = conf.getConf("agent").getString("model").get
+    val trace = conf.getConf("agent").getString("trace")
     QAgentBuilder(numInputs, numActions).
       numHiddens1(numHiddens).
       numHiddens2(numHiddens).
@@ -77,6 +78,7 @@ object MazeMain {
       maxAbsParams(maxAbsParams).
       seed(seed).
       file(model).
+      trace(trace).
       build()
   }
 
