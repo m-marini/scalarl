@@ -1,4 +1,5 @@
 function [S0, Q0, ACTION, REWARD, S1, Q1, NQ0] = readTrace(file, W = 10, H = 10)
+  # INPUT         S0,    Q0,           ACTION,   REWARD,   S1,                Q1,                  NQ0
   # INPUT OFFSET: 1:200, 201:208,      209,      210,      211:410,           411:418,             419:426
   # INPUT OFFSET: 1:2*N, 2*N+1:2*N+NA, 2*N+NA+1, 2*N+NA+2, 2*N+NA+3:4*N+NA+2, 4*N+NA+3:4*N+2*NA+2, 4*N+2*NA+3:4*N+3*NA+2
   N = W * H;
