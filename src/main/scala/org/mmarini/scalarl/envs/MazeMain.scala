@@ -29,24 +29,28 @@
 
 package org.mmarini.scalarl.envs
 
-import scala.collection.Seq
-import scala.util.Random
-import org.mmarini.scalarl.Env
-import org.mmarini.scalarl.Agent
-import org.mmarini.scalarl.agents.QAgent
-import org.mmarini.scalarl.Session
-import org.mmarini.scalarl.agents.QAgentBuilder
-import org.yaml.snakeyaml.Yaml
 import java.io.FileReader
-import scala.collection.JavaConverters._
-import scala.collection.JavaConversions._
-import org.deeplearning4j.util.ModelSerializer
-import java.io.FileWriter
+import java.io.Writer
+
+import scala.collection.JavaConversions.`deprecated asScalaBuffer`
+import scala.collection.JavaConversions.`deprecated mapAsScalaMap`
+import scala.collection.JavaConversions.`deprecated seqAsJavaList`
+import scala.collection.Seq
+
+import org.mmarini.scalarl.Agent
 import org.mmarini.scalarl.AgentKpi
 import org.mmarini.scalarl.DefaultAgentKpi
+import org.mmarini.scalarl.Env
+import org.mmarini.scalarl.FileUtils.withFile
+import org.mmarini.scalarl.FileUtils.writeINDArray
+import org.mmarini.scalarl.Session
+import org.mmarini.scalarl.agents.QAgent
+import org.mmarini.scalarl.agents.QAgentBuilder
+import org.nd4j.linalg.factory.Nd4j
+import org.yaml.snakeyaml.Yaml
+import org.nd4j.linalg.api.ndarray.INDArray
 
 object MazeMain {
-
   private def buildEnv(conf: Configuration): Env = {
     val map = conf.getConf("env").getList[String]("map")
     MazeEnv.fromStrings(map)
@@ -63,6 +67,7 @@ object MazeMain {
     val maxAbsGrads = conf.getConf("agent").getDouble("maxAbsGradients").get
     val maxAbsParams = conf.getConf("agent").getDouble("maxAbsParameters").get
     val model = conf.getConf("agent").getString("model").get
+    val trace = conf.getConf("agent").getString("trace")
     QAgentBuilder(numInputs, numActions).
       numHiddens1(numHiddens).
       numHiddens2(numHiddens).
@@ -73,6 +78,7 @@ object MazeMain {
       maxAbsParams(maxAbsParams).
       seed(seed).
       file(model).
+      trace(trace).
       build()
   }
 
@@ -84,20 +90,16 @@ object MazeMain {
   private def agentConf(conf: Map[String, Any]) = conf("agent").asInstanceOf[java.util.Map[String, Any]].toMap
   private def sessionConf(conf: Map[String, Any]) = conf("session").asInstanceOf[java.util.Map[String, Any]].toMap
 
-  private def writerCvsHeader(file: String)(header: Seq[String]) {
-    val fw = new FileWriter(file)
-    fw.write(header.mkString(",") + "\n")
-    fw.close();
-  }
-  private def writeCvsRecord(file: String)(kpi: AgentKpi) {
-    val fw = new FileWriter(file, true)
-    val record = Seq(
-      kpi.asInstanceOf[DefaultAgentKpi].episodeCount.toString,
-      kpi.stepCount().toString,
-      kpi.returnValue().toString,
-      kpi.avgLoss().toString)
-    fw.write(record.mkString(",") + "\n")
-    fw.close();
+  private def createDump(session: Session): INDArray = {
+    val qagent = session.agent.asInstanceOf[QAgent]
+    val kpi = qagent.agentKpi.map(k =>
+      Nd4j.create(Array(Array(k.stepCount(), k.returnValue(), k.avgLoss())))).get
+    val states = session.env.asInstanceOf[MazeEnv].dumpStates
+    val n = states.length
+    val sMat = Nd4j.vstack(states.map(_.observation)).ravel()
+    val q = states.map(qagent.q)
+    val qMat = Nd4j.vstack(q).ravel()
+    Nd4j.hstack(kpi, sMat, qMat)
   }
 
   def main(args: Array[String]) {
@@ -105,20 +107,27 @@ object MazeMain {
     val numEpisodes = conf.getConf("session").getInt("numEpisodes").get
     val sync = conf.getConf("session").getLong("sync").get
     val mode = conf.getConf("session").getString("mode").get
-    val model = conf.getConf("agent").getString("model").get
-    val kpis = conf.getConf("agent").getString("kpis").get
-    writerCvsHeader(kpis)(Seq("Episode", "StepCount", "ReturnValue", "AvgLoss"))
+    val model = conf.getConf("agent").getString("model")
+    val dump = conf.getConf("agent").getString("dump")
+
+    def onEpisode(session: Session) {
+      val qagent = session.agent.asInstanceOf[QAgent]
+      model.foreach(qagent.writeModel)
+      for {
+        file <- dump
+      } {
+        val data = createDump(session)
+        withFile(file, true)(writeINDArray(_)(data))
+      }
+    }
+
     val session = new Session(
       numEpisodes,
       buildEnv(conf),
       buildAgent(conf),
       sync = sync,
       mode = mode,
-      onEpisode = Some((session) => {
-        session.agent.asInstanceOf[QAgent].writeModel(model)
-        None.orNull
-      }))
-    session.agent.agentKpiObs.subscribe(writeCvsRecord(kpis)_)
+      onEpisode = Some(onEpisode _))
     session.run()
   }
 }

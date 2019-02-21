@@ -1,7 +1,7 @@
 
 while true
 do
-    rm maze.model
+    rm maze.zip
     sbt run
-    mv maze-kpis.csv data/maze-kpis-$(date +%Y%m%d%H%M%S).csv
+    mv maze-dump.csv data/maze-dump-$(date +%Y%m%d%H%M%S).csv
 done

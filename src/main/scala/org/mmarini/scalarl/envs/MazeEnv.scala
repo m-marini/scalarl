@@ -40,6 +40,7 @@ import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.indexing.NDArrayIndex
 import org.mmarini.scalarl.Feedback
 import org.nd4j.linalg.api.ops.impl.transforms.comparison.Eps
+import org.mmarini.scalarl.Observation
 
 /**
  * The environment simulating a subject in a maze.
@@ -140,8 +141,8 @@ case class MazeEnv(
     (nextEnv, nextEnv.observation, reward, endUp, info)
   }
 
-  private lazy val observation: Observation = {
-    val actions = Nd4j.zeros(Array(Deltas.length), 'c')
+  private def observation(subject: MazePos): Observation = {
+    val actions = Nd4j.zeros(Deltas.length.toLong)
     for {
       (delta, action) <- Deltas.zipWithIndex
       pos = subject.moveBy(delta)
@@ -151,14 +152,25 @@ case class MazeEnv(
     }
 
     val shape = 2L +: maze.map.shape()
-    val observation = Nd4j.zeros(shape, 'c')
+    val observation = Nd4j.zeros(shape: _*)
 
-    val int0 = NDArrayIndex.interval(0, 1)
-    val int1 = NDArrayIndex.all()
-    observation.get(int0, int1, int1).assign(maze.map)
-    observation.putScalar(Array(1, subject.y, subject.x), 1)
+    val ind1 = NDArrayIndex.point(1)
+    val indAll = NDArrayIndex.all()
+    val map = maze.map
+    val x = observation.put(Array(ind1, indAll, indAll), map)
+    observation.putScalar(Array(0, subject.y, subject.x), 1)
 
-    INDArrayObservation(observation = observation.ravel(), actions = actions)
+    val obs = INDArrayObservation(observation = observation.ravel(), actions = actions)
+    obs
+  }
+
+  private lazy val observation: Observation = observation(subject)
+
+  def dumpStates: Seq[Observation] = for {
+    y <- 0 until maze.height
+    x <- 0 until maze.width
+  } yield {
+    observation(MazePos(x, y))
   }
 
 }
