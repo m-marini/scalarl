@@ -29,35 +29,31 @@
 
 package org.mmarini.scalarl
 
-import rx.lang.scala.Observable
+import org.nd4j.linalg.api.ndarray.INDArray
+import java.io.Writer
+import java.io.FileWriter
 
-/**
- * The agent acting in the environment
- *
- *  Generates actions to change the status of environment basing on observation of the environment
- *  and the internal strategy policy.
- *
- *  Updates its strategy policy to optimize the return value (discount sum of rewards)
- *  and the observation of resulting environment
- */
-trait Agent {
+object FileUtils {
 
-  /**
-   * Chooses the action to be executed to the environment
-   *
-   *  Returns the new agent and the chosen action
-   *
-   *  @observation the observation of environment
-   */
-  def chooseAction(observation: Observation): (Agent, Action)
+  def withWriter(w: Writer)(f: Writer => Unit) {
+    try {
+      f(w)
+    } finally {
+      w.close();
+    }
+  }
 
-  /**
-   * Returns the fit agent by optimizing its strategy policy
-   *
-   * @param feedback the feedback from the last step
-   */
-  def fit(feedback: Feedback): Agent
+  def withFile(file: String, append: Boolean)(f: Writer => Unit) {
+    withWriter(new FileWriter(file, true))(f)
+  }
 
-  /** Returns the option of [[AgentKpi]] */
-  def agentKpi: Option[AgentKpi]
+  def writeINDArray(fw: Writer)(matrix: INDArray) {
+    val Array(n, m) = matrix.shape()
+    for {
+      i <- 0L until n
+    } {
+      val record = for { j <- 0L until m } yield matrix.getDouble(i, j).toString
+      fw.write(record.mkString(",") + "\n")
+    }
+  }
 }

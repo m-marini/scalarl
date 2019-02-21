@@ -47,7 +47,7 @@ class Session(
   mode:      String                  = "human",
   close:     Boolean                 = false,
   sync:      Long                    = 0,
-  onEpisode: Option[Session => Void] = None) {
+  onEpisode: Option[Session => Unit] = None) {
 
   private var _env: Env = env0
   private var _agent: Agent = agent0

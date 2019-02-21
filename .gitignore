@@ -9,5 +9,6 @@
 /.cache-main
 /.cache-tests
 /data
-/*.model
+/maze.zip
 /*.csv
+/octave/octave-workspace

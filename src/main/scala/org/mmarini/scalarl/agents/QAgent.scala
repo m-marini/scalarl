@@ -29,36 +29,32 @@
 
 package org.mmarini.scalarl.agents
 
-import org.mmarini.scalarl.Agent
-import org.mmarini.scalarl.Observation
-import org.mmarini.scalarl.Action
-import org.mmarini.scalarl.Feedback
-import org.deeplearning4j.nn.conf.NeuralNetConfiguration
-import org.nd4j.linalg.learning.config.Sgd
+import java.io.File
+import org.mmarini.scalarl.FileUtils._
+
 import org.deeplearning4j.nn.api.OptimizationAlgorithm
+import org.deeplearning4j.nn.conf.GradientNormalization
+import org.deeplearning4j.nn.conf.NeuralNetConfiguration
+import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
 import org.deeplearning4j.nn.conf.layers.DenseLayer
 import org.deeplearning4j.nn.conf.layers.OutputLayer
-import org.nd4j.linalg.activations.Activation
-import org.deeplearning4j.nn.conf.MultiLayerConfiguration
-import org.deeplearning4j.nn.weights.WeightInit
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
-import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.api.rng.Random
-import org.nd4j.linalg.api.rng.DefaultRandom
-import org.nd4j.linalg.lossfunctions.impl.LossMSLE
-import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
-import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.learning.config.Adam
+import org.deeplearning4j.nn.weights.WeightInit
 import org.deeplearning4j.util.ModelSerializer
-import org.deeplearning4j.nn.api.layers.LayerConstraint
-import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
-import org.deeplearning4j.nn.conf.GradientNormalization
-import java.io.File
-import org.mmarini.scalarl.AgentKpi
-import rx.lang.scala.Subject
-import rx.lang.scala.Observable
+import org.mmarini.scalarl.Action
+import org.mmarini.scalarl.Agent
 import org.mmarini.scalarl.AgentKpi
 import org.mmarini.scalarl.DefaultAgentKpi
+import org.mmarini.scalarl.Feedback
+import org.mmarini.scalarl.Observation
+import org.nd4j.linalg.activations.Activation
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.api.rng.DefaultRandom
+import org.nd4j.linalg.api.rng.Random
+import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.learning.config.Adam
+import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
+
 import com.typesafe.scalalogging.LazyLogging
 
 /**
@@ -80,9 +76,9 @@ case class QAgent(
   returnValue:  Double            = 0,
   discount:     Double            = 1,
   totalLoss:    Double            = 0,
-  agentKpiSubj: Subject[AgentKpi]) extends Agent {
+  agentKpi:     Option[AgentKpi]  = None,
+  trace:        Option[String]    = None) extends Agent {
 
-  
   /**
    * Returns the index containing the max value of a by masking mask
    *
@@ -115,9 +111,10 @@ case class QAgent(
    *
    * @param observationt the observation
    */
-  private def q(observation: Observation): INDArray = {
+  def q(observation: Observation): INDArray = {
     val out = net.feedForward(observation.observation)
-    out.get(out.size() - 1)
+    val q = out.get(out.size() - 1)
+    q
   }
 
   /**
@@ -155,16 +152,26 @@ case class QAgent(
       val q0 = q(obs0)
       val q1 = q(obs1)
       val v0 = maxWithMask(q0, obs0.actions)
-      val v1 = if (endUp) 0.0 else maxWithMask(q1, obs1.actions)
+      val v1 = if (endUp) {
+        0.0
+      } else {
+        maxWithMask(q1, obs1.actions)
+      }
       val err = reward + gamma * v1 - v0
       val delta = Nd4j.zeros(q0.shape(): _*)
       delta.putScalar(action, err)
       val expected = q0.add(delta)
       net.fit(obs0.observation, expected)
+      val newQ0 = q(obs0)
       val newStepCount = stepCount + 1
       val newDiscount = discount * gamma
       val newReturnValue = returnValue + reward * discount
       val newTotalLoss = totalLoss + err * err
+      trace.foreach(file => {
+        val actRewVect = Nd4j.create(Array(Array(action.toDouble, reward)))
+        val traceData = Nd4j.hstack(obs0.observation, q0, actRewVect, obs1.observation, q1, newQ0)
+        withFile(file, true)(w => writeINDArray(w)(traceData))
+      })
       if (endUp) {
         val newEpisodeCount = episodeCount + 1
         val kpi = DefaultAgentKpi(
@@ -172,13 +179,13 @@ case class QAgent(
           stepCount = newStepCount,
           returnValue = newReturnValue,
           avgLoss = newTotalLoss / newStepCount)
-        agentKpiSubj.onNext(kpi)
         copy(
           episodeCount = newEpisodeCount,
           stepCount = 0,
           discount = 1,
           returnValue = 0,
-          totalLoss = 0)
+          totalLoss = 0,
+          agentKpi = Some(kpi))
       } else {
         copy(
           stepCount = newStepCount,
@@ -193,8 +200,6 @@ case class QAgent(
     this
   }
 
-  /** Returns the observable of [[AgentKpi]] */
-  override def agentKpiObs: Observable[AgentKpi] = agentKpiSubj
 }
 
 /**
@@ -224,7 +229,8 @@ case class QAgentBuilder(
   _seed:           Long           = 0L,
   _maxAbsParams:   Double         = 1e3,
   _maxAbsGradient: Double         = 1e2,
-  _file:           Option[String] = None) extends LazyLogging {
+  _file:           Option[String] = None,
+  _trace:          Option[String] = None) extends LazyLogging {
 
   val DefaultEpsilon = 0.01
   val DefaultGamma = 0.99
@@ -256,6 +262,9 @@ case class QAgentBuilder(
   /** Returns the builder with filename model to load */
   def file(file: String): QAgentBuilder = copy(_file = Some(file))
 
+  /** Returns the builder with trace filename */
+  def trace(file: Option[String]): QAgentBuilder = copy(_trace = file)
+
   /** Builds and returns the [[QAgent]] */
   def build(): QAgent = {
     val file = _file.map(f => new File(f)).filter(_.canRead())
@@ -266,7 +275,7 @@ case class QAgentBuilder(
       random = if (_seed != 0) new DefaultRandom(_seed) else new DefaultRandom(),
       epsilon = _epsilon,
       gamma = _gamma,
-      agentKpiSubj = Subject())
+      trace = _trace)
   }
 
   private def loadNet(file: File): MultiLayerNetwork = {
