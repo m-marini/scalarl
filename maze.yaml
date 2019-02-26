@@ -14,7 +14,7 @@ env:
 agent:
   numInputs: 200
   numActions: 8
-  numHiddens: 100
+  numHiddens: []
   seed: 1234
   learningRate: 3e-3
   epsilon: 0.03
