@@ -208,8 +208,7 @@ case class QAgent(
  *  @constructor Creates a [[QAgentBuilder]]
  *  @param numInputs the number of input nodes
  *  @param numActions the total number of actions or output nodes
- *  @param _numHiddens1 the number of hidden nodes in the second layer
- *  @param _numHiddens1 the number of hidden nodes in the third layer
+ *  @param _numHiddens array of the number of hidden nodes per layer
  *  @param _learningRate the learning rate
  *  @param _epsilon the epsilon value of epsilon-greedy policy
  *  @param _gamma the discount factor for total return
@@ -221,8 +220,7 @@ case class QAgent(
 case class QAgentBuilder(
   numInputs:       Int,
   numActions:      Int,
-  _numHiddens1:    Int            = 10,
-  _numHiddens2:    Int            = 10,
+  _numHiddens:     Array[Int]     = Array(),
   _learningRate:   Double         = Adam.DEFAULT_ADAM_LEARNING_RATE,
   _epsilon:        Double         = 1e-2,
   _gamma:          Double         = 0.99,
@@ -235,11 +233,11 @@ case class QAgentBuilder(
   val DefaultEpsilon = 0.01
   val DefaultGamma = 0.99
 
-  /** Returns the builder with a number of hidden nodes in the second layer */
-  def numHiddens1(numHidden: Int): QAgentBuilder = copy(_numHiddens1 = numHidden)
+  /** Returns the builder with a number of hidden nodes */
+  def numHiddens(numHiddens: Array[Int]): QAgentBuilder = copy(_numHiddens = numHiddens)
 
   /** Returns the builder with a number of hidden nodes in the third layer */
-  def numHiddens2(numHidden: Int): QAgentBuilder = copy(_numHiddens2 = numHidden)
+  def addLayer(numHidden: Int): QAgentBuilder = numHiddens(_numHiddens :+ numHidden)
 
   /** Returns the builder with epsilon value */
   def epsilon(epsilon: Double): QAgentBuilder = copy(_epsilon = epsilon)
@@ -283,22 +281,27 @@ case class QAgentBuilder(
     ModelSerializer.restoreMultiLayerNetwork(file, true)
   }
 
+  private def buildHiddenLayers(): Array[DenseLayer] = if (_numHiddens.isEmpty) {
+    Array()
+  } else {
+    val inpAct = numInputs +: _numHiddens.init
+    val layers = for {
+      (n, m) <- inpAct.zip(_numHiddens)
+    } yield new DenseLayer.Builder().
+      nIn(n).
+      nOut(m).
+      weightInit(WeightInit.XAVIER).
+      activation(Activation.TANH).
+      build()
+    layers
+  }
+
   /** Returns the built network for the QAgent */
   private def buildNet(): MultiLayerNetwork = {
-    val layer1 = new DenseLayer.Builder().
-      nIn(numInputs).
-      nOut(_numHiddens1).
-      weightInit(WeightInit.XAVIER).
-      activation(Activation.TANH).
-      build()
-    val layer2 = new DenseLayer.Builder().
-      nIn(_numHiddens1).
-      nOut(_numHiddens2).
-      weightInit(WeightInit.XAVIER).
-      activation(Activation.TANH).
-      build()
-    val layer3 = new OutputLayer.Builder().
-      nIn(_numHiddens2).
+    val layers = buildHiddenLayers()
+    val outActivations = _numHiddens.lastOption.getOrElse(numInputs)
+    val outLayer = new OutputLayer.Builder().
+      nIn(outActivations).
       nOut(numActions).
       lossFunction(LossFunction.MSE).
       activation(Activation.IDENTITY).
@@ -312,7 +315,7 @@ case class QAgentBuilder(
       constrainAllParameters(new MinMaxNormConstraint(-_maxAbsParams, _maxAbsParams, 1)).
       gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue).
       gradientNormalizationThreshold(_maxAbsGradient).
-      list(layer1, layer2, layer3).
+      list((layers :+ outLayer): _*).
       build()
 
     new MultiLayerNetwork(conf);
