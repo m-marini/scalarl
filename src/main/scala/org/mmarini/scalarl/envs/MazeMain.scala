@@ -59,7 +59,7 @@ object MazeMain {
   private def buildAgent(conf: Configuration): Agent = {
     val numInputs = conf.getConf("agent").getInt("numInputs").get
     val numActions = conf.getConf("agent").getInt("numActions").get
-    val numHiddens = conf.getConf("agent").getInt("numHiddens").get
+    val numHiddens = conf.getConf("agent").getList[Int]("numHiddens")
     val seed = conf.getConf("agent").getLong("seed").get
     val epsilon = conf.getConf("agent").getDouble("epsilon").get
     val gamma = conf.getConf("agent").getDouble("gamma").get
@@ -69,8 +69,7 @@ object MazeMain {
     val model = conf.getConf("agent").getString("model").get
     val trace = conf.getConf("agent").getString("trace")
     QAgentBuilder(numInputs, numActions).
-      numHiddens1(numHiddens).
-      numHiddens2(numHiddens).
+      numHiddens(numHiddens.toArray).
       epsilon(epsilon).
       gamma(gamma).
       learningRate(learningRate).
