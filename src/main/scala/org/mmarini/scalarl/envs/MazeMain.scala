@@ -48,8 +48,9 @@ import org.nd4j.linalg.factory.Nd4j
 import org.yaml.snakeyaml.Yaml
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.mmarini.scalarl.Episode
+import com.typesafe.scalalogging.LazyLogging
 
-object MazeMain {
+object MazeMain extends LazyLogging {
   private def buildEnv(conf: Configuration): Env = {
     val map = conf.getConf("env").getList[String]("map")
     MazeEnv.fromStrings(map)
@@ -66,7 +67,7 @@ object MazeMain {
     val maxAbsGrads = conf.getConf("agent").getDouble("maxAbsGradients").get
     val maxAbsParams = conf.getConf("agent").getDouble("maxAbsParameters").get
     val model = conf.getConf("agent").getString("model").get
-    val trace = conf.getConf("agent").getString("trace")
+    //    val trace = conf.getConf("agent").getString("trace")
     QAgentBuilder(numInputs, numActions).
       numHiddens(numHiddens.toArray).
       epsilon(epsilon).
@@ -76,7 +77,7 @@ object MazeMain {
       maxAbsParams(maxAbsParams).
       seed(seed).
       file(model).
-      trace(trace).
+      //      trace(trace).
       build()
   }
 
@@ -125,7 +126,9 @@ object MazeMain {
       buildAgent(conf),
       sync = sync,
       mode = mode)
-    session.episodeObs.subscribe(onEpisode(_))
+    session.episodeObs.subscribe(
+      onEpisode(_),
+      ex => logger.error(ex.getMessage, ex))
     session.run()
   }
 }

@@ -81,6 +81,8 @@ class Session(
       var _obs = obs1
       _env = env2
       var step = 0
+      var totalLoss = 0.0
+      var returnValue = 0.0
       do {
         val obs0 = _obs
         val (agent1, action) = _agent.chooseAction(obs0)
@@ -102,8 +104,8 @@ class Session(
       episodeSubj.onNext(Episode(
         episode = episode,
         stepCount = step,
-        returnValue = 0,
-        avgLoss = 0,
+        returnValue = returnValue,
+        avgLoss = totalLoss / step,
         env = _env,
         agent = _agent,
         session = this))

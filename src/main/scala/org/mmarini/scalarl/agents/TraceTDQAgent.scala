@@ -66,12 +66,7 @@ case class TraceTDQAgent(
   random:       Random,
   epsilon:      Double,
   gamma:        Double,
-  lambda:       Double,
-  episodeCount: Int          = 0,
-  stepCount:    Int          = 0,
-  returnValue:  Double       = 0,
-  discount:     Double       = 1,
-  totalLoss:    Double       = 0) extends Agent {
+  lambda:       Double) extends Agent {
 
   /**
    * Returns the index containing the max value of a by masking mask

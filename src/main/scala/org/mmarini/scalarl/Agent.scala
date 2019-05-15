@@ -57,4 +57,7 @@ trait Agent {
    * @param feedback the feedback from the last step
    */
   def fit(feedback: Feedback): Agent
+
+  /** Returns the discount parameter */
+  def gamma: Double
 }

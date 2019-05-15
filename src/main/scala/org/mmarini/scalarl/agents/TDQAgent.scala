@@ -67,15 +67,16 @@ import rx.lang.scala.Subject
  *  and the observation of resulting environment
  */
 case class TDQAgent(
-  net:          MultiLayerNetwork,
-  random:       Random,
-  epsilon:      Double,
-  gamma:        Double,
-  episodeCount: Int               = 0,
-  stepCount:    Int               = 0,
-  returnValue:  Double            = 0,
-  discount:     Double            = 1,
-  totalLoss:    Double            = 0) extends Agent {
+  net:     MultiLayerNetwork,
+  random:  Random,
+  epsilon: Double,
+  gamma:   Double) extends Agent {
+  //  gamma:        Double,
+  //  episodeCount: Int               = 0,
+  //  stepCount:    Int               = 0,
+  //  returnValue:  Double            = 0,
+  //  discount:     Double            = 1,
+  //  totalLoss:    Double            = 0) extends Agent {
 
   /**
    * Returns the index containing the max value of a by masking mask
@@ -154,32 +155,35 @@ case class TDQAgent(
       val delta = Nd4j.zeros(q0.shape(): _*)
       delta.putScalar(action, err)
       val expected = q0.add(delta)
-      net.fit(obs0.observation, expected)
-      val newStepCount = stepCount + 1
-      val newDiscount = discount * gamma
-      val newReturnValue = returnValue + reward * discount
-      val newTotalLoss = totalLoss + err * err
-      if (endUp) {
-        val newEpisodeCount = episodeCount + 1
-//        val kpi = DefaultAgentKpi(
-//          episodeCount = newEpisodeCount,
-//          stepCount = newStepCount,
-//          returnValue = newReturnValue,
-//          avgLoss = newTotalLoss / newStepCount)
-//        agentKpiSubj.onNext(kpi)
-        copy(
-          episodeCount = newEpisodeCount,
-          stepCount = 0,
-          discount = 1,
-          returnValue = 0,
-          totalLoss = 0)
-      } else {
-        copy(
-          stepCount = newStepCount,
-          discount = newDiscount,
-          returnValue = newReturnValue,
-          totalLoss = newTotalLoss)
-      }
+      val newNet = net.clone()
+      newNet.fit(obs0.observation, expected)
+      copy(net = newNet)
+
+    //      val newStepCount = stepCount + 1
+    //      val newDiscount = discount * gamma
+    //      val newReturnValue = returnValue + reward * discount
+    //      val newTotalLoss = totalLoss + err * err
+    //      if (endUp) {
+    //        val newEpisodeCount = episodeCount + 1
+    //        //        val kpi = DefaultAgentKpi(
+    //        //          episodeCount = newEpisodeCount,
+    //        //          stepCount = newStepCount,
+    //        //          returnValue = newReturnValue,
+    //        //          avgLoss = newTotalLoss / newStepCount)
+    //        //        agentKpiSubj.onNext(kpi)
+    //        copy(
+    //          episodeCount = newEpisodeCount,
+    //          stepCount = 0,
+    //          discount = 1,
+    //          returnValue = 0,
+    //          totalLoss = 0)
+    //      } else {
+    //        copy(
+    //          stepCount = newStepCount,
+    //          discount = newDiscount,
+    //          returnValue = newReturnValue,
+    //          totalLoss = newTotalLoss)
+    //      }
   }
 
   def writeModel(file: String): TDQAgent = {
