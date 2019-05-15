@@ -1,6 +1,6 @@
 # Trace Dense Layer
 
-The layer implement a full connected nural network layer base on eligible trace
+The layer implement a full connected neural network layer base on eligible trace
 to update the layer parameters.
 
 ## Forward propagation
