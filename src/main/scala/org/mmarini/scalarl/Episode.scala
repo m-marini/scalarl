@@ -29,16 +29,11 @@
 
 package org.mmarini.scalarl
 
-/**
- * The AgentKpi gives the key performance indicators about the [[Agent]].
- */
-trait AgentKpi {
-  /** Returns the return value of the episode */
-  def returnValue(): Double
-
-  /** Returns the number of steps of the episode */
-  def stepCount(): Int
-
-  /** Returns the average loss value */
-  def avgLoss(): Double
-}
+case class Episode(
+  episode:     Int,
+  stepCount:   Int,
+  returnValue: Double,
+  avgLoss:     Double,
+  env:         Env,
+  agent:       Agent,
+  session:     Session)

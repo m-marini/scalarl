@@ -29,7 +29,9 @@
 
 package org.mmarini.scalarl
 
-/**
- * The AgentKpi gives the key performance indicators about the [[Agent]].
- */
-case class DefaultAgentKpi(episodeCount: Int, returnValue: Double, stepCount: Int, avgLoss: Double) extends AgentKpi
+case class Step(
+  episode: Int,
+  step:    Int,
+  env:     Env,
+  agent:   Agent,
+  session: Session)

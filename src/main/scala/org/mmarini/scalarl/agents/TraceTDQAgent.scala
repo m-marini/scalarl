@@ -42,22 +42,15 @@ import org.deeplearning4j.nn.weights.WeightInit
 import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.Action
 import org.mmarini.scalarl.Agent
-import org.mmarini.scalarl.AgentKpi
-import org.mmarini.scalarl.DefaultAgentKpi
 import org.mmarini.scalarl.Feedback
 import org.mmarini.scalarl.Observation
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.api.rng.DefaultRandom
 import org.nd4j.linalg.api.rng.Random
-import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.learning.config.Adam
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 
 import com.typesafe.scalalogging.LazyLogging
-
-import rx.lang.scala.Observable
-import rx.lang.scala.Subject
 
 /**
  * The agent acting in the environment by QLearning T(0) algorithm.
@@ -74,12 +67,11 @@ case class TraceTDQAgent(
   epsilon:      Double,
   gamma:        Double,
   lambda:       Double,
-  episodeCount: Int               = 0,
-  stepCount:    Int               = 0,
-  returnValue:  Double            = 0,
-  discount:     Double            = 1,
-  totalLoss:    Double            = 0,
-  agentKpiSubj: Subject[AgentKpi]) extends Agent {
+  episodeCount: Int          = 0,
+  stepCount:    Int          = 0,
+  returnValue:  Double       = 0,
+  discount:     Double       = 1,
+  totalLoss:    Double       = 0) extends Agent {
 
   /**
    * Returns the index containing the max value of a by masking mask
@@ -191,9 +183,6 @@ case class TraceTDQAgent(
     //    ModelSerializer.writeModel(net, file, true)
     this
   }
-
-  /** Returns the observable of [[AgentKpi]] */
-  override def agentKpiObs: Observable[AgentKpi] = agentKpiSubj
 }
 
 /**

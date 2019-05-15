@@ -57,7 +57,4 @@ trait Agent {
    * @param feedback the feedback from the last step
    */
   def fit(feedback: Feedback): Agent
-
-  /** Returns the option of [[AgentKpi]] */
-  def agentKpi: Option[AgentKpi]
 }

@@ -29,6 +29,9 @@
 
 package org.mmarini.scalarl
 
+import rx.lang.scala.Observable
+import rx.lang.scala.Subject
+
 /**
  * The session executes the interactions between the environment and the agent
  *
@@ -44,16 +47,18 @@ class Session(
   noEpisode: Int,
   env0:      Env,
   agent0:    Agent,
-  mode:      String                  = "human",
-  close:     Boolean                 = false,
-  sync:      Long                    = 0,
-  onEpisode: Option[Session => Unit] = None) {
+  mode:      String  = "human",
+  close:     Boolean = false,
+  sync:      Long    = 0) {
+
+  private val episodeSubj: Subject[Episode] = Subject()
+  private val stepSubj: Subject[Step] = Subject()
 
   private var _env: Env = env0
   private var _agent: Agent = agent0
 
-  def env: Env = _env
-  def agent: Agent = _agent
+  def episodeObs: Observable[Episode] = episodeSubj
+  def stepObs: Observable[Step] = stepSubj
 
   /**
    * Runs the interactions for the number of episodes
@@ -75,6 +80,7 @@ class Session(
       var _endUp = true
       var _obs = obs1
       _env = env2
+      var step = 0
       do {
         val obs0 = _obs
         val (agent1, action) = _agent.chooseAction(obs0)
@@ -84,9 +90,41 @@ class Session(
         _agent = agent1.fit((obs0, action, reward, obs1, endUp, info))
         _obs = obs1
         _endUp = endUp
+        stepSubj.onNext(Step(
+          episode = episode,
+          step = step,
+          env = _env,
+          agent = _agent,
+          session = this))
+        step += 1
       } while (!_endUp)
-      onEpisode.foreach(_(this))
+      // TODO compute statistics
+      episodeSubj.onNext(Episode(
+        episode = episode,
+        stepCount = step,
+        returnValue = 0,
+        avgLoss = 0,
+        env = _env,
+        agent = _agent,
+        session = this))
     }
     this
   }
+}
+
+object Session {
+  /**
+   * Returns a session
+   */
+  def apply(
+    noEpisode: Int,
+    env0:      Env,
+    agent0:    Agent,
+    mode:      String,
+    sync:      Long   = 0): Session =
+    new Session(
+      noEpisode = noEpisode,
+      env0 = env0,
+      agent0 = agent0,
+      mode = mode)
 }

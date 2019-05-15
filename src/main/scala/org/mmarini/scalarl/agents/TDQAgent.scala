@@ -42,8 +42,6 @@ import org.deeplearning4j.nn.weights.WeightInit
 import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.Action
 import org.mmarini.scalarl.Agent
-import org.mmarini.scalarl.AgentKpi
-import org.mmarini.scalarl.DefaultAgentKpi
 import org.mmarini.scalarl.Feedback
 import org.mmarini.scalarl.Observation
 import org.nd4j.linalg.activations.Activation
@@ -77,8 +75,7 @@ case class TDQAgent(
   stepCount:    Int               = 0,
   returnValue:  Double            = 0,
   discount:     Double            = 1,
-  totalLoss:    Double            = 0,
-  agentKpiSubj: Subject[AgentKpi]) extends Agent {
+  totalLoss:    Double            = 0) extends Agent {
 
   /**
    * Returns the index containing the max value of a by masking mask
@@ -164,12 +161,12 @@ case class TDQAgent(
       val newTotalLoss = totalLoss + err * err
       if (endUp) {
         val newEpisodeCount = episodeCount + 1
-        val kpi = DefaultAgentKpi(
-          episodeCount = newEpisodeCount,
-          stepCount = newStepCount,
-          returnValue = newReturnValue,
-          avgLoss = newTotalLoss / newStepCount)
-        agentKpiSubj.onNext(kpi)
+//        val kpi = DefaultAgentKpi(
+//          episodeCount = newEpisodeCount,
+//          stepCount = newStepCount,
+//          returnValue = newReturnValue,
+//          avgLoss = newTotalLoss / newStepCount)
+//        agentKpiSubj.onNext(kpi)
         copy(
           episodeCount = newEpisodeCount,
           stepCount = 0,
@@ -189,9 +186,6 @@ case class TDQAgent(
     ModelSerializer.writeModel(net, file, true)
     this
   }
-
-  /** Returns the observable of [[AgentKpi]] */
-  override def agentKpiObs: Observable[AgentKpi] = agentKpiSubj
 }
 
 /**
@@ -262,8 +256,7 @@ case class TDQAgentBuilder(
       net = net,
       random = if (_seed != 0) new DefaultRandom(_seed) else new DefaultRandom(),
       epsilon = _epsilon,
-      gamma = _gamma,
-      agentKpiSubj = Subject())
+      gamma = _gamma)
   }
 
   private def loadNet(file: File): MultiLayerNetwork = {

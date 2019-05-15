@@ -38,8 +38,6 @@ import scala.collection.JavaConversions.`deprecated seqAsJavaList`
 import scala.collection.Seq
 
 import org.mmarini.scalarl.Agent
-import org.mmarini.scalarl.AgentKpi
-import org.mmarini.scalarl.DefaultAgentKpi
 import org.mmarini.scalarl.Env
 import org.mmarini.scalarl.FileUtils.withFile
 import org.mmarini.scalarl.FileUtils.writeINDArray
@@ -49,6 +47,7 @@ import org.mmarini.scalarl.agents.QAgentBuilder
 import org.nd4j.linalg.factory.Nd4j
 import org.yaml.snakeyaml.Yaml
 import org.nd4j.linalg.api.ndarray.INDArray
+import org.mmarini.scalarl.Episode
 
 object MazeMain {
   private def buildEnv(conf: Configuration): Env = {
@@ -89,11 +88,11 @@ object MazeMain {
   private def agentConf(conf: Map[String, Any]) = conf("agent").asInstanceOf[java.util.Map[String, Any]].toMap
   private def sessionConf(conf: Map[String, Any]) = conf("session").asInstanceOf[java.util.Map[String, Any]].toMap
 
-  private def createDump(session: Session): INDArray = {
-    val qagent = session.agent.asInstanceOf[QAgent]
-    val kpi = qagent.agentKpi.map(k =>
-      Nd4j.create(Array(Array(k.stepCount(), k.returnValue(), k.avgLoss())))).get
-    val states = session.env.asInstanceOf[MazeEnv].dumpStates
+  private def createDump(episode: Episode): INDArray = {
+    val session = episode.session
+    val qagent = episode.agent.asInstanceOf[QAgent]
+    val kpi = Nd4j.create(Array(Array(episode.stepCount, episode.returnValue, episode.avgLoss)))
+    val states = episode.env.asInstanceOf[MazeEnv].dumpStates
     val n = states.length
     val sMat = Nd4j.vstack(states.map(_.observation)).ravel()
     val q = states.map(qagent.q)
@@ -109,24 +108,24 @@ object MazeMain {
     val model = conf.getConf("agent").getString("model")
     val dump = conf.getConf("agent").getString("dump")
 
-    def onEpisode(session: Session) {
-      val qagent = session.agent.asInstanceOf[QAgent]
+    def onEpisode(episode: Episode) {
+      val qagent = episode.agent.asInstanceOf[QAgent]
       model.foreach(qagent.writeModel)
       for {
         file <- dump
       } {
-        val data = createDump(session)
+        val data = createDump(episode)
         withFile(file, true)(writeINDArray(_)(data))
       }
     }
 
-    val session = new Session(
+    val session = Session(
       numEpisodes,
       buildEnv(conf),
       buildAgent(conf),
       sync = sync,
-      mode = mode,
-      onEpisode = Some(onEpisode _))
+      mode = mode)
+    session.episodeObs.subscribe(onEpisode(_))
     session.run()
   }
 }
