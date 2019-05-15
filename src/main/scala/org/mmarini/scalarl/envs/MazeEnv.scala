@@ -141,6 +141,7 @@ case class MazeEnv(
     (nextEnv, nextEnv.observation, reward, endUp, info)
   }
 
+  /** Returns the observation for a given subject location */
   private def observation(subject: MazePos): Observation = {
     val actions = Nd4j.zeros(Deltas.length.toLong)
     for {
@@ -166,6 +167,13 @@ case class MazeEnv(
 
   private lazy val observation: Observation = observation(subject)
 
+  /**
+   * Returns the sequence of observation for each of possible states
+   * Each observation consists of an array of states and an array of available actions.
+   * The state array consists of 10 x 10 values 1 value for the cell with subject
+   * and a second sequence of 10 x 10 values with 1 value foe the cell with obstacle
+   * The action array contains 9 values each for any direction with 1 value if action is valid
+   */
   def dumpStates: Seq[Observation] = for {
     y <- 0 until maze.height
     x <- 0 until maze.width

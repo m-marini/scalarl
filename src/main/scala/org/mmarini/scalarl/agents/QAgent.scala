@@ -142,11 +142,12 @@ case class QAgent(
   }
 
   /**
+   * Return an agent that fits the expected result and the error.
    * Updates the q function to fit the expected result.
    *
    *  @param feedback the [[Feedback]] from environment after a state transition
    */
-  def fit(feedback: Feedback): Agent = feedback match {
+  override def fit(feedback: Feedback): (Agent, Double) = feedback match {
     case (obs0, action, reward, obs1, endUp, _) =>
       val q0 = q(obs0)
       val q1 = q(obs1)
@@ -162,7 +163,7 @@ case class QAgent(
       val expected = q0.add(delta)
       val newNet = net.clone()
       newNet.fit(obs0.observation, expected)
-      copy(net = newNet)
+      (copy(net = newNet), err)
     //      val newQ0 = q(obs0)
     //      val newStepCount = stepCount + 1
     //      val newDiscount = discount * gamma

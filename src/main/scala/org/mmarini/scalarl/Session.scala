@@ -63,7 +63,8 @@ class Session(
   /**
    * Runs the interactions for the number of episodes
    *
-   *  Each episode is composed by the
+   *  Each episode is compo
+   *  sed by the
    *  - reset of environment
    *  - render of the environment
    *  - a iteration of
@@ -89,26 +90,30 @@ class Session(
         val (env1, obs1, reward, endUp, info) = _env.step(action)
         _env = env1.render(mode, close)
         if (sync > 0) Thread.sleep(sync)
-        _agent = agent1.fit((obs0, action, reward, obs1, endUp, info))
+        val (agent2, error) = agent1.fit((obs0, action, reward, obs1, endUp, info))
+        _agent = agent2
         _obs = obs1
         _endUp = endUp
-        stepSubj.onNext(Step(
+        val stepInfo = Step(
           episode = episode,
           step = step,
           env = _env,
           agent = _agent,
-          session = this))
+          session = this)
+        stepSubj.onNext(stepInfo)
         step += 1
+        returnValue = returnValue * _agent.gamma + reward
+        totalLoss += error * error
       } while (!_endUp)
-      // TODO compute statistics
-      episodeSubj.onNext(Episode(
+      val episodeInfo = Episode(
         episode = episode,
         stepCount = step,
         returnValue = returnValue,
         avgLoss = totalLoss / step,
         env = _env,
         agent = _agent,
-        session = this))
+        session = this)
+      episodeSubj.onNext(episodeInfo)
     }
     this
   }

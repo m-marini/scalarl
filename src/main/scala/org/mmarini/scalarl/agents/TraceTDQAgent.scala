@@ -62,11 +62,11 @@ import com.typesafe.scalalogging.LazyLogging
  *  and the observation of resulting environment
  */
 case class TraceTDQAgent(
-  net:          TraceNetwork,
-  random:       Random,
-  epsilon:      Double,
-  gamma:        Double,
-  lambda:       Double) extends Agent {
+  net:     TraceNetwork,
+  random:  Random,
+  epsilon: Double,
+  gamma:   Double,
+  lambda:  Double) extends Agent {
 
   /**
    * Returns the index containing the max value of a by masking mask
@@ -135,7 +135,7 @@ case class TraceTDQAgent(
    *
    *  @param feedback the [[Feedback]] from environment after a state transition
    */
-  def fit(feedback: Feedback): Agent = feedback match {
+  override def fit(feedback: Feedback): (Agent, Double) = feedback match {
     case (obs0, action, reward, obs1, endUp, _) =>
       //      val q0 = q(obs0)
       //      val q1 = q(obs1)

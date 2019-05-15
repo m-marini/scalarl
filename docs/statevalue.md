@@ -1,11 +1,10 @@
 # State value
 
-
 Lets $\gamma = 0.999$
 
 Value $v=1$
 
-```
+```text
 9|  1O1     |
 8|  111     |
 7|   *      |
@@ -21,7 +20,7 @@ Value $v=1$
 
 Value $v=\gamma-1=0.999-1 = -0.001$
 
-```
+```text
 | 2 O 2    |
 | 2   2    |
 | 22222    |
@@ -36,7 +35,7 @@ Value $v=\gamma-1=0.999-1 = -0.001$
 
 Value $v=\gamma^2-\gamma - 1 \approx -1.001$
 
-```
+```text
 |3  O  3   |
 |3     3   |
 |3     3   |
@@ -51,7 +50,7 @@ Value $v=\gamma^2-\gamma - 1 \approx -1.001$
 
 Value $v=\gamma^3- \gamma^2-\gamma - 1 \approx -2$
 
-```
+```text
 |   O   4  |
 |       4  |
 |       4  |
@@ -66,7 +65,7 @@ Value $v=\gamma^3- \gamma^2-\gamma - 1 \approx -2$
 
 Value $v = \dots \approx -2.998$
 
-```
+```text
 |   O    5 |
 |        5 |
 |        5 |
@@ -81,7 +80,7 @@ Value $v = \dots \approx -2.998$
 
 Value $v= \dots \approx -3.995$
 
-```
+```text
 |   O     6|
 |         6|
 |         6|
@@ -96,7 +95,7 @@ Value $v= \dots \approx -3.995$
 
 Value $v= \dots \approx -4.991$
 
-```
+```text
 |   O      |
 |          |
 |          |
@@ -111,7 +110,7 @@ Value $v= \dots \approx -4.991$
 
 Value $v= \dots \approx -5.986$
 
-```
+```text
 |   O      |
 |          |
 |          |
@@ -126,7 +125,7 @@ Value $v= \dots \approx -5.986$
 
 Value $v= \dots \approx -6.980$
 
-```
+```text
 |   O      |
 |          |
 |          |
@@ -141,7 +140,7 @@ Value $v= \dots \approx -6.980$
 
 Value $v= \dots \approx -7.973$
 
-```
+```text
 |   O      |
 |          |
 |          |
@@ -156,7 +155,7 @@ Value $v= \dots \approx -7.973$
 
 Value $v= \dots \approx -8.965$
 
-```
+```text
 |   O      |
 |          |
 |          |
@@ -171,7 +170,7 @@ Value $v= \dots \approx -8.965$
 
 Value $v= \dots \approx -9.956$
 
-```
+```text
 |   O      |
 |          |
 |          |
@@ -186,7 +185,7 @@ Value $v= \dots \approx -9.956$
 
 Value $v= \dots \approx -10.946$
 
-```
+```text
 |   O      |
 |          |
 |          |

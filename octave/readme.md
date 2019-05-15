@@ -16,7 +16,7 @@ The trace file format is composed by:
 
 ## Dump file format
 
-The dump file format is composed by:
+Each record of the dump file rappresents an episode and the format is composed by:
 
 | Field     | Offset |                  Size |
 |:----------|-------:|----------------------:|
@@ -25,6 +25,13 @@ The dump file format is composed by:
 | ERRORS    |      3 |                     1 |
 | STATES    |      4 | 10 x 10 x 200 = 20000 |
 | Q         |  20004 |     10 x 10 x 8 = 800 |
+
+the states consist of 10 x 10 possible subject location of
+(10 x 10 values with subject location flag and
+10 x 10 values with obstacle flags)
+
+the actions consist of 10 x 10 possible subject location of
+8 action values
 
 ## readTrace
 

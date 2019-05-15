@@ -52,11 +52,11 @@ trait Agent {
   def chooseAction(observation: Observation): (Agent, Action)
 
   /**
-   * Returns the fit agent by optimizing its strategy policy
+   * Returns the fit agent by optimizing its strategy policy and the error
    *
    * @param feedback the feedback from the last step
    */
-  def fit(feedback: Feedback): Agent
+  def fit(feedback: Feedback): (Agent, Double)
 
   /** Returns the discount parameter */
   def gamma: Double

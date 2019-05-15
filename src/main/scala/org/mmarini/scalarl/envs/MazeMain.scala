@@ -89,6 +89,9 @@ object MazeMain extends LazyLogging {
   private def agentConf(conf: Map[String, Any]) = conf("agent").asInstanceOf[java.util.Map[String, Any]].toMap
   private def sessionConf(conf: Map[String, Any]) = conf("session").asInstanceOf[java.util.Map[String, Any]].toMap
 
+  /**
+   * Returns the dump data array of the episode
+   */
   private def createDump(episode: Episode): INDArray = {
     val session = episode.session
     val qagent = episode.agent.asInstanceOf[QAgent]
