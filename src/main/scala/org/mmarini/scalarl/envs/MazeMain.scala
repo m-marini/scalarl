@@ -91,17 +91,21 @@ object MazeMain extends LazyLogging {
 
   /**
    * Returns the dump data array of the episode
+   * The data array is composed by:
+   * 
+   * - stepCount
+   * - returnValue
+   * - average loss
+   * - 10 x 10 x 8 of q action values for each state for each action 
    */
   private def createDump(episode: Episode): INDArray = {
     val session = episode.session
     val qagent = episode.agent.asInstanceOf[QAgent]
     val kpi = Nd4j.create(Array(Array(episode.stepCount, episode.returnValue, episode.avgLoss)))
     val states = episode.env.asInstanceOf[MazeEnv].dumpStates
-    val n = states.length
-    val sMat = Nd4j.vstack(states.map(_.observation)).ravel()
     val q = states.map(qagent.q)
     val qMat = Nd4j.vstack(q).ravel()
-    Nd4j.hstack(kpi, sMat, qMat)
+    Nd4j.hstack(kpi, qMat)
   }
 
   def main(args: Array[String]) {

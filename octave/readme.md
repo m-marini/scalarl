@@ -23,15 +23,10 @@ Each record of the dump file rappresents an episode and the format is composed b
 | STEPCOUNT |      1 |                     1 |
 | RETURNS   |      2 |                     1 |
 | ERRORS    |      3 |                     1 |
-| STATES    |      4 | 10 x 10 x 200 = 20000 |
-| Q         |  20004 |     10 x 10 x 8 = 800 |
+| Q(s,a)    |      4 |     8 x 10 x 10 = 800 |
 
-the states consist of 10 x 10 possible subject location of
-(10 x 10 values with subject location flag and
-10 x 10 values with obstacle flags)
 
-the actions consist of 10 x 10 possible subject location of
-8 action values
+Q(s,a) consist of 8 action values for 10 columns for 10 rows of possible subject locations
 
 ## readTrace
 
@@ -76,10 +71,7 @@ Returns the returns (discounted sum of rewards) from dump of episodes
 
 ## readDumpAgent
 
-Returns the agent status at a step from dump of episodes:
+Returns the agent status for a given episode from dump of episodes:
 
-- the position in the maze
-- the action values at position
-- the action values at position
-- the best action at position
-- the best action map
+- `Q` the action values at each position and direction (10, 10, 8)
+- `POS` best action at position (10, 10)

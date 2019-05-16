@@ -1,4 +1,4 @@
-
+#/bin/bash
 while true
 do
     rm maze.zip
