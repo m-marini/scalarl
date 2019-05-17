@@ -1,14 +1,13 @@
 # Trace Dense Layer
 
-The layer implement a full connected neural network layer base on eligible trace
-to update the layer parameters.
+The layer implement a full connected neural network layer base on eligible trace to update the layer parameters.
 
 ## Forward propagation
 
 The forward propagation of the network is the same of classical network
 
 ```math
-y(i) = Sum (x(j) * w(j, i)) + b(i) among j = 1 ... n
+y_i = \sum_j x_j w_{ji} + b_i, j = 1 ... n
 
 ```
 
@@ -17,47 +16,50 @@ y(i) = Sum (x(j) * w(j, i)) + b(i) among j = 1 ... n
 The gradients for weights and bias are
 
 ```math
-grad(Y, w(i, j)) = x(i)
-grad(Y, b(j)) = 1
+\frac{\partial y_i}{\partial w_{ji}} = x_j
+\\
+\frac{\partial y_i}{\partial b_i} = 1
 ```
 
 ## Trace update
 
-During the learning phase the network parameters are apdates basing on
-eligibility trace.
+During the learning phase the network parameters are updates basing on eligibility trace.
 
-The eligibility trace is a vector that traces the previous updated parameters
-allowing the network to learn from the past events.
+The eligibility trace is a vector that traces the previous updated parameters allowing the network to learn from the past events.
 
 Let be
 
-- `w(i, j)` the weights of neural network for i-th input and j-th output
-- `b(j)` the bias of j-th output
-- `Ew(i, j)` the weights eligibility trace after updating for i-th input and j-th output
-- `Eb(j)` the bias eligibility trace after updating and j-th output
-- `delta(j)` the errors for the j-th output
-- `alpha` the learing rate hyperparamter
-- `gamma` the reward discount rate
-- `lambda` the TD hyparameter
+- $w_{i,j}$ the weights of neural network for i-th input and j-th output
+- $b_j$ the bias of j-th output
+- $E_{w_{ji}}$ the weights eligibility trace after updating for i-th input and j-th output
+- $E_{b_j}$ the bias eligibility trace after updating and j-th output
+- $\delta_j$ the errors for the j-th output
+- $\alpha$ the learing rate hyperparamter
+- $\gamma$ the reward discount rate
+- $\lambda$ the TD hyperparameter
 
 The update parameter equations are
 
 ```math
-Ew'(i, j) <- Ew(i, j) * gamma * lambda + grad(Y, w(i, j))
-Eb'(j) <- Eb(j) * gamma * lambda + grad(Y, b(j))
-
-w'(i, j) <- w(i, j) + Ew'(i, j) * delta(j)_ * alpha
-b'(j) <- b(j) + Eb'(j) * e_j * alpha
+E'_{w_{ij}} = E_{w_{ij}} \gamma \lambda + \frac{\partial y_j}{\partial w_{ij}}
+\\
+E'_{b_j} = E_{b_j} \gamma \lambda + \frac{\partial y_j}{\partial b_j}
+\\
+w'_{ij} = w_{ij} + E'_{w_{ij}} \delta_j \alpha
+\\
+b'_i = b_i + E'_{b_i} \delta_i \alpha
 ```
 
-that concretely become
+that concretely becomes
 
 ```math
-Ew'(i, j) <- Ew(i, j) * gamma * lambda + X(i)
-Eb'(i, j) <- Eb(j) * gamma * lambda  + 1
-
-w'(i, j) <- w(i, j) + alpha * Ew'(i, j) * delta(j)
-b'(j) <- b(j) + alpha * Eb'(j) * delta(j)
+E'_{w_{ij}} = E_{w_{ij}} \gamma \lambda + x_i
+\\
+E'_{b_j} = E_{b_j} \gamma \lambda + 1
+\\
+w'_{ij} = w_{ij} + E'_{w_{ij}} \delta_j \alpha
+\\
+b'_i = b_i + E'_{b_i} \delta_i \alpha
 ```
 
 ## Backward propagation
@@ -65,41 +67,40 @@ b'(j) <- b(j) + alpha * Eb'(j) * delta(j)
 The backward propagation of errors in the input are
 
 ```math
-delta'(i) = Sum( diff(y(j), x(i)) * delta(j)) among j = 1 ... m
-delta'(i) = Sum( w(i, j) * delta(j)) among j = 1 ... m
+\delta'_i = \sum_j \frac{\partial y_j}{\partial x_i} \delta_j,  j = 1 \dots m
+\\
+\delta'_i = \sum_j w_{ij} \delta_j, j = 1 \dots m
 ```
 
 ## Error mask
 
-In Reinforcement learning the Q-Learning algorithm must update the parameters
-for the action a(k) taken by the current policy so the update mechanism shuold
-be changed by the equations
+In Reinforcement Learning the Q-Learning algorithm must update the parameters for the action $a_k$ taken by the current policy so the update mechanism shuold be changed by the equations
 
 ```math
-Ew'(i, j) <- Ew(i, j) * gamma * lambda + grad(Y, w(i, j)), for j = k
-Ew'(i, j) <- Ew(i, j) * gamma * lambda, for j != k
-
-Eb'(j) <- Eb(j) * gamma * lambda + grad(Y, b(j)), for j = k
-Eb'(j) <- Eb(j) * gamma * lambda, for j != k
+E'_{w_{ij}} = E_{w_{ij}} \gamma \lambda + \frac{\partial y_j}{\partial w_{ij}}, j = k
+\\
+E'_{w_{ij}} = E_{w_{ij}} \gamma \lambda, j \ne k
+\\
+E'_{b_j} = E_{b_j} \gamma \lambda + \frac{\partial y_j}{\partial b_j}, j = k
+\\
+E'_{b_j} = E_{b_j} \gamma \lambda, j \ne k
 ```
 
-When a deep learning network composed by multiple layers is updated
-the update should not be applied for all the parameters but on for the releted
-to the action a(k).
+When a deep learning network composed by multiple layers is updated the update should not be applied for all the parameters but on for the releted to the action a(k).
 
-To implement such requirement we use a mask for the errors that are backpropagated toghther
-the error depending on the layer type.
+To implement such requirement we use a mask for the errors that are backpropagated toghther the error depending on the layer type.
 
 ```math
-Ew'(i, j) <- Ew(i, j) * gamma * lambda + grad(Y, w(i, j)) * M(j)
-Eb'(j) <- Eb(j) * gamma * lambda + grad(Y, b(j)) * M(j)
+E'_{w_{ij}} = E_{w_{ij}} \gamma \lambda + \frac{\partial y_j}{\partial w_{ij}} M_j
+\\
+E'_{b_j} = E_{b_j} \gamma \lambda + \frac{\partial y_j}{\partial b_j} * M_j
 ```
 
 For the Dense layer each input is connected and therefore influenced by each output
 so the backpropagated error mask is a ones vectors.
 
 ```math
-M'(i) = ones(n)
+M_i = 1
 ```
 
 ## MSE Loss function
@@ -107,9 +108,9 @@ M'(i) = ones(n)
 The MSE Loss function is define as
 
 ```math
-L = 1 / 2  * Sum ((Y(i) - y(i))^2), among i = 1 ... m
-
-diff(L, y(i)) = Y(i) - y(i)
+L = \frac{1}{2} \sum_i \left( Y_i - y_i \right)^2, i = 1 \dots m
+\\
+\frac{\partial L}{\partial y_i}= Y_i - y_i
 ```
 
-where `Y(i)` is the expected output
+where $Y_i$ is the expected output

@@ -7,7 +7,7 @@ The layer implement a tanh activation function layer and does not have any param
 The forward propagation of the network is the same of classical network
 
 ```math
-y(i) =  tanh(x(i))
+y_i = \tanh(x_i)
 ```
 
 ## Backward propagation
@@ -15,9 +15,9 @@ y(i) =  tanh(x(i))
 The backward propagation of errors in the input are
 
 ```math
-delta'(i) = diff(y(i), x(i)) * delta(i))
-
-delta'(i) = (1 - y(i)) * (1 + y(i))
+\delta'_i = \frac{\partial y_j}{\partial x_i} \delta_i
+\\
+\delta'_i = (1 - y_i) (1 + y_i) = 1-y_i^2
 ```
 
 ## Error mask
@@ -25,5 +25,5 @@ delta'(i) = (1 - y(i)) * (1 + y(i))
 For the activation layer the error mask is backpropagated without changes
 
 ```math
-M'(i) = M(i)
+M'_i = M_i
 ```
