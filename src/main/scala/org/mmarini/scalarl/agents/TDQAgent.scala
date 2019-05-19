@@ -67,10 +67,11 @@ import rx.lang.scala.Subject
  *  and the observation of resulting environment
  */
 case class TDQAgent(
-  net:     MultiLayerNetwork,
+  net:     TraceNetwork,
   random:  Random,
   epsilon: Double,
-  gamma:   Double) extends Agent {
+  gamma:   Double,
+  lambda:  Double) extends Agent {
   //  gamma:        Double,
   //  episodeCount: Int               = 0,
   //  stepCount:    Int               = 0,
@@ -111,8 +112,8 @@ case class TDQAgent(
    * @param observationt the observation
    */
   def q(observation: Observation): INDArray = {
-    val out = net.feedForward(observation.observation)
-    out.get(out.size() - 1)
+    val out = net.forward(observation.observation)
+    out.last
   }
 
   /**
@@ -143,21 +144,22 @@ case class TDQAgent(
   /**
    * Updates the q function to fit the expected result.
    *
-   *  @param feedback the [[Feedback]] from environment after a state transition
+   * @param feedback the [[Feedback]] from environment after a state transition
    */
   override def fit(feedback: Feedback): (Agent, Double) = feedback match {
     case (obs0, action, reward, obs1, endUp, _) =>
-      val q0 = q(obs0)
-      val q1 = q(obs1)
-      val v0 = maxWithMask(q0, obs0.actions)
-      val v1 = maxWithMask(q1, obs1.actions)
-      val err = reward + gamma * v1 - v0
-      val delta = Nd4j.zeros(q0.shape(): _*)
-      delta.putScalar(action, err)
-      val expected = q0.add(delta)
-      val newNet = net.clone()
-      newNet.fit(obs0.observation, expected)
-      (copy(net = newNet), err)
+      ???
+    //      val q0 = q(obs0)
+    //      val q1 = q(obs1)
+    //      val v0 = maxWithMask(q0, obs0.actions)
+    //      val v1 = maxWithMask(q1, obs1.actions)
+    //      val err = reward + gamma * v1 - v0
+    //      val delta = Nd4j.zeros(q0.shape(): _*)
+    //      delta.putScalar(action, err)
+    //      val expected = q0.add(delta)
+    //      val newNet = net.clone()
+    //      newNet.fit(obs0.observation, expected)
+    //      (copy(net = newNet), err)
 
     //      val newStepCount = stepCount + 1
     //      val newDiscount = discount * gamma
@@ -187,8 +189,9 @@ case class TDQAgent(
   }
 
   def writeModel(file: String): TDQAgent = {
-    ModelSerializer.writeModel(net, file, true)
-    this
+    ???
+    //    ModelSerializer.writeModel(net, file, true)
+    //    this
   }
 }
 
@@ -256,11 +259,12 @@ case class TDQAgentBuilder(
     val file = _file.map(f => new File(f)).filter(_.canRead())
     val net = file.map(loadNet).getOrElse(buildNet())
     net.init()
-    TDQAgent(
-      net = net,
-      random = if (_seed != 0) new DefaultRandom(_seed) else new DefaultRandom(),
-      epsilon = _epsilon,
-      gamma = _gamma)
+    //    TDQAgent(
+    //      net = net,
+    //      random = if (_seed != 0) new DefaultRandom(_seed) else new DefaultRandom(),
+    //      epsilon = _epsilon,
+    //      gamma = _gamma)
+    ???
   }
 
   private def loadNet(file: File): MultiLayerNetwork = {

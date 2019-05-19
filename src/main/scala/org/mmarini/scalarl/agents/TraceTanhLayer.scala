@@ -49,9 +49,10 @@ class TraceTanhLayer extends TraceLayer {
    * Returns the backward errors and mask after updating the layer parameters given the input, output, output, errors
    * and output mask
    */
-  override def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): (INDArray, INDArray) = {
-    val inpError = output.sub(1.0).muli(output.add(1.0)).negi().muli(errors).muli(mask)
-    (inpError, mask)
+  override def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): (TraceLayer, INDArray, INDArray) = {
+    val inpError = output.mul(output).subi(1.0).negi().muli(errors).muli(mask)
+    //    val inpError = output.sub(1.0).muli(output.add(1.0)).negi().muli(errors).muli(mask)
+    (this, inpError, mask)
   }
 
   override def clearTraces(): TraceLayer = this

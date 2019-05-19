@@ -30,10 +30,20 @@ package org.mmarini.scalarl.agents
 
 import org.nd4j.linalg.api.ndarray.INDArray
 
+/**
+ * A eligibility trace network used to learn the Q function.
+ * @constructor creates a new network
+ * @param layers the layers of network from inputs to outputs
+ * @param loss the loss function used to compute the error
+ */
 class TraceNetwork(
   val layers: Array[TraceLayer],
   val loss:   TraceLossFunction = LossFunctions.MSE) {
 
+  /**
+   * Returns the array of layer values from input to output
+   * @parameters the input values
+   */
   def forward(input: INDArray): Array[INDArray] = {
     val (result, _) = layers.foldLeft((Array(input), input)) {
       case ((result, input), layer) =>
@@ -47,14 +57,15 @@ class TraceNetwork(
    * Returns the loss value and update the network fitting the labels with mask given an input
    */
   def backward(input: INDArray, labels: INDArray, mask: INDArray): Double = {
-    val activations = forward(input)
-    val inOut = activations.zip(activations.tail).zip(layers)
-    val errors = loss.gradient(labels, activations.last, mask)
-    inOut.reverse.foldLeft((errors, mask)) {
-      case ((error, mask), ((in, out), layer)) =>
-        layer.backward(in, out, error, mask)
-    }
-    loss(labels, activations.last, mask)
+//    val activations = forward(input)
+//    val inOut = activations.zip(activations.tail).zip(layers)
+//    val errors = loss.gradient(labels, activations.last, mask)
+//    inOut.reverse.foldLeft((errors, mask)) {
+//      case ((error, mask), ((in, out), layer)) =>
+//        layer.backward(in, out, error, mask)
+//    }
+//    loss(labels, activations.last, mask)
+    ???
   }
 
   def clearTraces(): TraceNetwork = {

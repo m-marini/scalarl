@@ -17,7 +17,7 @@ The backward propagation of errors in the input are
 ```math
 \delta'_i = \frac{\partial y_j}{\partial x_i} \delta_i
 \\
-\delta'_i = (1 - y_i) (1 + y_i) = 1-y_i^2
+\delta'_i = (1 - y_i) (1 + y_i) \delta_i = (1-y_i^2) \delta_i
 ```
 
 ## Error mask

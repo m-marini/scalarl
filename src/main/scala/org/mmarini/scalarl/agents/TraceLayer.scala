@@ -42,13 +42,21 @@ trait TraceLayer {
   def forward(input: INDArray): INDArray
 
   /**
-   * Returns the layer by updating traces given input, output and output mask of layer
+   * Returns a new layer with eligibility traces cleared
    */
   def clearTraces(): TraceLayer
 
   /**
-   * Returns the backward errors and mask after updating the layer parameters given the input, output, output, errors
-   * and output mask
+   * Returns
+   * <ul>
+   * <li>a new layer with updated parameters by fitting the output errors,</li>
+   * <li>the input mask</li>
+   * <li>the input errors</li>
+   * </ul>
+   * @param input the input values
+   * @param output the output values
+   * @param errors the output errors
+   * @param mask the output mask (the updating output)
    */
-  def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): (INDArray, INDArray)
+  def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): (TraceLayer, INDArray, INDArray)
 }

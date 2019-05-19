@@ -36,7 +36,7 @@ import org.nd4j.linalg.indexing.INDArrayIndex
 
 /**
  */
-class TraceDenseLayer(
+case class TraceDenseLayer(
   val weights:      INDArray,
   val bias:         INDArray,
   val weightTraces: INDArray,
@@ -62,48 +62,51 @@ class TraceDenseLayer(
   }
 
   /**
-   * Returns the layer by updating traces given input, output and output mask of layer
+   * Returns a new layer by updating traces given input, output and output mask of layer
    */
-  override def clearTraces(): TraceLayer = {
-    weightTraces.put(Array(NDArrayIndex.all), 0.0)
-    biasTraces.put(Array(NDArrayIndex.all), 0.0)
-    this
-  }
+  override def clearTraces(): TraceLayer =
+    copy(
+      weightTraces = Nd4j.zeros(weightTraces.shape(): _*),
+      biasTraces = Nd4j.zeros(biasTraces.shape(): _*))
 
   /**
    * Returns the backward errors and mask after updating the layer parameters given the input, output, output, errors
    * and output mask
    */
-  override def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): (INDArray, INDArray) = {
-    this.updateTraces(input, output, mask)
+  override def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): (TraceLayer, INDArray, INDArray) = {
+
+    val (newWeightTraces, newBiasTraces) = updatedTraces(input, output, mask)
 
     val ni = weights.size(0)
     val no = weights.size(1)
 
-    val dWeights = weightTraces.mul(learningRate).muli(errors.broadcast(ni, no))
-    val dBias = biasTraces.mul(learningRate).muli(errors)
+    val dWeights = newWeightTraces.mul(learningRate).muli(errors.broadcast(ni, no))
+    val dBias = newBiasTraces.mul(learningRate).muli(errors)
 
     val inpErrors = errors.mmul(weights.transpose())
 
-    weights.addi(dWeights)
-    bias.addi(dBias)
+    val newWeights = weights.add(dWeights)
+    val newBias = bias.add(dBias)
+    val newLayer = copy(
+      bias = newBias,
+      weights = newWeights,
+      biasTraces = newBiasTraces,
+      weightTraces = newWeightTraces)
 
     val inpMask = Nd4j.ones(input.shape(): _*)
-    (inpErrors, inpMask)
+    (newLayer, inpErrors, inpMask)
   }
 
   /**
-   * Returns the layer by updating traces given input, output and output mask of layer
+   * Returns the updated traces for input, output and output mask
    */
-  def updateTraces(input: INDArray, output: INDArray, mask: INDArray): TraceDenseLayer = {
-    weightTraces.muli(lambda * gamma)
-    biasTraces.muli(lambda * gamma)
+  private def updatedTraces(input: INDArray, output: INDArray, mask: INDArray): (INDArray, INDArray) = {
     val (wGrad, bGrad) = gradient(input, output)
     wGrad.muli(mask.broadcast(wGrad.shape(): _*))
     bGrad.muli(mask)
-    weightTraces.addi(wGrad)
-    biasTraces.addi(bGrad)
-    this
+    val newWeightTraces = weightTraces.mul(lambda * gamma).addi(wGrad)
+    val newBiasTraces = biasTraces.mul(lambda * gamma).addi(bGrad)
+    (newWeightTraces, newBiasTraces)
   }
 }
 

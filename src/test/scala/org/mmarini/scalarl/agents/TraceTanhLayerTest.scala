@@ -113,7 +113,7 @@ class TraceTanhLayerTest extends PropSpec with PropertyChecks with Matchers {
                 val outputs = layer.forward(input)
                 val expected = createInputErrors(outputs, errors)
 
-                val (inputErrors, inputMask) = layer.backward(input, outputs, errors, mask)
+                val (_, inputErrors, inputMask) = layer.backward(input, outputs, errors, mask)
 
                 // Checks for input errors
                 for {
@@ -156,7 +156,7 @@ class TraceTanhLayerTest extends PropSpec with PropertyChecks with Matchers {
             val outputs = layer.forward(input)
             val expected = createInputErrors(outputs, errors)
 
-            val (inputErrors, inputMask) = layer.backward(input, outputs, errors, mask)
+            val (layer1, inputErrors, inputMask) = layer.backward(input, outputs, errors, mask)
 
             // Checks for input errors
             for {

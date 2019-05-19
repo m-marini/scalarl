@@ -41,6 +41,7 @@ import org.nd4j.linalg.api.ndarray.INDArray
 class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
   val MaxInputs = 5
   val MaxOutputs = 5
+  val Epsilon = 1e-3
 
   def expectedOut(input: INDArray, weights: INDArray, bias: INDArray): INDArray = {
     val ni = input.size(1)
@@ -69,8 +70,10 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
     Then should return the expected value""") {
     forAll(
       (Gen.choose(1, MaxInputs), "noInputs"),
-      (Gen.choose(1, MaxOutputs), "noOutputs")) {
-        (noInputs, noOutputs) =>
+      (Gen.choose(1, MaxOutputs), "noOutputs"),
+      (Gen.choose(0.0, 1.0), "gamma"),
+      (Gen.choose(0.0, 1.0), "lambda")) {
+        (noInputs, noOutputs, gamma, lambda) =>
           whenever(noInputs >= 1 && noOutputs >= 1) {
             val input = createInput(noInputs)
             val weights = createWeights(noInputs, noOutputs);
@@ -78,7 +81,7 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
 
             val expected = expectedOut(input, weights, bias)
 
-            val layer = TraceDenseLayer(weights, bias, 0.9, 0.9, 1e-3)
+            val layer = TraceDenseLayer(weights, bias, gamma, lambda, Epsilon)
             val output = layer.forward(input)
 
             output should be(expected)
@@ -91,14 +94,16 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
     Then should return the expected value""") {
     forAll(
       (Gen.choose(1, MaxInputs), "noInputs"),
-      (Gen.choose(1, MaxOutputs), "noOutputs")) {
-        (noInputs, noOutputs) =>
+      (Gen.choose(1, MaxOutputs), "noOutputs"),
+      (Gen.choose(0.0, 1.0), "gamma"),
+      (Gen.choose(0.0, 1.0), "lambda")) {
+        (noInputs, noOutputs, gamma, lambda) =>
           whenever(noInputs >= 1 && noOutputs >= 1) {
             val input = createInput(noInputs)
             val weights = createWeights(noInputs, noOutputs);
             val bias = createBias(noOutputs)
 
-            val layer = TraceDenseLayer(weights, bias, 0.9, 0.9, 1e-3)
+            val layer = TraceDenseLayer(weights, bias, gamma, lambda, Epsilon)
             val outputs = layer.forward(input)
             val (gradW, gradB) = layer.gradient(input, outputs)
 
@@ -119,172 +124,6 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
               gradW.getDouble(i.toLong, j.toLong) should be(input.getDouble(i.toLong))
             }
 
-          }
-      }
-  }
-
-  property(s"""Given a TraceDenseLayer
-    When updateTraces invoked first time
-    Then should change the traces""") {
-    forAll(
-      (Gen.choose(1, MaxInputs), "noInputs"),
-      (Gen.choose(1, MaxOutputs), "noOutputs")) {
-        (noInputs, noOutputs) =>
-          whenever(noInputs >= 1 && noOutputs >= 1) {
-            val input = createInput(noInputs)
-            val weights = createWeights(noInputs, noOutputs);
-            val bias = createBias(noOutputs)
-
-            val layer = TraceDenseLayer(weights, bias, 0.9, 0.9, 1e-3)
-            val outputs = layer.forward(input)
-            val mask = Nd4j.ones(noOutputs)
-            layer.updateTraces(input, outputs, mask)
-
-            val wTraces = layer.weightTraces
-            for {
-              i <- 0L until noInputs
-              j <- 0L until noOutputs
-            } {
-              wTraces.getDouble(i, j) should be(input.getDouble(i))
-            }
-
-            val bTraces = layer.biasTraces
-            for {
-              i <- 0L until noOutputs
-            } {
-              bTraces.getDouble(i) should be(1.0)
-            }
-
-          }
-      }
-  }
-
-  property(s"""Given a TraceDenseLayer
-    When updateTraces invoked second time
-    Then should change the traces by decay""") {
-    forAll(
-      (Gen.choose(1, MaxInputs), "noInputs"),
-      (Gen.choose(1, MaxOutputs), "noOutputs"),
-      (Gen.choose(0.0, 1.0), "gamma"),
-      (Gen.choose(0.0, 1.0), "lambda")) {
-        (noInputs, noOutputs, gamma, lambda) =>
-          whenever(noInputs >= 1 && noOutputs >= 1) {
-            val input = createInput(noInputs)
-            val weights = createWeights(noInputs, noOutputs);
-            val bias = createBias(noOutputs)
-
-            val mask = Nd4j.ones(noOutputs)
-            val layer = TraceDenseLayer(weights, bias, gamma, lambda, 1e-3)
-            val outputs = layer.forward(input)
-            layer.updateTraces(input, outputs, mask)
-            layer.updateTraces(input, outputs, mask)
-
-            val wTraces = layer.weightTraces
-            for {
-              i <- 0L until noInputs
-              j <- 0L until noOutputs
-            } {
-              wTraces.getDouble(i, j) should be(input.getDouble(i) * (1 + lambda * gamma) +- 1e-6)
-            }
-
-            val bTraces = layer.biasTraces
-            for {
-              i <- 0L until noOutputs
-            } {
-              bTraces.getDouble(i) should be(1 + lambda * gamma +- 1e-6)
-            }
-
-          }
-      }
-  }
-
-  property(s"""Given a TraceDenseLayer
-    When updateTraces invoked
-      And clearTrace invode
-    Then should result the traces to be zeros""") {
-    forAll(
-      (Gen.choose(1, MaxInputs), "noInputs"),
-      (Gen.choose(1, MaxOutputs), "noOutputs")) {
-        (noInputs, noOutputs) =>
-          whenever(noInputs >= 1 && noOutputs >= 1) {
-            val input = createInput(noInputs)
-            val weights = createWeights(noInputs, noOutputs);
-            val bias = createBias(noOutputs)
-
-            val mask = Nd4j.ones(noOutputs)
-            val layer = TraceDenseLayer(weights, bias, 0.9, 0.9, 1e-3)
-            val outputs = layer.forward(input)
-            layer.updateTraces(input, outputs, mask)
-            layer.clearTraces()
-
-            val wTraces = layer.weightTraces
-            for {
-              i <- 0L until noInputs
-              j <- 0L until noOutputs
-            } {
-              wTraces.getDouble(i, j) should be(0.0)
-            }
-
-            val bTraces = layer.biasTraces
-            for {
-              i <- 0L until noOutputs
-            } {
-              bTraces.getDouble(i) should be(0.0)
-            }
-
-          }
-      }
-  }
-
-  property(s"""Given a TraceDenseLayer
-      And a single output mask
-    When updateTraces invoked
-      And clearTrace invode
-    Then should result the traces to be zeros""") {
-    forAll(
-      (Gen.choose(1, MaxInputs), "noInputs"),
-      (for {
-        noOutputs <- Gen.choose(1, MaxOutputs)
-        outputIdx <- Gen.choose(0, noOutputs - 1)
-      } yield (noOutputs, outputIdx), "(noOutputs, outputIdx)")) {
-        (noInputs, outs) =>
-          whenever(noInputs >= 1 && outs._1 >= 1) {
-            outs match {
-              case (noOutputs, outputIdx) =>
-                val input = createInput(noInputs)
-                val weights = createWeights(noInputs, noOutputs)
-                val bias = createBias(noOutputs)
-
-                val mask = Nd4j.zeros(noOutputs)
-                mask.putScalar(Array(0L, outputIdx.toLong), 1.0)
-                val layer = TraceDenseLayer(weights, bias, 0.9, 0.9, 1e-3)
-                val outputs = layer.forward(input)
-                layer.updateTraces(input, outputs, mask)
-
-                val wTraces = layer.weightTraces
-                for {
-                  i <- 0L until noInputs
-                  j <- 0L until noOutputs
-                } {
-                  if (j == outputIdx) {
-                    wTraces.getDouble(i, j) should be(input.getDouble(0L, i))
-                  } else {
-                    wTraces.getDouble(i, j) should be(0.0)
-                  }
-                }
-
-                val bTraces = layer.biasTraces
-                for {
-                  i <- 0L until noOutputs
-                } {
-                  if (i == outputIdx) {
-                    bTraces.getDouble(i) should be(1.0)
-                  } else {
-                    bTraces.getDouble(i) should be(0.0)
-                  }
-                }
-
-            }
           }
       }
   }
@@ -335,7 +174,7 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
 
                 val layer = TraceDenseLayer(initWeights.dup(), initBias.dup(), gamma, lambda, learningRate)
                 val outputs = layer.forward(input)
-                val (inputErrors, inputMask) = layer.backward(input, outputs, errors, mask)
+                val (layer1, inputErrors, inputMask) = layer.backward(input, outputs, errors, mask)
 
                 // Checks for input errors
                 for {
@@ -352,7 +191,7 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
                 }
 
                 // Checks for weights
-                val weights = layer.weights
+                val weights = layer1.asInstanceOf[TraceDenseLayer].weights
                 for {
                   i <- 0L until noInputs
                   j <- 0L until noOutputs
@@ -367,7 +206,7 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
                 }
 
                 // Checks for bias
-                val bias = layer.bias
+                val bias = layer1.asInstanceOf[TraceDenseLayer].bias
                 for {
                   j <- 0L until noOutputs
                 } {
@@ -381,7 +220,7 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
                 }
 
                 // Checks for weight traces
-                val wTraces = layer.weightTraces
+                val wTraces = layer1.asInstanceOf[TraceDenseLayer].weightTraces
                 for {
                   i <- 0L until noInputs
                   j <- 0L until noOutputs
@@ -394,7 +233,7 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
                 }
 
                 // Checks for bias traces
-                val bTraces = layer.biasTraces
+                val bTraces = layer1.asInstanceOf[TraceDenseLayer].biasTraces
                 for {
                   i <- 0L until noOutputs
                 } {
@@ -435,7 +274,7 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
 
             val layer = TraceDenseLayer(initWeights.dup(), initBias.dup(), gamma, lambda, learningRate)
             val outputs = layer.forward(input)
-            val (inputErrors, inputMask) = layer.backward(input, outputs, errors, mask)
+            val (layer1, inputErrors, inputMask) = layer.backward(input, outputs, errors, mask)
 
             // Checks for input errors
             for {
@@ -452,7 +291,7 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
             }
 
             // Checks for weights
-            val weights = layer.weights
+            val weights = layer1.asInstanceOf[TraceDenseLayer].weights
             for {
               i <- 0L until noInputs
               j <- 0L until noOutputs
@@ -463,7 +302,7 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
             }
 
             // Checks for bias
-            val bias = layer.bias
+            val bias = layer1.asInstanceOf[TraceDenseLayer].bias
             for {
               j <- 0L until noOutputs
             } {
@@ -473,7 +312,7 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
             }
 
             // Checks for weight traces
-            val wTraces = layer.weightTraces
+            val wTraces = layer1.asInstanceOf[TraceDenseLayer].weightTraces
             for {
               i <- 0L until noInputs
               j <- 0L until noOutputs
@@ -482,11 +321,96 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
             }
 
             // Checks for bias traces
-            val bTraces = layer.biasTraces
+            val bTraces = layer1.asInstanceOf[TraceDenseLayer].biasTraces
             for {
               i <- 0L until noOutputs
             } {
               bTraces.getDouble(i) should be(1.0)
+            }
+          }
+      }
+  }
+
+  property(s"""Given a TraceDenseLayer
+      And full output mask
+    When backward invoked
+      and clear trace invoked
+    Then should result the backward error
+      And the layer with updated parameters
+      And traces resetted""") {
+    forAll(
+      (Gen.choose(1L, MaxInputs), "noInputs"),
+      (Gen.choose(1L, MaxOutputs), "noOutputs"),
+      (Gen.choose(0.0, 1.0), "gamma"),
+      (Gen.choose(0.0, 1.0), "lambda"),
+      (Gen.choose(0.0, 1.0), "learningRate")) {
+        (noInputs, noOutputs, gamma, lambda, learningRate) =>
+          whenever(noInputs >= 1 && noOutputs >= 1) {
+            val input = createInput(noInputs)
+            val initWeights = createWeights(noInputs, noOutputs)
+            val initBias = createBias(noOutputs)
+
+            val mask = Nd4j.ones(1L, noOutputs)
+
+            val errors = Nd4j.randn(Array(1, noOutputs)).muli(mask)
+
+            val expected = createInputErrors(initWeights, errors)
+
+            val layer = TraceDenseLayer(initWeights.dup(), initBias.dup(), gamma, lambda, learningRate)
+            val outputs = layer.forward(input)
+            val (layer1, inputErrors, inputMask) = layer.backward(input, outputs, errors, mask)
+            val layer2 = layer1.clearTraces()
+
+            // Checks for input errors
+            for {
+              i <- 0L until noInputs
+            } {
+              inputErrors.getDouble(0L, i) should be(expected.getDouble(0L, i) +- 1e-6)
+            }
+
+            // Checks for input mask
+            for {
+              i <- 0L until noInputs
+            } {
+              inputMask.getDouble(0L, i) should be(1.0)
+            }
+
+            // Checks for weights
+            val weights = layer2.asInstanceOf[TraceDenseLayer].weights
+            for {
+              i <- 0L until noInputs
+              j <- 0L until noOutputs
+            } {
+              weights.getDouble(i, j) should be(
+                initWeights.getDouble(i, j) +
+                  input.getDouble(0L, i) * learningRate * errors.getDouble(0L, j) +- 1e-6)
+            }
+
+            // Checks for bias
+            val bias = layer2.asInstanceOf[TraceDenseLayer].bias
+            for {
+              j <- 0L until noOutputs
+            } {
+              bias.getDouble(0L, j) should be(
+                initBias.getDouble(0L, j) +
+                  learningRate * errors.getDouble(0L, j) +- 1e-6)
+            }
+
+            // Checks for weight traces
+            val wTraces = layer2.asInstanceOf[TraceDenseLayer].weightTraces
+            for {
+              i <- 0L until noInputs
+              j <- 0L until noOutputs
+            } {
+              wTraces.getDouble(i, j) should be(0.0)
+            }
+
+            // Checks for bias traces
+            val bTraces = layer2.asInstanceOf[TraceDenseLayer].biasTraces
+            for {
+              i <- 0L until noOutputs
+            } {
+              bTraces.getDouble(i) should be(0.0)
             }
           }
       }
