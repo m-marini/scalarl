@@ -42,48 +42,49 @@ class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
       "|      X   |",
       "|  XXXXX   |",
       "|  X       |",
-      "|    *     |")
+      "|     *    |")
     val env = MazeEnv.fromStrings(data)
 
     describe("When MazeEnv.reset") {
-      val (_, obs) = env.reset()
+      val (env0, obs) = env.reset()
 
       describe("Then observation") {
         val observation = obs.observation
-        it("should be 1 at 1,0,4 ") {
-          observation.getInt(1, 0, 4) should equal(1)
+        it("should be 1 at subject position=0,4,5, index=40+5=45") {
+          observation.getInt(45) should equal(1)
         }
-        it("should be 1 at 0,1,2 ") {
-          observation.getInt(0, 1, 2) should equal(1)
+        it("should be 1 at wall position=1,1,6, index=50+10+6=66") {
+          observation.getInt(66) should equal(1)
         }
-        it("should be 1 at 0,3,6 ") {
-          observation.getInt(0, 3, 6) should equal(1)
+        it("should be 1 at wall position=1,3,2, index=50+30+2=82") {
+          observation.getInt(82) should equal(1)
         }
       }
-      describe("And actions") {
+      describe("And valid actions") {
         val actions = obs.actions
         it("should be (1,1,1,0,0,0,1,1)") {
-          actions should equal(Nd4j.create(Array(1, 1, 1, 0, 0, 0, 1, 1).map(_.toDouble)))
+          val expected = Nd4j.create(Array(1, 1, 1, 0, 0, 0, 1, 1).map(_.toDouble)).ravel()
+          actions should equal(expected)
         }
       }
     }
 
-    describe("When MazeEnv.step") {
-      val (env1, obs, reward, endUp, info) = env.step(0)
+    describe("When MazeEnv.step north west") {
+      val (env1, obs, reward, endUp, info) = env.step(7)
 
       describe("Then observation") {
         val observation = obs.observation
-        it("should be 0 at 1,0,4 ") {
-          observation.getInt(1, 0, 4) should equal(0)
+        it("should be 0 at subject position=0,4,5, index=40+5=45") {
+          observation.getInt(44) should equal(0)
         }
-        it("should be 1 at 1,1,4 ") {
-          observation.getInt(1, 1, 4) should equal(1)
+        it("should be 1 at subject position=0,3,4, index=30+4=34") {
+          observation.getInt(34) should equal(1)
         }
-        it("should be 1 at 0,1,2 ") {
-          observation.getInt(0, 1, 2) should equal(1)
+        it("should be 1 at wall position=1,1,6, index=50+10+6=66") {
+          observation.getInt(66) should equal(1)
         }
-        it("should be 1 at 0,3,6 ") {
-          observation.getInt(0, 3, 6) should equal(1)
+        it("should be 1 at wall position=1,3,2, index=50+30+2=82") {
+          observation.getInt(82) should equal(1)
         }
       }
       describe("And actions") {
@@ -119,14 +120,14 @@ class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
 
       describe("Then observation") {
         val observation = obs.observation
-        it("should be 1 at 1,1,3") {
-          observation.getInt(1, 1, 3) should equal(1)
+        it("should be 1 at subject position=0,3,3, index=30+3=3") {
+          observation.getInt(33) should equal(1)
         }
-        it("should be 1 at 0,1,2 ") {
-          observation.getInt(0, 1, 2) should equal(1)
+        it("should be 1 at wall position=1,1,6, index=50+10+6=66") {
+          observation.getInt(66) should equal(1)
         }
-        it("should be 1 at 0,3,6 ") {
-          observation.getInt(0, 3, 6) should equal(1)
+        it("should be 1 at wall position=1,3,2, index=50+30+2=82") {
+          observation.getInt(82) should equal(1)
         }
       }
       describe("And actions") {
@@ -152,14 +153,14 @@ class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
 
       describe("Then observation") {
         val observation = obs.observation
-        it("should be 1 at 1,1,3") {
-          observation.getInt(1, 1, 3) should equal(1)
+        it("should be 1 at subject position=0,3,3, index=30+3=3") {
+          observation.getInt(33) should equal(1)
         }
-        it("should be 1 at 0,1,2 ") {
-          observation.getInt(0, 1, 2) should equal(1)
+        it("should be 1 at wall position=1,1,6, index=50+10+6=66") {
+          observation.getInt(66) should equal(1)
         }
-        it("should be 1 at 0,3,6 ") {
-          observation.getInt(0, 3, 6) should equal(1)
+        it("should be 1 at wall position=1,3,2, index=50+30+2=82") {
+          observation.getInt(82) should equal(1)
         }
       }
       describe("And actions") {
@@ -175,17 +176,17 @@ class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
 
       describe("Then observation") {
         val observation = obs.observation
-        it("should be 0 at 1,1,3") {
-          observation.getInt(1, 1, 3) should equal(0)
+        it("should be 0 at subject position=0,3,3, index=30+3=33") {
+          observation.getInt(33) should equal(0)
         }
-        it("should be 1 at 1,1,4") {
-          observation.getInt(1, 1, 4) should equal(1)
+        it("should be 1 at subject position=0,3,4, index=30+4=34") {
+          observation.getInt(34) should equal(1)
         }
-        it("should be 1 at 0,1,2 ") {
-          observation.getInt(0, 1, 2) should equal(1)
+        it("should be 1 at wall position=1,1,6, index=50+10+6=66") {
+          observation.getInt(66) should equal(1)
         }
-        it("should be 1 at 0,3,6 ") {
-          observation.getInt(0, 3, 6) should equal(1)
+        it("should be 1 at wall position=1,3,2, index=50+30+2=82") {
+          observation.getInt(82) should equal(1)
         }
       }
       describe("And reward") {

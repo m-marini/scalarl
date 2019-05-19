@@ -110,7 +110,7 @@ case class TDQAgent(
    *
    * @param observationt the observation
    */
-  private def q(observation: Observation): INDArray = {
+  def q(observation: Observation): INDArray = {
     val out = net.feedForward(observation.observation)
     out.get(out.size() - 1)
   }

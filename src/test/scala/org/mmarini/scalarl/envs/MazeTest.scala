@@ -170,28 +170,28 @@ class MazeTest extends FunSpec with PropertyChecks with Matchers {
     describe("When Maze.fromStrings") {
       val maze = Maze.fromStrings(data)
 
-      it("should have 10 width ") {
+      it("should have 10 width") {
         maze.width should equal(10)
       }
 
-      it("should have 5 height ") {
+      it("should have 5 height") {
         maze.height should equal(5)
       }
 
-      it("should have intial at (4,0)") {
-        maze.initial should equal(MazePos(4, 0))
+      it("should have intial at (4,4)") {
+        maze.initial should equal(MazePos(4, 4))
       }
 
-      it("should have target at (2,4)") {
-        maze.target should equal(MazePos(2, 4))
+      it("should have target at (0,2)") {
+        maze.target should equal(MazePos(0, 2))
       }
 
       it("should have expected walls") {
         maze.walls should equal(Array(
           false, false, false, false, false, false, false, false, false, false,
-          false, false, true, false, false, false, false, false, false, false,
-          false, false, true, true, true, true, true, false, false, false,
           false, false, false, false, false, false, true, false, false, false,
+          false, false, true, true, true, true, true, false, false, false,
+          false, false, true, false, false, false, false, false, false, false,
           false, false, false, false, false, false, false, false, false, false))
       }
 

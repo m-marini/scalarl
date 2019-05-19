@@ -4,15 +4,18 @@
 
 The trace file format is composed by:
 
-| Field  | Offset | Size |
-|:-------|-------:|-----:|
-| S0     |      1 |  200 |
-| Q0     |    201 |    8 |
-| ACTION |    209 |    1 |
-| REWARD |    210 |    1 |
-| S1     |    211 |  410 |
-| Q1     |    411 |    8 |
-| NQ0    |    419 |    8 |
+| Field      | Offset | Size |
+|:-----------|-------:|-----:|
+| EPISODE    |      1 |    1 |
+| STEP       |      2 |    1 |
+| ACTION     |      3 |    1 |
+| REWARD     |      4 |    1 |
+| ENDUP      |      5 |    1 |
+| PREV_POS   |      6 |    2 |
+| RESULT_POS |      8 |    2 |
+| PREV_Q     |     10 |    8 |
+| RESULT_Q   |     18 |    8 |
+| PREV_Q1    |     26 |    8 |
 
 ## Dump file format
 
@@ -32,13 +35,13 @@ Q(s,a) consist of 8 action values for 10 columns for 10 rows of possible subject
 
 Returns the data of state transition capture by the trace file:
 
-- the subject position in the maze environment
-- the action value estimated at that position
+- the subject position in the maze environment before step
+- the subject position in the maze environment after step
 - the action applied
 - the reward obtained
-- the resulting subject position
-- the action value estimated at the resulting position
-- the action value estimated at inital position after the reinforcement learning
+- the action values estimated before step
+- the action values estimated at result position before step
+- the action values estimated at result position after step
 
 ## qlearn 
 

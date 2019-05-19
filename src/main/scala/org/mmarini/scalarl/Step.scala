@@ -30,8 +30,13 @@
 package org.mmarini.scalarl
 
 case class Step(
-  episode: Int,
-  step:    Int,
-  env:     Env,
-  agent:   Agent,
-  session: Session)
+  episode:   Int,
+  step:      Int,
+  reward:    Double,
+  endUp:     Boolean,
+  action:    Int,
+  prevEnv:   Env,
+  prevAgent: Agent,
+  env:       Env,
+  agent:     Agent,
+  session:   Session)

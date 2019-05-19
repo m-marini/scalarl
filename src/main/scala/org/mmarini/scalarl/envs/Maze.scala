@@ -50,7 +50,7 @@ case class Maze(
   target:  MazePos) {
 
   /** Returns the flat position index */
-  def index(pos: MazePos): Int = pos.x + pos.y * width
+  def index(pos: MazePos): Int = pos.row * width + pos.col
 
   /** Returns true if the position is a wall */
   def isWall(pos: MazePos): Boolean = walls(index(pos))
@@ -60,7 +60,7 @@ case class Maze(
 
   /** Returns true if the position is outer the maze*/
   def isOuter(pos: MazePos): Boolean =
-    pos.x < 0 || pos.x >= width || pos.y < 0 || pos.y >= height
+    pos.col < 0 || pos.col >= width || pos.row < 0 || pos.row >= height
 
   /** Returns true if the position is valid */
   def isValid(pos: MazePos): Boolean = !(isOuter(pos) || isWall(pos))
@@ -69,12 +69,12 @@ case class Maze(
   lazy val map: INDArray = {
     val observation = Nd4j.zeros(Array(height, width), 'c')
     for {
-      x <- 0 until width
-      y <- 0 until height
-      pos = MazePos(x, y)
+      row <- 0 until height
+      col <- 0 until width
+      pos = MazePos(row, col)
       if !isValid(pos)
     } {
-      observation.putScalar(Array(y, x), 1)
+      observation.putScalar(Array(row, col), 1)
     }
     observation
   }
@@ -85,19 +85,22 @@ object Maze {
 
   /** Creates a [[Maze]] by parsing a list of lines representing the environment */
   def fromStrings(lines: Seq[String]): Maze = {
-    val (w, h) = size(lines)
-    val i = MazePos(position(lines, '*'))
-    val t = MazePos(position(lines, 'O'))
-    val ws = walls(lines)
+    val (width, height) = size(lines)
+    val initialPos = position(lines, '*')
+    val target = position(lines, 'O')
+    val wallsMap = walls(lines)
     Maze(
-      width = w,
-      height = h,
-      walls = ws,
-      initial = i,
-      target = t)
+      width = width,
+      height = height,
+      walls = wallsMap,
+      initial = initialPos,
+      target = target)
   }
 
-  /** Returns the width and height of maze by parsing the list of lines */
+  /**
+   * Returns the width and height of maze by parsing the list of lines
+   * @param lines the list of string rows including the bound characters `|`
+   */
   private def size(lines: Seq[String]): (Int, Int) = {
     val height = lines.length
     require(height > 0, "line 1: There must be at least one line")
@@ -113,21 +116,26 @@ object Maze {
     (width, height)
   }
 
-  /** Returns the position definition by parsing the list of lines */
-  private def position(lines: Seq[String], target: Char): (Int, Int) = {
+  /**
+   * Returns the position definition by parsing the list of lines
+   * @param lines the list of string rows including the bound characters `|`
+   * @param target the target character
+   */
+  private def position(lines: Seq[String], target: Char): MazePos = {
     val indices = for {
       (line, row) <- lines.zipWithIndex
       col = line.indexOf(target)
       if (col > 0)
-    } yield (col - 1, row)
+    } yield MazePos(row, col - 1)
     require(!indices.isEmpty, s"line ${lines.length + 1}: File must contain a '${target}'")
-    require(indices.length == 1, s"line ${indices(1)._2 + 1}: File must contain a single '${target}'")
-    indices.head match {
-      case (x, y) => (x, lines.length - y - 1)
-    }
+    require(indices.length == 1, s"line ${indices(1).row + 1}: File must contain a single '${target}'")
+    indices.head
   }
 
-  /** Returns the wall map by parsing the list of lines */
+  /**
+   * Returns the wall map by parsing the list of lines.
+   * @param lines the list of string rows including the bound characters `|`
+   */
   private def walls(lines: Seq[String]): Array[Boolean] = {
     val height = lines.length
     val width = lines.head.length() - 2
@@ -136,6 +144,6 @@ object Maze {
     } yield {
       row.tail.init.map(_ == 'X')
     }
-    walls.reverse.flatten.toArray
+    walls.flatten.toArray
   }
 }

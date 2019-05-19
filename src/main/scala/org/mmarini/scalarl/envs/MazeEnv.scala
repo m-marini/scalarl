@@ -68,24 +68,24 @@ case class MazeEnv(
   private val ClearScreen = "\033[2J\033[H"
 
   private val Deltas: Array[(Int, Int)] = Array(
-    (0, 1), //N
-    (1, 1), // NE
-    (1, 0), // E
-    (1, -1), // SE
-    (0, -1), // S
-    (-1, -1), // SW
-    (-1, 0), // W
-    (-1, 1) // NW
+    (-1, 0), //N
+    (-1, 1), // NE
+    (0, 1), // E
+    (1, 1), // SE
+    (1, 0), // S
+    (1, -1), // SW
+    (0, -1), // W
+    (-1, -1) // NW
   )
 
   override def render(mode: String, close: Boolean): Env = mode match {
     case "human" =>
       val map = for {
-        y <- 0 until maze.height
+        row <- 0 until maze.height
       } yield {
         val line = for {
-          x <- 0 until maze.width
-          pos = MazePos(x, y)
+          col <- 0 until maze.width
+          pos = MazePos(row, col)
         } yield {
           if (pos == subject) {
             '*'
@@ -101,7 +101,7 @@ case class MazeEnv(
       }
 
       val txt = ClearScreen +
-        "\r" + map.reverse.mkString("\n") + "\n" +
+        "\r" + map.mkString("\n") + "\n" +
         s"Episode ${episodeCount} / Step ${stepCount}"
       print(txt)
       this
@@ -116,7 +116,11 @@ case class MazeEnv(
   }
 
   override def reset(): (Env, Observation) = {
-    val next = MazeEnv(maze = maze, subject = maze.initial, episodeCount = episodeCount + 1, stepCount = 0)
+    val next = MazeEnv(
+      maze = maze,
+      subject = maze.initial,
+      episodeCount = episodeCount + 1,
+      stepCount = 0)
     val obs = next.observation
     (next, obs)
   }
@@ -143,6 +147,7 @@ case class MazeEnv(
 
   /** Returns the observation for a given subject location */
   private def observation(subject: MazePos): Observation = {
+    // Computes the available actions 
     val actions = Nd4j.zeros(Deltas.length.toLong)
     for {
       (delta, action) <- Deltas.zipWithIndex
@@ -152,20 +157,25 @@ case class MazeEnv(
       actions.putScalar(action, 1)
     }
 
+    // Computes the environment status
+    // array of 2 x widht x height
     val shape = 2L +: maze.map.shape()
     val observation = Nd4j.zeros(shape: _*)
 
+    // Fills with wall map
     val ind1 = NDArrayIndex.point(1)
     val indAll = NDArrayIndex.all()
     val map = maze.map
-    val x = observation.put(Array(ind1, indAll, indAll), map)
-    observation.putScalar(Array(0, subject.y, subject.x), 1)
+    observation.put(Array(ind1, indAll, indAll), map)
+
+    // Fills with subject position
+    observation.putScalar(Array(0, subject.row, subject.col), 1)
 
     val obs = INDArrayObservation(observation = observation.ravel(), actions = actions)
     obs
   }
 
-  private lazy val observation: Observation = observation(subject)
+  lazy val observation: Observation = observation(subject)
 
   /**
    * Returns the sequence of observation for each of possible states
@@ -175,10 +185,10 @@ case class MazeEnv(
    * The action array contains 9 values each for any direction with 1 value if action is valid
    */
   def dumpStates: Seq[Observation] = for {
-    y <- 0 until maze.height
-    x <- 0 until maze.width
+    row <- 0 until maze.height
+    col <- 0 until maze.width
   } yield {
-    observation(MazePos(x, y))
+    observation(MazePos(row, col))
   }
 
 }

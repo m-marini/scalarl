@@ -49,6 +49,8 @@ import org.yaml.snakeyaml.Yaml
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.mmarini.scalarl.Episode
 import com.typesafe.scalalogging.LazyLogging
+import org.mmarini.scalarl.Step
+import org.mmarini.scalarl.agents.TDQAgent
 
 object MazeMain extends LazyLogging {
   private def buildEnv(conf: Configuration): Env = {
@@ -67,7 +69,6 @@ object MazeMain extends LazyLogging {
     val maxAbsGrads = conf.getConf("agent").getDouble("maxAbsGradients").get
     val maxAbsParams = conf.getConf("agent").getDouble("maxAbsParameters").get
     val model = conf.getConf("agent").getString("model").get
-    //    val trace = conf.getConf("agent").getString("trace")
     QAgentBuilder(numInputs, numActions).
       numHiddens(numHiddens.toArray).
       epsilon(epsilon).
@@ -77,7 +78,6 @@ object MazeMain extends LazyLogging {
       maxAbsParams(maxAbsParams).
       seed(seed).
       file(model).
-      //      trace(trace).
       build()
   }
 
@@ -92,11 +92,11 @@ object MazeMain extends LazyLogging {
   /**
    * Returns the dump data array of the episode
    * The data array is composed by:
-   * 
+   *
    * - stepCount
    * - returnValue
    * - average loss
-   * - 10 x 10 x 8 of q action values for each state for each action 
+   * - 10 x 10 x 8 of q action values for each state for each action
    */
   private def createDump(episode: Episode): INDArray = {
     val session = episode.session
@@ -108,13 +108,54 @@ object MazeMain extends LazyLogging {
     Nd4j.hstack(kpi, qMat)
   }
 
+  /**
+   * Returns the trace data array of the step
+   * The data array is composed by:
+   *
+   * - episodeCount
+   * - stepCount
+   * - action
+   * - reward
+   * - endUp flag
+   * - prev row position
+   * - prev col position
+   * - result row position
+   * - result col position
+   * - prev q
+   * - result q
+   * - prev q1
+   */
+  private def createTrace(step: Step): INDArray = {
+    val prevEnv = step.prevEnv.asInstanceOf[MazeEnv]
+    val prevPos = prevEnv.subject
+    val env = step.env.asInstanceOf[MazeEnv]
+    val pos = env.subject
+    val head = Nd4j.create(Array(Array(
+      step.episode.toDouble,
+      step.step.toDouble,
+      step.action.toDouble,
+      step.reward,
+      if (step.endUp) 1.0 else 0.0,
+      prevPos.row,
+      prevPos.col,
+      pos.row,
+      pos.col)))
+    val prevAgent = step.prevAgent.asInstanceOf[QAgent]
+    val agent = step.agent.asInstanceOf[QAgent]
+    val prevQ = prevAgent.q(prevEnv.observation)
+    val prevQ1 = prevAgent.q(env.observation)
+    val q1 = agent.q(env.observation)
+    Nd4j.hstack(head, prevQ, q1, prevQ1)
+  }
+
   def main(args: Array[String]) {
     val conf = loadConfig(if (args.isEmpty) "maze.yaml" else args(0))
     val numEpisodes = conf.getConf("session").getInt("numEpisodes").get
     val sync = conf.getConf("session").getLong("sync").get
     val mode = conf.getConf("session").getString("mode").get
+    val dump = conf.getConf("session").getString("dump")
+    val trace = conf.getConf("session").getString("trace")
     val model = conf.getConf("agent").getString("model")
-    val dump = conf.getConf("agent").getString("dump")
 
     def onEpisode(episode: Episode) {
       val qagent = episode.agent.asInstanceOf[QAgent]
@@ -136,6 +177,12 @@ object MazeMain extends LazyLogging {
     session.episodeObs.subscribe(
       onEpisode(_),
       ex => logger.error(ex.getMessage, ex))
+    trace.foreach(file => {
+      session.stepObs.subscribe(step => {
+        val data = createTrace(step)
+        withFile(file, true)(writeINDArray(_)(data))
+      })
+    });
     session.run()
   }
 }

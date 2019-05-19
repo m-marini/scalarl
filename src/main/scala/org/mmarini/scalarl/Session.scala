@@ -87,7 +87,9 @@ class Session(
       do {
         val obs0 = _obs
         val (agent1, action) = _agent.chooseAction(obs0)
-        val (env1, obs1, reward, endUp, info) = _env.step(action)
+        val prevEnv = _env
+        val prevAgent = _agent
+        val (env1, obs1, reward, endUp, info) = prevEnv.step(action)
         _env = env1.render(mode, close)
         if (sync > 0) Thread.sleep(sync)
         val (agent2, error) = agent1.fit((obs0, action, reward, obs1, endUp, info))
@@ -97,6 +99,11 @@ class Session(
         val stepInfo = Step(
           episode = episode,
           step = step,
+          action = action,
+          reward = reward,
+          endUp = endUp,
+          prevEnv = prevEnv,
+          prevAgent = prevAgent,
           env = _env,
           agent = _agent,
           session = this)

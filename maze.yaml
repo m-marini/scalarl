@@ -22,9 +22,10 @@ agent:
   maxAbsGradients: 1
   maxAbsParameters: 1e3
   model: maze.zip
-  dump: maze-dump.csv
-#  trace: trace.csv
 session:
   numEpisodes: 300
   sync: 0
   mode: stats
+  trace: trace.csv
+  dump: maze-dump.csv
+
