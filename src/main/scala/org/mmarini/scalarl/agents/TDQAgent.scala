@@ -72,12 +72,6 @@ case class TDQAgent(
   epsilon: Double,
   gamma:   Double,
   lambda:  Double) extends Agent {
-  //  gamma:        Double,
-  //  episodeCount: Int               = 0,
-  //  stepCount:    Int               = 0,
-  //  returnValue:  Double            = 0,
-  //  discount:     Double            = 1,
-  //  totalLoss:    Double            = 0) extends Agent {
 
   /**
    * Returns the index containing the max value of a by masking mask
@@ -147,7 +141,7 @@ case class TDQAgent(
    * @param feedback the [[Feedback]] from environment after a state transition
    */
   override def fit(feedback: Feedback): (Agent, Double) = feedback match {
-    case (obs0, action, reward, obs1, endUp, _) =>
+    case Feedback(obs0, action, reward, obs1, endUp) =>
       ???
     //      val q0 = q(obs0)
     //      val q1 = q(obs1)
@@ -193,6 +187,8 @@ case class TDQAgent(
     //    ModelSerializer.writeModel(net, file, true)
     //    this
   }
+
+  override def reset: Agent = this
 }
 
 /**

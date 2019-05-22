@@ -44,18 +44,13 @@ import rx.lang.scala.Subject
  *  @param sync the time interval between each step in millis
  */
 class Session(
-  noEpisode: Int,
-  env0:      Env,
-  agent0:    Agent,
-  mode:      String  = "human",
-  close:     Boolean = false,
-  sync:      Long    = 0) {
+  env:              Env,
+  agent:            Agent,
+  noEpisode:        Int,
+  maxEpisodeLength: Long) {
 
   private val episodeSubj: Subject[Episode] = Subject()
   private val stepSubj: Subject[Step] = Subject()
-
-  private var _env: Env = env0
-  private var _agent: Agent = agent0
 
   def episodeObs: Observable[Episode] = episodeSubj
   def stepObs: Observable[Step] = stepSubj
@@ -75,50 +70,55 @@ class Session(
    *    - until detection of end of episode
    */
   def run(): Session = {
-    for { episode <- 1 to noEpisode } {
-      val (env1, obs1) = _env.reset()
-      val env2 = env1.render(mode, close)
-      var _endUp = true
-      var _obs = obs1
-      _env = env2
+    var currentEnv = env
+    var currentAgent = agent
+    for { episode <- 0 until noEpisode } {
+      // Initialize before starting episode
+      val (initialEnv, initialObs) = currentEnv.reset()
+      currentEnv = initialEnv
+      currentAgent = currentAgent.reset
+      var obs = initialObs
+      var endUp = true
       var step = 0
       var totalLoss = 0.0
       var returnValue = 0.0
       do {
-        val obs0 = _obs
-        val (agent1, action) = _agent.chooseAction(obs0)
-        val prevEnv = _env
-        val prevAgent = _agent
-        val (env1, obs1, reward, endUp, info) = prevEnv.step(action)
-        _env = env1.render(mode, close)
-        if (sync > 0) Thread.sleep(sync)
-        val (agent2, error) = agent1.fit((obs0, action, reward, obs1, endUp, info))
-        _agent = agent2
-        _obs = obs1
-        _endUp = endUp
+        val env0 = currentEnv
+        val agent0 = currentAgent
+        val obs0 = obs
+
+        val (agent_1, action) = agent0.chooseAction(obs0)
+        val (env1, obs1, reward, endUp1) = env0.step(action)
+        val (agent1, error) = agent_1.fit(Feedback(obs0, action, reward, obs1, endUp1))
+
         val stepInfo = Step(
           episode = episode,
           step = step,
-          action = action,
           reward = reward,
-          endUp = endUp,
-          prevEnv = prevEnv,
-          prevAgent = prevAgent,
-          env = _env,
-          agent = _agent,
+          endUp = endUp1,
+          action = action,
+          beforeEnv = env0,
+          beforeAgent = agent0,
+          afterEnv = env1,
+          afterAgent = agent1,
           session = this)
         stepSubj.onNext(stepInfo)
+
         step += 1
-        returnValue = returnValue * _agent.gamma + reward
+        returnValue = returnValue * agent1.gamma + reward
         totalLoss += error * error
-      } while (!_endUp)
+        currentEnv = env1
+        currentAgent = agent1
+        obs = obs1
+        endUp = endUp1
+      } while (!endUp && step < maxEpisodeLength)
       val episodeInfo = Episode(
         episode = episode,
         stepCount = step,
         returnValue = returnValue,
         avgLoss = totalLoss / step,
-        env = _env,
-        agent = _agent,
+        env = currentEnv,
+        agent = currentAgent,
         session = this)
       episodeSubj.onNext(episodeInfo)
     }
@@ -131,14 +131,13 @@ object Session {
    * Returns a session
    */
   def apply(
-    noEpisode: Int,
-    env0:      Env,
-    agent0:    Agent,
-    mode:      String,
-    sync:      Long   = 0): Session =
+    noEpisode:        Int,
+    env0:             Env,
+    agent0:           Agent,
+    maxEpisodeLength: Long): Session =
     new Session(
       noEpisode = noEpisode,
-      env0 = env0,
-      agent0 = agent0,
-      mode = mode)
+      env = env0,
+      agent = agent0,
+      maxEpisodeLength = maxEpisodeLength)
 }

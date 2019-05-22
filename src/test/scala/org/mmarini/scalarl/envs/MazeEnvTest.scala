@@ -70,7 +70,7 @@ class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
     }
 
     describe("When MazeEnv.step north west") {
-      val (env1, obs, reward, endUp, info) = env.step(7)
+      val (env1, obs, reward, endUp) = env.step(7)
 
       describe("Then observation") {
         val observation = obs.observation
@@ -172,7 +172,7 @@ class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
     }
 
     describe("When MazeEnv.step east") {
-      val (env1, obs, reward, endUp, info) = env.step(2)
+      val (env1, obs, reward, endUp) = env.step(2)
 
       describe("Then observation") {
         val observation = obs.observation

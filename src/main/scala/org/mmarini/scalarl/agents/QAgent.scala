@@ -70,13 +70,6 @@ case class QAgent(
   random:  Random,
   epsilon: Double,
   gamma:   Double) extends Agent {
-  //  gamma:        Double,
-  //  episodeCount: Int               = 0,
-  //  stepCount:    Int               = 0,
-  //  returnValue:  Double            = 0,
-  //  discount:     Double            = 1,
-  //  totalLoss:    Double            = 0,
-  //  trace:        Option[String]    = None) extends Agent {
 
   /**
    * Returns the index containing the max value of a by masking mask
@@ -148,7 +141,7 @@ case class QAgent(
    *  @param feedback the [[Feedback]] from environment after a state transition
    */
   override def fit(feedback: Feedback): (Agent, Double) = feedback match {
-    case (obs0, action, reward, obs1, endUp, _) =>
+    case Feedback(obs0, action, reward, obs1, endUp) =>
       val q0 = q(obs0)
       val q1 = q(obs1)
       val v0 = maxWithMask(q0, obs0.actions)
@@ -164,37 +157,6 @@ case class QAgent(
       val newNet = net.clone()
       newNet.fit(obs0.observation, expected)
       (copy(net = newNet), err)
-    //      val newQ0 = q(obs0)
-    //      val newStepCount = stepCount + 1
-    //      val newDiscount = discount * gamma
-    //      val newReturnValue = returnValue + reward * discount
-    //      val newTotalLoss = totalLoss + err * err
-    //      trace.foreach(file => {
-    //        val actRewVect = Nd4j.create(Array(Array(action.toDouble, reward)))
-    //        val traceData = Nd4j.hstack(obs0.observation, q0, actRewVect, obs1.observation, q1, newQ0)
-    //        withFile(file, true)(w => writeINDArray(w)(traceData))
-    //      })
-    //      if (endUp) {
-    //        val newEpisodeCount = episodeCount + 1
-    //        //        val kpi = DefaultAgentKpi(
-    //        //          episodeCount = newEpisodeCount,
-    //        //          stepCount = newStepCount,
-    //        //          returnValue = newReturnValue,
-    //        //          avgLoss = newTotalLoss / newStepCount)
-    //        //        //          _agentKpiObs.
-    //        copy(
-    //          episodeCount = newEpisodeCount,
-    //          stepCount = 0,
-    //          discount = 1,
-    //          returnValue = 0,
-    //          totalLoss = 0)
-    //      } else {
-    //        copy(
-    //          stepCount = newStepCount,
-    //          discount = newDiscount,
-    //          returnValue = newReturnValue,
-    //          totalLoss = newTotalLoss)
-    //      }
   }
 
   def writeModel(file: String): QAgent = {
@@ -202,6 +164,7 @@ case class QAgent(
     this
   }
 
+  override def reset: Agent = this
 }
 
 /**

@@ -15,6 +15,7 @@ agent:
   numInputs: 200
   numActions: 8
   numHiddens: []
+  seed: 1234
   learningRate: 3e-3
   epsilon: 0.03
   gamma: 0.999
@@ -22,8 +23,10 @@ agent:
   maxAbsParameters: 1e3
   model: maze.zip
 session:
-  numEpisodes: 300
+  numEpisodes: 10
+  maxEpisodeLength: 1000
   sync: 0
   mode: stats
+  trace: trace.csv
   dump: maze-dump.csv
 

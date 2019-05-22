@@ -136,7 +136,7 @@ case class TraceTDQAgent(
    *  @param feedback the [[Feedback]] from environment after a state transition
    */
   override def fit(feedback: Feedback): (Agent, Double) = feedback match {
-    case (obs0, action, reward, obs1, endUp, _) =>
+    case Feedback(obs0, action, reward, obs1, endUp) =>
       //      val q0 = q(obs0)
       //      val q1 = q(obs1)
       //      val v0 = maxWithMask(q0, obs0.actions)
@@ -178,6 +178,8 @@ case class TraceTDQAgent(
     //    ModelSerializer.writeModel(net, file, true)
     this
   }
+
+  override def reset: TraceTDQAgent = copy(net = net.clearTraces())
 }
 
 /**

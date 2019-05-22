@@ -42,10 +42,4 @@ package object scalarl {
 
   /** Flag to signal end of episode */
   type EndUp = Boolean
-
-  /** Additional info during simulation steps */
-  type Info = Map[String, Any]
-
-  /** Feedback from environment */
-  type Feedback = (Observation, Action, Reward, Observation, EndUp, Info)
 }

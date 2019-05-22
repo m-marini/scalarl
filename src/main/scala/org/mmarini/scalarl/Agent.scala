@@ -60,4 +60,7 @@ trait Agent {
 
   /** Returns the discount parameter */
   def gamma: Double
+
+  /** Returns the reset agent */ 
+  def reset: Agent
 }
