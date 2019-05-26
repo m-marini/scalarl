@@ -135,13 +135,20 @@ case class AgentBuilder(
           epsilon = _epsilon,
           gamma = _gamma)
       case AgentType.TDQAgent =>
+        val file = _file.map(f => new File(f)).filter(_.canRead())
+        val net = file.map(loadTraceNet).getOrElse(buildTraceNet())
         TDQAgent(
-          net = buildTraceNet(),
+          net = net,
           random = random,
           epsilon = _epsilon,
           gamma = _gamma,
           lambda = _lambda)
     }
+  }
+
+  private def loadTraceNet(file: File): TraceNetwork = {
+    logger.info(s"Loading ${file.toString} ...")
+    TraceModelSerializer.restoreTraceNetwork(file)
   }
 
   private def buildTraceNet(): TraceNetwork = {

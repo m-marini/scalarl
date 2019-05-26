@@ -131,7 +131,7 @@ case class TDQAgent(
   }
 
   override def writeModel(file: String): TDQAgent = {
-    //    ModelSerializer.writeModel(net, file, true)
+    TraceModelSerializer.writeModel(net, file)
     this
   }
 

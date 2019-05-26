@@ -30,4 +30,3 @@ session:
   mode: stats
   trace: trace.csv
   dump: maze-dump.csv
-

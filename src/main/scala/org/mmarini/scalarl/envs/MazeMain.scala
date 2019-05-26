@@ -63,7 +63,7 @@ object MazeMain extends LazyLogging {
     val numInputs = conf.getConf("agent").getInt("numInputs").get
     val numActions = conf.getConf("agent").getInt("numActions").get
     val numHiddens = conf.getConf("agent").getList[Int]("numHiddens")
-    val seed = conf.getConf("agent").getLong("seed").get
+    val seed = conf.getConf("agent").getLong("seed").getOrElse(0L)
     val epsilon = conf.getConf("agent").getDouble("epsilon").get
     val gamma = conf.getConf("agent").getDouble("gamma").get
     val learningRate = conf.getConf("agent").getDouble("learningRate").get
