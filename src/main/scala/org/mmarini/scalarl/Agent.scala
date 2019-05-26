@@ -29,7 +29,7 @@
 
 package org.mmarini.scalarl
 
-import rx.lang.scala.Observable
+import org.nd4j.linalg.api.ndarray.INDArray
 
 /**
  * The agent acting in the environment
@@ -58,9 +58,11 @@ trait Agent {
    */
   def fit(feedback: Feedback): (Agent, Double)
 
+  /** Returns the reset agent */
+  def reset: Agent
+
   /** Returns the discount parameter */
   def gamma: Double
 
-  /** Returns the reset agent */ 
-  def reset: Agent
+  def writeModel(file: String): Agent
 }

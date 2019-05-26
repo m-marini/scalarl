@@ -12,7 +12,7 @@ env:
   - "|          |"
   - "|          |"
 agent:
-  numInputs: 200
+  numInputs: 208
   numActions: 8
   numHiddens: []
   seed: 1234
@@ -21,6 +21,7 @@ agent:
   gamma: 0.999
   maxAbsGradients: 1
   maxAbsParameters: 1e3
+  type: TDQAgent
   model: maze.zip
 session:
   numEpisodes: 10

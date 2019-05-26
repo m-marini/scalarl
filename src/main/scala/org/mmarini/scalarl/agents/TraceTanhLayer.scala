@@ -57,3 +57,9 @@ class TraceTanhLayer extends TraceLayer {
 
   override def clearTraces(): TraceLayer = this
 }
+
+object TraceTanhLayer {
+  private val layer = new TraceTanhLayer()
+
+  def apply() :TraceTanhLayer = layer
+}

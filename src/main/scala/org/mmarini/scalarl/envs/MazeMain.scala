@@ -41,12 +41,15 @@ import org.mmarini.scalarl.FileUtils.withFile
 import org.mmarini.scalarl.FileUtils.writeINDArray
 import org.mmarini.scalarl.Session
 import org.mmarini.scalarl.Step
-import org.mmarini.scalarl.agents.QAgent
-import org.mmarini.scalarl.agents.QAgentBuilder
+import org.mmarini.scalarl.agents.TDQAgent
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
 
 import com.typesafe.scalalogging.LazyLogging
+import org.mmarini.scalarl.agents.AgentBuilder
+import org.mmarini.scalarl.agents.QAgent
+import org.mmarini.scalarl.agents.TD0QAgent
+import org.mmarini.scalarl.agents.AgentType
 
 object MazeMain extends LazyLogging {
   private val ClearScreen = "\033[2J\033[H"
@@ -67,8 +70,13 @@ object MazeMain extends LazyLogging {
     val maxAbsGrads = conf.getConf("agent").getDouble("maxAbsGradients").get
     val maxAbsParams = conf.getConf("agent").getDouble("maxAbsParameters").get
     val model = conf.getConf("agent").getString("model").get
-    QAgentBuilder(numInputs, numActions).
-      numHiddens(numHiddens.toArray).
+    val agentTypeOp = conf.getConf("agent").getString("type")
+    val agentType = agentTypeOp.map(AgentType.withName).getOrElse(AgentType.QAgent)
+
+    AgentBuilder().
+      numInputs(numInputs).
+      numActions(numActions).
+      numHiddens(numHiddens: _*).
       epsilon(epsilon).
       gamma(gamma).
       learningRate(learningRate).
@@ -76,6 +84,7 @@ object MazeMain extends LazyLogging {
       maxAbsParams(maxAbsParams).
       seed(seed).
       file(model).
+      agentType(agentType).
       build()
   }
 
@@ -155,7 +164,7 @@ object MazeMain extends LazyLogging {
       for {
         file <- model
       } {
-        episode.agent.asInstanceOf[QAgent].writeModel(file)
+        episode.agent.writeModel(file)
       }
       for {
         file <- dump

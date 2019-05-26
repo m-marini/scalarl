@@ -50,12 +50,12 @@ trait TraceLayer {
    * Returns
    * <ul>
    * <li>a new layer with updated parameters by fitting the output errors,</li>
-   * <li>the input mask</li>
    * <li>the input errors</li>
+   * <li>the input mask</li>
    * </ul>
    * @param input the input values
    * @param output the output values
-   * @param errors the output errors
+   * @param errors the output errors gradient
    * @param mask the output mask (the updating output)
    */
   def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): (TraceLayer, INDArray, INDArray)

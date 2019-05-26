@@ -46,7 +46,7 @@ object LossFunctions {
   val MSE: TraceLossFunction = new TraceLossFunction() {
 
     override def apply(labels: INDArray, output: INDArray, mask: INDArray): Double =
-      labels.mul(mask).distance2(output.mul(mask)) / 2
+      labels.mul(mask).squaredDistance(output.mul(mask)) / 2
 
     override def gradient(labels: INDArray, output: INDArray, mask: INDArray): INDArray =
       labels.sub(output).muli(mask)

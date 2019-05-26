@@ -30,6 +30,7 @@
 package org.mmarini.scalarl
 
 import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.Nd4j
 
 /**
  * The concrete observation of the environment status.
@@ -38,4 +39,6 @@ import org.nd4j.linalg.api.ndarray.INDArray
  * @param observation the environment status observation
  * @param actions the valid action for the current environment status
  */
-case class INDArrayObservation(observation: INDArray, actions: INDArray) extends Observation
+case class INDArrayObservation(observation: INDArray, actions: INDArray) extends Observation {
+  lazy val signals: INDArray = Nd4j.hstack(observation, actions)
+}

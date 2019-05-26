@@ -29,28 +29,14 @@
 
 package org.mmarini.scalarl.agents
 
-import java.io.File
-
-import org.deeplearning4j.nn.api.OptimizationAlgorithm
-import org.deeplearning4j.nn.conf.GradientNormalization
-import org.deeplearning4j.nn.conf.NeuralNetConfiguration
-import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
-import org.deeplearning4j.nn.conf.layers.DenseLayer
-import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
-import org.deeplearning4j.nn.weights.WeightInit
 import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.Action
 import org.mmarini.scalarl.Agent
 import org.mmarini.scalarl.Feedback
 import org.mmarini.scalarl.Observation
-import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
-import org.nd4j.linalg.learning.config.Adam
-import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
-
-import com.typesafe.scalalogging.LazyLogging
 import org.nd4j.linalg.factory.Nd4j
 
 /**
@@ -62,12 +48,11 @@ import org.nd4j.linalg.factory.Nd4j
  *  Updates its strategy policy to optimize the return value (discount sum of rewards)
  *  and the observation of resulting environment
  */
-case class TDQAgent(
-  net:     TraceNetwork,
+case class TD0QAgent(
+  net:     MultiLayerNetwork,
   random:  Random,
   epsilon: Double,
-  gamma:   Double,
-  lambda:  Double) extends QAgent {
+  gamma:   Double) extends QAgent {
 
   /**
    * Returns the q function with action value for an observation
@@ -75,15 +60,16 @@ case class TDQAgent(
    * @param observationt the observation
    */
   override def q(observation: Observation): INDArray = {
-    val out = net.forward(observation.signals)
-    out.last
+    val out = net.feedForward(observation.signals)
+    val q = out.get(out.size() - 1)
+    q
   }
 
   /**
    * Chooses the action for an observation
    *
    * It return the new agent and the chosen action.
-   * This actor apply a epsilon greedy policy choosing a random actin with probability epsilon
+   * This actor apply a epsilon greedy policy choosing a random action with probability epsilon
    * and the action with highest action value with probability 1 - epsilon.
    *
    *  @param observation the observation of environment status
@@ -91,12 +77,10 @@ case class TDQAgent(
   override def chooseAction(observation: Observation): (Agent, Action) = {
     val actions = observation.actions
     val action = if (random.nextDouble() < epsilon) {
-      val validActions = (0 until actions.size(1).toInt).filter(i => actions.getInt(i) > 0)
-      require(!validActions.isEmpty, s"actions=${actions}, validActions=${validActions}")
+      val validActions = (0 until actions.size(0).toInt).filter(i => actions.getInt(i) > 0)
       val action = validActions(random.nextInt(validActions.length))
       action
     } else {
-      // Greedy policy
       greedyAction(observation)
     }
     require(actions.getInt(action) > 0)
@@ -104,6 +88,7 @@ case class TDQAgent(
   }
 
   /**
+   * Return an agent that fits the expected result and the error.
    * Updates the q function to fit the expected result.
    *
    *  @param feedback the [[Feedback]] from environment after a state transition
@@ -111,29 +96,21 @@ case class TDQAgent(
   override def fit(feedback: Feedback): (Agent, Double) = feedback match {
     case Feedback(obs0, action, reward, obs1, endUp) =>
       val v0 = v(obs0)
-      val v1 = v(obs1)
+      val v1 = if (endUp) 0.0 else v(obs1)
       val err = reward + gamma * v1 - v0
-
       val q0 = q(obs0)
       val delta = Nd4j.zeros(q0.shape(): _*)
       delta.putScalar(action, err)
-
       val expected = q0.add(delta)
-
-      val mask = Nd4j.zeros(q0.shape(): _*)
-      mask.putScalar(action, 1)
-
-      val aStar = greedyAction(obs0)
-      val net1 = if (action == aStar) net else net.clearTraces()
-      val (newNet, error) = net1.backward(obs0.signals, expected, mask)
-
-      (copy(net = newNet), error)
+      val newNet = net.clone()
+      newNet.fit(obs0.signals, expected)
+      (copy(net = newNet), err)
   }
 
-  override def writeModel(file: String): TDQAgent = {
-    //    ModelSerializer.writeModel(net, file, true)
+ override def writeModel(file: String): Agent = {
+    ModelSerializer.writeModel(net, file, true)
     this
   }
 
-  override def reset: TDQAgent = copy(net = net.clearTraces())
+  override def reset: Agent = this
 }

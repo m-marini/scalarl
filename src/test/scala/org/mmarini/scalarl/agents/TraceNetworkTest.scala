@@ -48,8 +48,20 @@ class TraceNetworkTest extends PropSpec with PropertyChecks with Matchers {
 
   def createNetwork(n: Long, m: Long): TraceNetwork = {
     val layer1 = TraceDenseLayer(n, m, gamma = 0.0, lambda = 0.0, learningRate = 1e-3)
-    val layer2 = new TraceTanhLayer()
-    new TraceNetwork(Array(layer1, layer2))
+    new TraceNetwork(Array(layer1, TraceTanhLayer()))
+  }
+
+  def createNetwork1(): TraceNetwork = {
+    val weights = Nd4j.ones(2L, 2L).mul(0.1)
+    val bias = Nd4j.zeros(1L, 2L)
+    val layer1 = TraceDenseLayer(
+      weights = weights,
+      bias = bias,
+      gamma = 0.0,
+      lambda = 0.0,
+      learningRate = 1e-3)
+
+    new TraceNetwork(Array(layer1, TraceTanhLayer()))
   }
 
   def createInput(noInputs: Long): INDArray = Nd4j.randn(1L, noInputs)
@@ -91,8 +103,36 @@ class TraceNetworkTest extends PropSpec with PropertyChecks with Matchers {
   def createLabels(n: Long): INDArray = Nd4j.randn(1L, n)
 
   property(s"""Given a TraceNetwork
+      and fixed inputs, labels
     When backward invoked
-      and forward again
+      and forward on fitted network
+    Then should return a smaller loss value""") {
+    forAll(
+      (Gen.const(2), "noInputs"),
+      (Gen.const(2), "noOutputs")) {
+        (noInputs, noOutputs) =>
+          whenever(noInputs >= 1 && noOutputs >= 1) {
+            val input = Nd4j.create(Array(1.0, -1.0))
+            val nn = createNetwork1()
+            val labels = Nd4j.create(Array(0.3, 0.7))
+
+            val output = nn.forward(input)
+            val mask = Nd4j.ones(labels.shape(): _*)
+            val expectedError = output.last.squaredDistance(labels) / 2
+
+            val (fittedNet, initError) = nn.backward(input, labels, mask)
+            initError should be(expectedError +- Eps)
+
+            val newOutputs = fittedNet.forward(input)
+            val nextError = newOutputs.last.squaredDistance(labels) / 2
+            nextError should be < initError
+          }
+      }
+  }
+
+  property(s"""Given a TraceNetwork
+    When backward invoked
+      and forward on fitted network
     Then should return a smaller loss value""") {
     forAll(
       (Gen.choose(1L, MaxInputs), "noInputs"),
@@ -105,12 +145,13 @@ class TraceNetworkTest extends PropSpec with PropertyChecks with Matchers {
 
             val output = nn.forward(input)
             val mask = Nd4j.ones(labels.shape(): _*)
-            val expectedError = output.last.distance2(labels) / 2
-            val initError = nn.backward(input, labels, mask)
+            val expectedError = output.last.squaredDistance(labels) / 2
 
+            val (fittedNet, initError) = nn.backward(input, labels, mask)
             initError should be(expectedError +- Eps)
 
-            val nextError = nn.backward(input, labels, mask)
+            val newOutputs = fittedNet.forward(input)
+            val nextError = newOutputs.last.squaredDistance(labels) / 2
             nextError should be < initError
           }
       }

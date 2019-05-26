@@ -140,7 +140,7 @@ case class MazeEnv(
     // Fills with subject position
     observation.putScalar(Array(0, subject.row, subject.col), 1)
 
-    val obs = INDArrayObservation(observation = observation.ravel(), actions = actions)
+    val obs = INDArrayObservation(observation = observation.ravel(), actions = actions.ravel())
     obs
   }
 

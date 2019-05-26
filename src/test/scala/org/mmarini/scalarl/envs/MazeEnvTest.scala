@@ -95,7 +95,7 @@ class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
       }
       describe("And reward") {
         it("should be -1") {
-          reward should equal(-1.0)
+          reward should equal(-2.414 +- 0.001)
         }
       }
       describe("And endUp") {
@@ -191,7 +191,7 @@ class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
       }
       describe("And reward") {
         it("should be 1") {
-          reward should equal(1.0)
+          reward should equal(8.0)
         }
       }
       describe("And endUp") {

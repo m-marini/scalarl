@@ -54,18 +54,24 @@ class TraceNetwork(
   }
 
   /**
-   * Returns the loss value and update the network fitting the labels with mask given an input
+   * Returns the fit trace network and the loss value given the inputs, output labels and mask
    */
-  def backward(input: INDArray, labels: INDArray, mask: INDArray): Double = {
-//    val activations = forward(input)
-//    val inOut = activations.zip(activations.tail).zip(layers)
-//    val errors = loss.gradient(labels, activations.last, mask)
-//    inOut.reverse.foldLeft((errors, mask)) {
-//      case ((error, mask), ((in, out), layer)) =>
-//        layer.backward(in, out, error, mask)
-//    }
-//    loss(labels, activations.last, mask)
-    ???
+  def backward(input: INDArray, labels: INDArray, mask: INDArray): (TraceNetwork, Double) = {
+    val activations = forward(input)
+    // Transforms the layer activations into pair of input and output activations and layer
+    val inOutLayers = activations.zip(activations.tail).zip(layers)
+    // Computes the errors on the output layer
+    val errors = loss.gradient(labels, activations.last, mask)
+    // applies the backward propagation from output layer to input layer
+    val (_, _, newLayers) = inOutLayers.reverse.foldLeft((errors, mask, Seq[TraceLayer]())) {
+      case ((error, mask, layers), ((in, out), layer)) => {
+        val (newLayer, backErrors, backMask) = layer.backward(in, out, error, mask)
+        (backErrors, backMask, newLayer +: layers)
+      }
+    }
+    (
+      new TraceNetwork(layers = newLayers.toArray, loss),
+      loss(labels, activations.last, mask))
   }
 
   def clearTraces(): TraceNetwork = {
