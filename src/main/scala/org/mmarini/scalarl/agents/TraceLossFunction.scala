@@ -27,22 +27,31 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl
+package org.mmarini.scalarl.agents
 
 import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.indexing.NDArrayIndex
+import org.nd4j.linalg.indexing.INDArrayIndex
 
-/** The observation of the environment status. */
-trait Observation {
+/**
+ */
+trait TraceLossFunction {
+  def name: String
 
-  /** Returns the tensor of status of environment */
-  def observation: INDArray
+  def apply(labels: INDArray, output: INDArray, mask: INDArray): Double
 
-  /**
-   * Returns the valid actions vector.
-   * The vector contains the value 1 at valid action indices
-   */
-  def actions: INDArray
+  def gradient(labels: INDArray, output: INDArray, mask: INDArray): INDArray
+}
 
-  /** Returns the signal vector. */
-  def signals: INDArray
+object LossFunctions {
+  val MSE: TraceLossFunction = new TraceLossFunction() {
+    val name = "MSE"
+    
+    override def apply(labels: INDArray, output: INDArray, mask: INDArray): Double =
+      labels.mul(mask).squaredDistance(output.mul(mask)) / 2
+
+    override def gradient(labels: INDArray, output: INDArray, mask: INDArray): INDArray =
+      labels.sub(output).muli(mask)
+  }
 }

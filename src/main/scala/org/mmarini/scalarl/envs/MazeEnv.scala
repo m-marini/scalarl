@@ -30,17 +30,13 @@
 package org.mmarini.scalarl.envs
 
 import org.mmarini.scalarl.Action
-import org.mmarini.scalarl.Env
-import org.mmarini.scalarl.Observation
 import org.mmarini.scalarl.EndUp
-import org.mmarini.scalarl.Info
-import org.mmarini.scalarl.Reward
+import org.mmarini.scalarl.Env
 import org.mmarini.scalarl.INDArrayObservation
+import org.mmarini.scalarl.Observation
+import org.mmarini.scalarl.Reward
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.indexing.NDArrayIndex
-import org.mmarini.scalarl.Feedback
-import org.nd4j.linalg.api.ops.impl.transforms.comparison.Eps
-import org.mmarini.scalarl.Observation
 
 /**
  * The environment simulating a subject in a maze.
@@ -55,93 +51,72 @@ import org.mmarini.scalarl.Observation
  * @param subject the current subject position
  */
 case class MazeEnv(
-  maze:         Maze,
-  subject:      MazePos,
-  episodeCount: Int     = 0,
-  stepCount:    Int     = 0) extends Env {
-  private val OuterReward = -1.0
-  private val WallReward = -1.0
-  private val TargetReward = 1.0
+  maze:    Maze,
+  subject: MazePos) extends Env {
+  private val TargetReward = 10.0
   private val NoStepReward = -1.0
-  private val StepReward = -1.0
-
-  private val ClearScreen = "\033[2J\033[H"
+  private val UnitMoveReward = -1.0
 
   private val Deltas: Array[(Int, Int)] = Array(
-    (0, 1), //N
-    (1, 1), // NE
-    (1, 0), // E
-    (1, -1), // SE
-    (0, -1), // S
-    (-1, -1), // SW
-    (-1, 0), // W
-    (-1, 1) // NW
+    (-1, 0), //N
+    (-1, 1), // NE
+    (0, 1), // E
+    (1, 1), // SE
+    (1, 0), // S
+    (1, -1), // SW
+    (0, -1), // W
+    (-1, -1) // NW
   )
 
-  override def render(mode: String, close: Boolean): Env = mode match {
-    case "human" =>
-      val map = for {
-        y <- 0 until maze.height
+  def render() {
+    val map = for {
+      row <- 0 until maze.height
+    } yield {
+      val line = for {
+        col <- 0 until maze.width
+        pos = MazePos(row, col)
       } yield {
-        val line = for {
-          x <- 0 until maze.width
-          pos = MazePos(x, y)
-        } yield {
-          if (pos == subject) {
-            '*'
-          } else if (pos == maze.target) {
-            'O'
-          } else if (maze.isValid(pos)) {
-            ' '
-          } else {
-            'X'
-          }
+        if (pos == subject) {
+          '*'
+        } else if (pos == maze.target) {
+          'O'
+        } else if (maze.isValid(pos)) {
+          ' '
+        } else {
+          'X'
         }
-        "|" + line.mkString + "|"
       }
-
-      val txt = ClearScreen +
-        "\r" + map.reverse.mkString("\n") + "\n" +
-        s"Episode ${episodeCount} / Step ${stepCount}"
-      print(txt)
-      this
-    case "stats" =>
-      if (endUp()) {
-        println(s"Episode ${episodeCount} / Step ${stepCount}")
-      }
-      this
-    case _ =>
-      print(ClearScreen + s"\rEpisode ${episodeCount} / Step ${stepCount}")
-      this
+      "|" + line.mkString + "|"
+    }
+    print(map.mkString("\n"))
   }
 
   override def reset(): (Env, Observation) = {
-    val next = MazeEnv(maze = maze, subject = maze.initial, episodeCount = episodeCount + 1, stepCount = 0)
+    val next = MazeEnv(
+      maze = maze,
+      subject = maze.initial)
     val obs = next.observation
     (next, obs)
   }
 
   private def endUp(): Boolean = maze.isTarget(subject)
 
-  override def step(action: Action): (Env, Observation, Reward, EndUp, Info) = {
+  private def moveCost(pos: MazePos): Double =
+    NoStepReward + subject.distance(pos) * UnitMoveReward
+
+  override def step(action: Action): (Env, Observation, Reward, EndUp) = {
     val delta = if (action >= 0 && action < Deltas.length) Deltas(action) else (0, 0)
-    val nextPos = subject.moveBy(delta)
-    val (pos, reward, endUp, info) = if (!maze.isValid(nextPos)) {
-      // Invalid
-      (subject, NoStepReward, false, Map[String, Any]())
-    } else if (nextPos.equals((0, 0))) {
-      // No move
-      (subject, NoStepReward, false, Map[String, Any]())
-    } else if (maze.isTarget(nextPos)) {
-      (nextPos, TargetReward, true, Map[String, Any]())
-    } else {
-      (nextPos, StepReward, false, Map[String, Any]())
-    }
-    val nextEnv = copy(subject = pos, stepCount = stepCount + 1)
-    (nextEnv, nextEnv.observation, reward, endUp, info)
+    val destination = subject.moveBy(delta)
+    val pos = if (maze.isValid(destination)) destination else subject
+    val endUp = maze.isTarget(pos)
+    val reward = moveCost(pos) + (if (endUp) TargetReward else 0.0)
+    val nextEnv = copy(subject = pos)
+    (nextEnv, nextEnv.observation, reward, endUp)
   }
 
+  /** Returns the observation for a given subject location */
   private def observation(subject: MazePos): Observation = {
+    // Computes the available actions
     val actions = Nd4j.zeros(Deltas.length.toLong)
     for {
       (delta, action) <- Deltas.zipWithIndex
@@ -151,26 +126,38 @@ case class MazeEnv(
       actions.putScalar(action, 1)
     }
 
+    // Computes the environment status
+    // array of 2 x widht x height
     val shape = 2L +: maze.map.shape()
     val observation = Nd4j.zeros(shape: _*)
 
+    // Fills with wall map
     val ind1 = NDArrayIndex.point(1)
     val indAll = NDArrayIndex.all()
     val map = maze.map
-    val x = observation.put(Array(ind1, indAll, indAll), map)
-    observation.putScalar(Array(0, subject.y, subject.x), 1)
+    observation.put(Array(ind1, indAll, indAll), map)
 
-    val obs = INDArrayObservation(observation = observation.ravel(), actions = actions)
+    // Fills with subject position
+    observation.putScalar(Array(0, subject.row, subject.col), 1)
+
+    val obs = INDArrayObservation(observation = observation.ravel(), actions = actions.ravel())
     obs
   }
 
-  private lazy val observation: Observation = observation(subject)
+  lazy val observation: Observation = observation(subject)
 
+  /**
+   * Returns the sequence of observation for each of possible states
+   * Each observation consists of an array of states and an array of available actions.
+   * The state array consists of 10 x 10 values 1 value for the cell with subject
+   * and a second sequence of 10 x 10 values with 1 value foe the cell with obstacle
+   * The action array contains 9 values each for any direction with 1 value if action is valid
+   */
   def dumpStates: Seq[Observation] = for {
-    y <- 0 until maze.height
-    x <- 0 until maze.width
+    row <- 0 until maze.height
+    col <- 0 until maze.width
   } yield {
-    observation(MazePos(x, y))
+    observation(MazePos(row, col))
   }
 
 }

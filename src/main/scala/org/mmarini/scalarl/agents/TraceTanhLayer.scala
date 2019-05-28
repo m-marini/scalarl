@@ -27,22 +27,39 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl
+package org.mmarini.scalarl.agents
 
 import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.indexing.NDArrayIndex
+import org.nd4j.linalg.indexing.INDArrayIndex
+import org.nd4j.linalg.api.ops.impl.transforms.Tanh
 
-/** The observation of the environment status. */
-trait Observation {
+/**
+ */
+class TraceTanhLayer extends TraceLayer {
 
-  /** Returns the tensor of status of environment */
-  def observation: INDArray
+  /** Returns the output of layer given an input */
+  override def forward(input: INDArray): INDArray = {
+    val y = Nd4j.getExecutioner().execAndReturn(new Tanh(input.dup()))
+    y
+  }
 
   /**
-   * Returns the valid actions vector.
-   * The vector contains the value 1 at valid action indices
+   * Returns the backward errors and mask after updating the layer parameters given the input, output, output, errors
+   * and output mask
    */
-  def actions: INDArray
+  override def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): (TraceLayer, INDArray, INDArray) = {
+    val inpError = output.mul(output).subi(1.0).negi().muli(errors).muli(mask)
+    //    val inpError = output.sub(1.0).muli(output.add(1.0)).negi().muli(errors).muli(mask)
+    (this, inpError, mask)
+  }
 
-  /** Returns the signal vector. */
-  def signals: INDArray
+  override def clearTraces(): TraceLayer = this
+}
+
+object TraceTanhLayer {
+  private val layer = new TraceTanhLayer()
+
+  def apply() :TraceTanhLayer = layer
 }

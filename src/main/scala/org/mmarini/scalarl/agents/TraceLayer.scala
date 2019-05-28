@@ -27,22 +27,36 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl
+package org.mmarini.scalarl.agents
 
 import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.indexing.NDArrayIndex
+import org.nd4j.linalg.indexing.INDArrayIndex
 
-/** The observation of the environment status. */
-trait Observation {
+/**
+ */
+trait TraceLayer {
 
-  /** Returns the tensor of status of environment */
-  def observation: INDArray
+  /** Returns the output of layer given an input */
+  def forward(input: INDArray): INDArray
 
   /**
-   * Returns the valid actions vector.
-   * The vector contains the value 1 at valid action indices
+   * Returns a new layer with eligibility traces cleared
    */
-  def actions: INDArray
+  def clearTraces(): TraceLayer
 
-  /** Returns the signal vector. */
-  def signals: INDArray
+  /**
+   * Returns
+   * <ul>
+   * <li>a new layer with updated parameters by fitting the output errors,</li>
+   * <li>the input errors</li>
+   * <li>the input mask</li>
+   * </ul>
+   * @param input the input values
+   * @param output the output values
+   * @param errors the output errors gradient
+   * @param mask the output mask (the updating output)
+   */
+  def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): (TraceLayer, INDArray, INDArray)
 }

@@ -29,6 +29,9 @@
 
 package org.mmarini.scalarl.envs
 
+import scala.math.sqrt;
+import scala.math.pow;
+
 /**
  * The cell position in the maze
  *
@@ -36,12 +39,15 @@ package org.mmarini.scalarl.envs
  *  @param x the x coordinate
  *  @param y the y coordinate
  */
-case class MazePos(x: Int, y: Int) {
+case class MazePos(row: Int, col: Int) {
 
   /** Returns the position moved from this position by delta */
   def moveBy(delta: (Int, Int)): MazePos = delta match {
-    case (dx, dy) => MazePos(x = x + dx, y = y + dy)
+    case (dRow, dCol) => MazePos(row = row + dRow, col = col + dCol)
   }
+
+  def distance(pos: MazePos): Double =
+    sqrt(pow(pos.row - row, 2) + pow(pos.col - col, 2))
 }
 
 /** The builder of [[MazePos]] */

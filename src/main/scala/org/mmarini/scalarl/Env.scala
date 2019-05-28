@@ -40,16 +40,6 @@ trait Env {
   def reset(): (Env, Observation)
 
   /**
-   * Returns the environment simulator after rendering it
-   *
-   * @param mode the rendering mode
-   * - "human" for human readable rendering
-   *
-   * @param close true if it closes the rendering window
-   */
-  def render(mode: String = "human", close: Boolean = false): Env
-
-  /**
    * Computes the next status of environment executing an action.
    *
    *  It returns a n-uple with:
@@ -61,5 +51,5 @@ trait Env {
    *
    *  @param action the executing action
    */
-  def step(action: Action): (Env, Observation, Reward, EndUp, Info)
+  def step(action: Action): (Env, Observation, Reward, EndUp)
 }

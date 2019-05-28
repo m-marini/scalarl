@@ -29,7 +29,7 @@
 
 package org.mmarini.scalarl
 
-import rx.lang.scala.Observable
+import org.nd4j.linalg.api.ndarray.INDArray
 
 /**
  * The agent acting in the environment
@@ -52,12 +52,17 @@ trait Agent {
   def chooseAction(observation: Observation): (Agent, Action)
 
   /**
-   * Returns the fit agent by optimizing its strategy policy
+   * Returns the fit agent by optimizing its strategy policy and the error
    *
    * @param feedback the feedback from the last step
    */
-  def fit(feedback: Feedback): Agent
+  def fit(feedback: Feedback): (Agent, Double)
 
-  /** Returns the option of [[AgentKpi]] */
-  def agentKpi: Option[AgentKpi]
+  /** Returns the reset agent */
+  def reset: Agent
+
+  /** Returns the discount parameter */
+  def gamma: Double
+
+  def writeModel(file: String): Agent
 }
