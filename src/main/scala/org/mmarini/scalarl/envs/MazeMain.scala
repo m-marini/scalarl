@@ -69,11 +69,11 @@ object MazeMain extends LazyLogging {
     val learningRate = conf.getConf("agent").getDouble("learningRate").get
     val maxAbsGrads = conf.getConf("agent").getDouble("maxAbsGradients").get
     val maxAbsParams = conf.getConf("agent").getDouble("maxAbsParameters").get
-    val model = conf.getConf("agent").getString("model").get
+    val model = conf.getConf("agent").getString("model")
     val agentTypeOp = conf.getConf("agent").getString("type")
     val agentType = agentTypeOp.map(AgentType.withName).getOrElse(AgentType.QAgent)
 
-    AgentBuilder().
+    val baseBuilder = AgentBuilder().
       numInputs(numInputs).
       numActions(numActions).
       numHiddens(numHiddens: _*).
@@ -83,8 +83,10 @@ object MazeMain extends LazyLogging {
       maxAbsGradient(maxAbsGrads).
       maxAbsParams(maxAbsParams).
       seed(seed).
-      file(model).
-      agentType(agentType).
+      agentType(agentType)
+    model.
+      map(baseBuilder.file).
+      getOrElse(baseBuilder).
       build()
   }
 
@@ -181,12 +183,15 @@ object MazeMain extends LazyLogging {
           print(ClearScreen + "\r")
           env.asInstanceOf[MazeEnv].render()
           print(s"\nEpisode ${episodeCount} / Step ${stepCount}")
+          System.out.flush()
         case "stats" =>
           if (endUp) {
             println(s"Episode ${episodeCount} / Step ${stepCount}")
+            System.out.flush()
           }
         case _ =>
           print(ClearScreen + s"\rEpisode ${episodeCount} / Step ${stepCount}")
+          System.out.flush()
       }
     }
 
@@ -213,11 +218,10 @@ object MazeMain extends LazyLogging {
       onEpisode(_),
       ex => logger.error(ex.getMessage, ex))
 
-    trace.foreach(file => {
-      session.stepObs.subscribe(
-        onStep(_),
-        ex => logger.error(ex.getMessage, ex))
-    })
+    session.stepObs.subscribe(
+      onStep(_),
+      ex => logger.error(ex.getMessage, ex))
+
     session.run()
   }
 }

@@ -20,3 +20,12 @@ The configuration is defined in `maze.yaml` file and consists of a maze map with
 
 The analysis of data can be done using octave script in `octave` folders.
 See `octave/readme.md`
+
+## Current goal #18
+
+Run different sessions on maze environment with different agent (QAgent, TDQAgent) and analize the results.
+It is expected that learning rate of TDQAgent should be heighr of QAgent.
+
+Analyze different network configurations with no hidden layer, one hidden layer or two hidden layer.
+
+Run a QAgent without hidden layer (linear regretion) with 300 episodes limited to max 300 steps.

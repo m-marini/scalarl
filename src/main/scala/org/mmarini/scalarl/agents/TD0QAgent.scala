@@ -77,7 +77,7 @@ case class TD0QAgent(
   override def chooseAction(observation: Observation): (Agent, Action) = {
     val actions = observation.actions
     val action = if (random.nextDouble() < epsilon) {
-      val validActions = (0 until actions.size(0).toInt).filter(i => actions.getInt(i) > 0)
+      val validActions = (0 until actions.size(1).toInt).filter(i => actions.getInt(i) > 0)
       val action = validActions(random.nextInt(validActions.length))
       action
     } else {

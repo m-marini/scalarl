@@ -25,7 +25,7 @@ agent:
   model: maze.zip
 session:
   numEpisodes: 10
-  maxEpisodeLength: 1000
+  maxEpisodeLength: 300
   sync: 0
   mode: stats
   trace: trace.csv
