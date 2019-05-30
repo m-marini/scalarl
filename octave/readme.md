@@ -19,7 +19,7 @@ The trace file format is composed by:
 
 ## Dump file format
 
-Each record of the dump file rappresents an episode and the format is composed by:
+Each record of the dump file rapresents an episode and the format is composed by:
 
 | Field     | Offset |                  Size |
 |:----------|-------:|----------------------:|
@@ -28,8 +28,36 @@ Each record of the dump file rappresents an episode and the format is composed b
 | ERRORS    |      3 |                     1 |
 | Q(s,a)    |      4 |     8 x 10 x 10 = 800 |
 
-
 Q(s,a) consist of 8 action values for 10 columns for 10 rows of possible subject locations
+
+## Statistics file format
+
+Each record of statistic file rapresentes the statistical data of sampled episode sequence
+
+| Field              | Offset | Size |
+|:-------------------|-------:|-----:|
+| Average            |      1 |    1 |
+| Standard deviation |      2 |    1 |
+| Minimum            |      3 |    1 |
+| 5% percentile      |      4 |    1 |
+| 25% percentile     |      5 |    1 |
+| Median             |      6 |    1 |
+| 75% percentile     |      7 |    1 |
+| 95% percentile     |      8 |    1 |
+| Maximum            |      9 |    1 |
+
+## stats
+
+Computes the statistics on data dump folder.
+Creates the steps, returns and errors files containing statistics
+
+## plotFile
+
+Plot the data on a file in y linear scale
+
+## logyPlotFile
+
+Plot the data on a file in y logaritmic scale
 
 ## readTrace
 
