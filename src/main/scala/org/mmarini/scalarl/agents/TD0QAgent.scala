@@ -97,17 +97,17 @@ case class TD0QAgent(
     case Feedback(obs0, action, reward, obs1, endUp) =>
       val v0 = v(obs0)
       val v1 = if (endUp) 0.0 else v(obs1)
-      val err = reward + gamma * v1 - v0
+      val expected = reward + gamma * v1
+      val err = expected - v0
       val q0 = q(obs0)
-      val delta = Nd4j.zeros(q0.shape(): _*)
-      delta.putScalar(action, err)
-      val expected = q0.add(delta)
+      q0.putScalar(action, expected)
+
       val newNet = net.clone()
-      newNet.fit(obs0.signals, expected)
+      newNet.fit(obs0.signals, q0)
       (copy(net = newNet), err)
   }
 
- override def writeModel(file: String): Agent = {
+  override def writeModel(file: String): Agent = {
     ModelSerializer.writeModel(net, file, true)
     this
   }
