@@ -50,6 +50,8 @@ import org.mmarini.scalarl.agents.AgentBuilder
 import org.mmarini.scalarl.agents.QAgent
 import org.mmarini.scalarl.agents.TD0QAgent
 import org.mmarini.scalarl.agents.AgentType
+import org.mmarini.scalarl.agents.TraceUpdater
+import org.mmarini.scalarl.agents.AccumulateTraceUpdater
 
 object MazeMain extends LazyLogging {
   private val ClearScreen = "\033[2J\033[H"
@@ -70,8 +72,8 @@ object MazeMain extends LazyLogging {
     val maxAbsGrads = conf.getConf("agent").getDouble("maxAbsGradients").get
     val maxAbsParams = conf.getConf("agent").getDouble("maxAbsParameters").get
     val model = conf.getConf("agent").getString("model")
-    val agentTypeOp = conf.getConf("agent").getString("type")
-    val agentType = agentTypeOp.map(AgentType.withName).getOrElse(AgentType.QAgent)
+    val traceUpdater = conf.getConf("agent").getString("traceUpdater").map(TraceUpdater.fromString).getOrElse(AccumulateTraceUpdater)
+    val agentType = conf.getConf("agent").getString("type").map(AgentType.withName).getOrElse(AgentType.QAgent)
 
     val baseBuilder = AgentBuilder().
       numInputs(numInputs).
@@ -83,7 +85,8 @@ object MazeMain extends LazyLogging {
       maxAbsGradient(maxAbsGrads).
       maxAbsParams(maxAbsParams).
       seed(seed).
-      agentType(agentType)
+      agentType(agentType).
+      traceUpdater(traceUpdater)
     model.
       map(baseBuilder.file).
       getOrElse(baseBuilder).

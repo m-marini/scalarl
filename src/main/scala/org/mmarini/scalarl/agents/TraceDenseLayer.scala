@@ -43,7 +43,8 @@ case class TraceDenseLayer(
   val biasTraces:   INDArray,
   val gamma:        Double,
   val lambda:       Double,
-  val learningRate: Double) extends TraceLayer {
+  val learningRate: Double,
+  val traceUpdater: TraceUpdater) extends TraceLayer {
 
   /** Returns the output of layer given an input */
   override def forward(input: INDArray): INDArray = {
@@ -104,9 +105,13 @@ case class TraceDenseLayer(
     val (wGrad, bGrad) = gradient(input, output)
     wGrad.muli(mask.broadcast(wGrad.shape(): _*))
     bGrad.muli(mask)
-    val newWeightTraces = weightTraces.mul(lambda * gamma).addi(wGrad)
-    val newBiasTraces = biasTraces.mul(lambda * gamma).addi(bGrad)
-    (newWeightTraces, newBiasTraces)
+    traceUpdater(
+      weightTraces.mul(lambda * gamma),
+      biasTraces.mul(lambda * gamma),
+      wGrad, bGrad)
+    //    val newWeightTraces = weightTraces.mul(lambda * gamma).addi(wGrad)
+    //    val newBiasTraces = biasTraces.mul(lambda * gamma).addi(bGrad)
+    //    (newWeightTraces, newBiasTraces)
   }
 }
 
@@ -116,7 +121,8 @@ object TraceDenseLayer {
     bias:         INDArray,
     gamma:        Double,
     lambda:       Double,
-    learningRate: Double): TraceDenseLayer = {
+    learningRate: Double,
+    traceUpdater: TraceUpdater): TraceDenseLayer = {
     val wTraces = Nd4j.zeros(weights.shape(): _*)
     val bTraces = Nd4j.zeros(bias.shape(): _*)
     new TraceDenseLayer(
@@ -126,7 +132,8 @@ object TraceDenseLayer {
       biasTraces = bTraces,
       gamma = gamma,
       lambda = lambda,
-      learningRate = learningRate)
+      learningRate = learningRate,
+      traceUpdater = traceUpdater)
   }
 
   def apply(
@@ -134,7 +141,8 @@ object TraceDenseLayer {
     noOutputs:    Long,
     gamma:        Double,
     lambda:       Double,
-    learningRate: Double): TraceDenseLayer = {
+    learningRate: Double,
+    traceUpdater: TraceUpdater): TraceDenseLayer = {
     // Xavier initialization
     val weights = Nd4j.randn(noInputs, noOutputs).muli(2.0 / (noInputs + noOutputs))
     val bias = Nd4j.zeros(1L, noOutputs)
@@ -143,6 +151,7 @@ object TraceDenseLayer {
       bias = bias,
       gamma = gamma,
       lambda = lambda,
-      learningRate = learningRate)
+      learningRate = learningRate,
+      traceUpdater = traceUpdater)
   }
 }

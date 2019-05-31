@@ -82,7 +82,8 @@ case class AgentBuilder(
   _maxAbsParams:   Double          = 0,
   _maxAbsGradient: Double          = 0,
   _agentType:      AgentType.Value = AgentType.QAgent,
-  _file:           Option[String]  = None) extends LazyLogging {
+  _file:           Option[String]  = None,
+  _traceUpdater:   TraceUpdater    = AccumulateTraceUpdater) extends LazyLogging {
 
   /**
    * Returns the builder with a number of input nodes
@@ -119,6 +120,8 @@ case class AgentBuilder(
   def file(file: String): AgentBuilder = copy(_file = Some(file))
 
   def agentType(agentType: AgentType.Value): AgentBuilder = copy(_agentType = agentType)
+
+  def traceUpdater(traceUpdater: TraceUpdater): AgentBuilder = copy(_traceUpdater = traceUpdater)
 
   /** Builds and returns the [[QAgent]] */
   def build(): Agent = {
@@ -163,7 +166,8 @@ case class AgentBuilder(
           noOutputs = outs,
           gamma = _gamma,
           lambda = _lambda,
-          learningRate = _learningRate),
+          learningRate = _learningRate,
+          _traceUpdater),
         TraceTanhLayer())
     } yield layer
 
@@ -173,7 +177,8 @@ case class AgentBuilder(
       noOutputs = _numActions,
       gamma = _gamma,
       lambda = _lambda,
-      learningRate = _learningRate)
+      learningRate = _learningRate,
+      _traceUpdater)
     new TraceNetwork(layers = hiddenLayers :+ outLayer)
   }
 

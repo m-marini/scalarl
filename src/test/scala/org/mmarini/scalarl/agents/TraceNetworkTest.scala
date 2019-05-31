@@ -47,7 +47,8 @@ class TraceNetworkTest extends PropSpec with PropertyChecks with Matchers {
   val Eps = 1e-3
 
   def createNetwork(n: Long, m: Long): TraceNetwork = {
-    val layer1 = TraceDenseLayer(n, m, gamma = 0.0, lambda = 0.0, learningRate = 1e-3)
+    val layer1 = TraceDenseLayer(n, m, gamma = 0.0, lambda = 0.0, learningRate = 1e-3,
+      traceUpdater = AccumulateTraceUpdater)
     new TraceNetwork(Array(layer1, TraceTanhLayer()))
   }
 
@@ -59,7 +60,8 @@ class TraceNetworkTest extends PropSpec with PropertyChecks with Matchers {
       bias = bias,
       gamma = 0.0,
       lambda = 0.0,
-      learningRate = 1e-3)
+      learningRate = 1e-3,
+      traceUpdater = AccumulateTraceUpdater)
 
     new TraceNetwork(Array(layer1, TraceTanhLayer()))
   }

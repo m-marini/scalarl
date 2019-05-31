@@ -84,7 +84,7 @@ object TraceModelSerializer {
     meta.asJava
   }
 
-  def createDenseMeta(net: TraceDenseLayer): java.util.Map[String, _ <: Any] = {
+  def createDenseMeta(net: TraceDenseLayer): java.util.Map[String, _ <: Any] =
     Map(
       "type" -> "TraceDenseLayer",
       "inputs" -> net.weights.size(0),
@@ -93,8 +93,8 @@ object TraceModelSerializer {
       "lambda" -> net.lambda,
       "weights" -> toMeta(net.weights),
       "bias" -> toMeta(net.bias),
-      "learningRate" -> net.learningRate).asJava
-  }
+      "learningRate" -> net.learningRate,
+      "traceUpdater" -> net.traceUpdater.name).asJava
 
   def restoreTraceNetwork(file: File): TraceNetwork = {
     val zipFile = new ZipFile(file)
@@ -135,11 +135,15 @@ object TraceModelSerializer {
     val gamma = conf.getDouble("gamma").get
     val lambda = conf.getDouble("lambda").get
     val learningRate = conf.getDouble("learningRate").get
+    val traceUpdater = conf.getString("traceUpdater").
+      map(TraceUpdater.fromString).
+      getOrElse(AccumulateTraceUpdater)
     TraceDenseLayer(
       weights = weights,
       bias = bias,
       gamma = gamma,
       lambda = lambda,
-      learningRate = learningRate)
+      learningRate = learningRate,
+      traceUpdater = traceUpdater)
   }
 }
