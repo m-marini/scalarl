@@ -20,9 +20,10 @@ agent:
   epsilon: 0.01
   gamma: 0.999
   lambda: 0.7
+  kappa: 2
   maxAbsGradients: 1
   maxAbsParameters: 1e3
-  type: TDQAgent
+  type: TDAAgent
   model: maze.zip
 session:
   numEpisodes: 100

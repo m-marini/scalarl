@@ -41,17 +41,16 @@ import org.mmarini.scalarl.FileUtils.withFile
 import org.mmarini.scalarl.FileUtils.writeINDArray
 import org.mmarini.scalarl.Session
 import org.mmarini.scalarl.Step
-import org.mmarini.scalarl.agents.TDQAgent
+import org.mmarini.scalarl.agents.AccumulateTraceUpdater
+import org.mmarini.scalarl.agents.AgentType
+import org.mmarini.scalarl.agents.PolicyFunction
+import org.mmarini.scalarl.agents.TDAgent
+import org.mmarini.scalarl.agents.TraceUpdater
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
 
 import com.typesafe.scalalogging.LazyLogging
 import org.mmarini.scalarl.agents.AgentBuilder
-import org.mmarini.scalarl.agents.QAgent
-import org.mmarini.scalarl.agents.TD0QAgent
-import org.mmarini.scalarl.agents.AgentType
-import org.mmarini.scalarl.agents.TraceUpdater
-import org.mmarini.scalarl.agents.AccumulateTraceUpdater
 
 object MazeMain extends LazyLogging {
   private val ClearScreen = "\033[2J\033[H"
@@ -68,6 +67,8 @@ object MazeMain extends LazyLogging {
     val seed = conf.getConf("agent").getLong("seed").getOrElse(0L)
     val epsilon = conf.getConf("agent").getDouble("epsilon").get
     val gamma = conf.getConf("agent").getDouble("gamma").get
+    val lambda = conf.getConf("agent").getDouble("lambda").getOrElse(0.0)
+    val kappa = conf.getConf("agent").getDouble("kappa").getOrElse(1.0)
     val learningRate = conf.getConf("agent").getDouble("learningRate").get
     val maxAbsGrads = conf.getConf("agent").getDouble("maxAbsGradients").get
     val maxAbsParams = conf.getConf("agent").getDouble("maxAbsParameters").get
@@ -81,6 +82,8 @@ object MazeMain extends LazyLogging {
       numHiddens(numHiddens: _*).
       epsilon(epsilon).
       gamma(gamma).
+      lambda(lambda).
+      kappa(kappa).
       learningRate(learningRate).
       maxAbsGradient(maxAbsGrads).
       maxAbsParams(maxAbsParams).
@@ -107,12 +110,12 @@ object MazeMain extends LazyLogging {
    */
   private def createDump(episode: Episode): INDArray = {
     val session = episode.session
-    val qagent = episode.agent.asInstanceOf[QAgent]
+    val agent = episode.agent.asInstanceOf[TDAgent]
     val kpi = Nd4j.create(Array(Array(episode.stepCount, episode.returnValue, episode.avgLoss)))
     val states = episode.env.asInstanceOf[MazeEnv].dumpStates
-    val q = states.map(qagent.q)
-    val qMat = Nd4j.vstack(q).ravel()
-    Nd4j.hstack(kpi, qMat)
+    val policy = states.map(agent.asInstanceOf[PolicyFunction].policy)
+    val policyMat = Nd4j.vstack(policy).ravel()
+    Nd4j.hstack(kpi, policyMat)
   }
 
   /**
@@ -147,11 +150,11 @@ object MazeMain extends LazyLogging {
       beforePos.col,
       afterPos.row,
       afterPos.col)))
-    val beforeAgent = step.beforeAgent.asInstanceOf[QAgent]
-    val afterAgent = step.afterAgent.asInstanceOf[QAgent]
-    val beforeQ = beforeAgent.q(beforeEnv.observation)
-    val afterQ = beforeAgent.q(afterEnv.observation)
-    val fitQ = afterAgent.q(beforeEnv.observation)
+    val beforeAgent = step.beforeAgent.asInstanceOf[PolicyFunction]
+    val afterAgent = step.afterAgent.asInstanceOf[PolicyFunction]
+    val beforeQ = beforeAgent.policy(beforeEnv.observation)
+    val afterQ = beforeAgent.policy(afterEnv.observation)
+    val fitQ = afterAgent.policy(beforeEnv.observation)
     Nd4j.hstack(head, beforeQ, fitQ, afterQ)
   }
 
@@ -200,7 +203,7 @@ object MazeMain extends LazyLogging {
     }
 
     def onStep(step: Step) {
-//      render(step)
+      //      render(step)
       for {
         file <- trace
       } {

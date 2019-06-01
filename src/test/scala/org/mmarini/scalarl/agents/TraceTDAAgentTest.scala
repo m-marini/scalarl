@@ -36,8 +36,9 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import scala.math.abs
+import org.mmarini.scalarl.INDArrayObservation
 
-class TraceTDQAgentTest extends FunSpec with Matchers {
+class TraceTDAAgentTest extends FunSpec with Matchers {
   val Outputs = 2
   val Inputs = 3 + Outputs
   val Eps = 1e-3
@@ -71,13 +72,13 @@ class TraceTDQAgentTest extends FunSpec with Matchers {
       s1 = INDArrayObservation(in1, AvailableActions),
       endUp = endUp)
 
-  def createAgent(): TDQAgent = {
+  def createAgent(): TDAAgent = {
     AgentBuilder()
       .numInputs(Inputs)
       .numActions(Outputs)
       .numHiddens(Outputs)
-      .agentType(AgentType.TDQAgent)
-      .build().asInstanceOf[TDQAgent]
+      .agentType(AgentType.TDAAgent)
+      .build().asInstanceOf[TDAAgent]
   }
 
   describe(s"""Given a TDQAgent and an observation""") {
@@ -86,7 +87,7 @@ class TraceTDQAgentTest extends FunSpec with Matchers {
     describe(s"""When gets for greedyAction""") {
       val action = agent.greedyAction(obs)
       it(s"""Then it should return the action with the highest q""") {
-        val q = agent.q(obs)
+        val q = agent.policy(obs)
         for {
           i <- 0L until q.length()
           if i != action
@@ -97,19 +98,19 @@ class TraceTDQAgentTest extends FunSpec with Matchers {
     }
   }
 
-  describe(s"""Given a TDQAgent and a feedback""") {
+  describe(s"""Given a TDAAgent and a feedback""") {
     val agent = createAgent()
     val feedback = Feedbacks(0)
     val Feedback(s0, action, reward, s1, _) = feedback
     describe(s"""When fits for the feedback and gets the q of the fitted agent""") {
       it(s"""Then should results a TDQAgent with value of action nearer the expected value""") {
-        val beforeQ0 = agent.q(s0, action)
+        val beforeQ0 = agent.actionPolicy(s0, action)
         val expectedQ0 = reward + agent.gamma * agent.v(s1)
 
         val (agent1, error) = agent.fit(feedback)
-        val agent2 = agent1.asInstanceOf[QAgent]
+        val agent2 = agent1.asInstanceOf[TDAAgent]
 
-        val afterQ0 = agent2.q(s0, action)
+        val afterQ0 = agent2.actionPolicy(s0, action)
         abs(expectedQ0 - afterQ0) should be <= (abs(expectedQ0 - beforeQ0))
       }
     }

@@ -47,7 +47,7 @@ trait TraceLossFunction {
 object LossFunctions {
   val MSE: TraceLossFunction = new TraceLossFunction() {
     val name = "MSE"
-    
+
     override def apply(labels: INDArray, output: INDArray, mask: INDArray): Double =
       labels.mul(mask).squaredDistance(output.mul(mask)) / 2
 
