@@ -1,0 +1,58 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+
+\title{Reinforcement Learning results analysis}
+\author{Marco Marini}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\begin{abstract}
+Reinforcement Learning results analysis.
+\end{abstract}
+
+\secton{Measure}
+
+One hundred tests were run a maze environment with two different $\lambda$ values.
+
+Each test consist of 1000 episodes with a limit of 300 steps per episode.
+
+\section{TDQAgent}
+
+The returns of TDQAgent slightly increase from about -565 to -555 while the optimal value should be about -4.
+
+The agent was not able to learn the optimal strategy due to probable the impossibility to find the path within limit of 300 steps.
+
+The errors increase from 6 to about 3000. The cause of such increment may be due to boostrap effect.
+No optimal and stable policy was found and so the action values decrease incrementally without a lower bound limit.
+The changes of network parameters do not fit such limits createing incremental errors episode by episodes.
+
+No significant differences of learning rate can be noted changing the hyper parameter $\lambda$.
+
+
+\begin{figure}
+	\includegraphics[width=\linewidth]{returns-0.png}
+	\caption{Returns $\lambda=0$.}
+	\label{fig:returns0}
+\end{figure}
+\begin{figure}
+	\includegraphics[width=\linewidth]{returns-07.png}
+	\caption{Returns $\lambda=0.7$.}
+	\label{fig:returns07}
+\end{figure}
+\begin{figure}
+	\includegraphics[width=\linewidth]{errors-0.png}
+	\caption{Error $\lambda=0$.}
+	\label{fig:errors01}
+\end{figure}
+\begin{figure}
+	\includegraphics[width=\linewidth]{errors-07.png}
+	\caption{Errorss with $\lambda=0.7$.}
+	\label{fig:error07}
+\end{figure}
+\end{document}
