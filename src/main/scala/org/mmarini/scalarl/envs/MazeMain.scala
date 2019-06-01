@@ -177,6 +177,7 @@ object MazeMain extends LazyLogging {
         val data = createDump(episode)
         withFile(file, true)(writeINDArray(_)(data))
       }
+      println(s"Episode ${episode.episode}, Steps ${episode.stepCount}, loss=${episode.avgLoss} ")
     }
 
     def render(step: Step) {
@@ -199,7 +200,7 @@ object MazeMain extends LazyLogging {
     }
 
     def onStep(step: Step) {
-      render(step)
+//      render(step)
       for {
         file <- trace
       } {

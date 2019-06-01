@@ -116,7 +116,7 @@ class Session(
         episode = episode,
         stepCount = step,
         returnValue = returnValue,
-        avgLoss = totalLoss / step,
+        avgLoss = if (step > 1) totalLoss / (step - 1) else totalLoss,
         env = currentEnv,
         agent = currentAgent,
         session = this)

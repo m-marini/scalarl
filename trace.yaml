@@ -3,30 +3,31 @@ env:
   map:
   - "|   O      |"
   - "|          |"
-  - "|   *      |"
+  - "|          |"
   - "|          |"
   - "|XXXXXX    |"
   - "|          |"
   - "|          |"
   - "|    XXXXXX|"
   - "|          |"
-  - "|          |"
+  - "|         *|"
 agent:
   numInputs: 208
   numActions: 8
   numHiddens: []
   seed: 1234
-  learningRate: 3e-3
-  epsilon: 0.03
+  learningRate: 1e-3
+  epsilon: 0.01
   gamma: 0.999
+  lambda: 0.7
   maxAbsGradients: 1
   maxAbsParameters: 1e3
   type: TDQAgent
   model: maze.zip
 session:
-  numEpisodes: 10
-  maxEpisodeLength: 300
+  numEpisodes: 100
+  maxEpisodeLength: 3000
   sync: 0
   mode: stats
-  trace: trace.csv
+#  trace: trace.csv
   dump: maze-dump.csv
