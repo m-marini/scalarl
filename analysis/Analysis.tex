@@ -3,6 +3,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{lmodern}
 \usepackage{graphicx}
+\usepackage{subcaption}
 
 \title{Reinforcement Learning results analysis}
 \author{Marco Marini}
@@ -16,7 +17,7 @@
 Reinforcement Learning results analysis.
 \end{abstract}
 
-\secton{Measure}
+\section{Measure}
 
 One hundred tests were run a maze environment with two different $\lambda$ values.
 
@@ -34,25 +35,32 @@ The changes of network parameters do not fit such limits createing incremental e
 
 No significant differences of learning rate can be noted changing the hyper parameter $\lambda$.
 
+\begin{figure}[h!]
+	\centering
+	\begin{subfigure}[b]{0.4\linewidth}
+		\includegraphics[width=\linewidth]{returns-0.png}
+		\caption{$\lambda=0$.}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.4\linewidth}
+		\includegraphics[width=\linewidth]{returns-07.png}
+		\caption{$\lambda=0.7$.}
+	\end{subfigure}
+	\caption{Returns}
+	\label{fig:returns}
+\end{figure}
 
-\begin{figure}
-	\includegraphics[width=\linewidth]{returns-0.png}
-	\caption{Returns $\lambda=0$.}
-	\label{fig:returns0}
+\begin{figure}[h!]
+	\centering
+	\begin{subfigure}[b]{0.4\linewidth}
+		\includegraphics[width=\linewidth]{errors-0.png}
+		\caption{$\lambda=0$.}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.4\linewidth}
+		\includegraphics[width=\linewidth]{errors-07.png}
+		\caption{Errorss with $\lambda=0.7$.}
+	\end{subfigure}
+	\caption{Errors}
+	\label{fig:errors}
 \end{figure}
-\begin{figure}
-	\includegraphics[width=\linewidth]{returns-07.png}
-	\caption{Returns $\lambda=0.7$.}
-	\label{fig:returns07}
-\end{figure}
-\begin{figure}
-	\includegraphics[width=\linewidth]{errors-0.png}
-	\caption{Error $\lambda=0$.}
-	\label{fig:errors01}
-\end{figure}
-\begin{figure}
-	\includegraphics[width=\linewidth]{errors-07.png}
-	\caption{Errorss with $\lambda=0.7$.}
-	\label{fig:error07}
-\end{figure}
+
 \end{document}
