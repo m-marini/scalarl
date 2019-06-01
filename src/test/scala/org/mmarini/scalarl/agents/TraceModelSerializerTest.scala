@@ -53,7 +53,8 @@ class TraceModelSerializerTest extends FunSpec with Matchers {
       noOutputs = Outputs,
       gamma = Gamma,
       lambda = Lambda,
-      learningRate = Alpha)
+      learningRate = Alpha,
+      traceUpdater = AccumulateTraceUpdater)
     val layer1 = TraceTanhLayer()
     // Creates the output layer
     val outLayer = TraceDenseLayer(
@@ -61,7 +62,8 @@ class TraceModelSerializerTest extends FunSpec with Matchers {
       noOutputs = Outputs,
       gamma = Gamma,
       lambda = Lambda,
-      learningRate = Alpha)
+      learningRate = Alpha,
+      traceUpdater = AccumulateTraceUpdater)
     new TraceNetwork(layers = Array(layer0, layer1, outLayer))
   }
 

@@ -81,7 +81,7 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
 
             val expected = expectedOut(input, weights, bias)
 
-            val layer = TraceDenseLayer(weights, bias, gamma, lambda, Epsilon)
+            val layer = TraceDenseLayer(weights, bias, gamma, lambda, Epsilon, AccumulateTraceUpdater)
             val output = layer.forward(input)
 
             output should be(expected)
@@ -103,7 +103,7 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
             val weights = createWeights(noInputs, noOutputs);
             val bias = createBias(noOutputs)
 
-            val layer = TraceDenseLayer(weights, bias, gamma, lambda, Epsilon)
+            val layer = TraceDenseLayer(weights, bias, gamma, lambda, Epsilon, AccumulateTraceUpdater)
             val outputs = layer.forward(input)
             val (gradW, gradB) = layer.gradient(input, outputs)
 
@@ -172,7 +172,7 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
 
                 val expected = createInputErrors(initWeights, errors)
 
-                val layer = TraceDenseLayer(initWeights.dup(), initBias.dup(), gamma, lambda, learningRate)
+                val layer = TraceDenseLayer(initWeights.dup(), initBias.dup(), gamma, lambda, learningRate, AccumulateTraceUpdater)
                 val outputs = layer.forward(input)
                 val (layer1, inputErrors, inputMask) = layer.backward(input, outputs, errors, mask)
 
@@ -272,7 +272,7 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
 
             val expected = createInputErrors(initWeights, errors)
 
-            val layer = TraceDenseLayer(initWeights.dup(), initBias.dup(), gamma, lambda, learningRate)
+            val layer = TraceDenseLayer(initWeights.dup(), initBias.dup(), gamma, lambda, learningRate, AccumulateTraceUpdater)
             val outputs = layer.forward(input)
             val (layer1, inputErrors, inputMask) = layer.backward(input, outputs, errors, mask)
 
@@ -356,7 +356,7 @@ class TraceDenseLayerTest extends PropSpec with PropertyChecks with Matchers {
 
             val expected = createInputErrors(initWeights, errors)
 
-            val layer = TraceDenseLayer(initWeights.dup(), initBias.dup(), gamma, lambda, learningRate)
+            val layer = TraceDenseLayer(initWeights.dup(), initBias.dup(), gamma, lambda, learningRate, AccumulateTraceUpdater)
             val outputs = layer.forward(input)
             val (layer1, inputErrors, inputMask) = layer.backward(input, outputs, errors, mask)
             val layer2 = layer1.clearTraces()

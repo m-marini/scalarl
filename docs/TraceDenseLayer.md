@@ -62,6 +62,23 @@ w'_{ij} = w_{ij} + E'_{w_{ij}} \delta_j \alpha
 b'_i = b_i + E'_{b_i} \delta_i \alpha
 ```
 
+If we consider the replace method then the update parameters equation are
+```math
+E'_{w_{ij}} = hardtanh(E_{w_{ij}} \gamma \lambda + x_i)
+\\
+E'_{b_j} = hardtanh(E_{b_j} \gamma \lambda + 1)
+\\
+hardtanh(x) = -1, x \lt -1
+\\
+hardtanh(x) = x, -1 \le x \lt 1
+\\
+hardtanh(x) = 1, x > 1
+\\
+w'_{ij} = w_{ij} + E'_{w_{ij}} \delta_j \alpha
+\\
+b'_i = b_i + E'_{b_i} \delta_i \alpha
+```
+
 ## Backward propagation
 
 The backward propagation of errors in the input are
@@ -74,7 +91,7 @@ The backward propagation of errors in the input are
 
 ## Error mask
 
-In Reinforcement Learning the Q-Learning algorithm must update the parameters for the action $a_k$ taken by the current policy so the update mechanism shuold be changed by the equations
+In Reinforcement Learning the Q-Learning algorithm must update the parameters for the action $a_k$ taken by the current policy so the update mechanism should be changed by the equations
 
 ```math
 E'_{w_{ij}} = E_{w_{ij}} \gamma \lambda + \frac{\partial y_j}{\partial w_{ij}}, j = k

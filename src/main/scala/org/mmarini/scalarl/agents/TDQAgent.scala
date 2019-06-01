@@ -110,22 +110,17 @@ case class TDQAgent(
    */
   override def fit(feedback: Feedback): (Agent, Double) = feedback match {
     case Feedback(obs0, action, reward, obs1, endUp) =>
-      val v0 = v(obs0)
       val v1 = v(obs1)
-      val err = reward + gamma * v1 - v0
 
       val q0 = q(obs0)
-      val delta = Nd4j.zeros(q0.shape(): _*)
-      delta.putScalar(action, err)
-
-      val expected = q0.add(delta)
+      q0.putScalar(action, reward + gamma * v1)
 
       val mask = Nd4j.zeros(q0.shape(): _*)
       mask.putScalar(action, 1)
 
       val aStar = greedyAction(obs0)
       val net1 = if (action == aStar) net else net.clearTraces()
-      val (newNet, error) = net1.backward(obs0.signals, expected, mask)
+      val (newNet, error) = net1.backward(obs0.signals, q0, mask)
 
       (copy(net = newNet), error)
   }

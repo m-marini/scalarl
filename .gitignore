@@ -12,3 +12,7 @@
 /maze.zip
 /*.csv
 /octave/octave-workspace
+/analysis/*.aux
+/analysis/*.synctex.gz
+/analysis/*.toc
+/analysis/*.log

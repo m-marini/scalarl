@@ -26,42 +26,47 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
-
 package org.mmarini.scalarl.agents
 
 import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.indexing.NDArrayIndex
-import org.nd4j.linalg.indexing.INDArrayIndex
-import org.nd4j.linalg.api.ops.impl.transforms.Tanh
 import org.nd4j.linalg.ops.transforms.Transforms
 
 /**
+ * Generates the new trace tensors.
+ *
+ * The [[AccumulateTraceUpdater]] or [[ReplaceTraceUpdater]] implements the concrete [[TraceUpdater]]
  */
-class TraceTanhLayer extends TraceLayer {
+trait TraceUpdater {
+  def name: String
 
-  /** Returns the output of layer given an input */
-  override def forward(input: INDArray): INDArray = {
-    //    val y = Nd4j.getExecutioner().execAndReturn(new Tanh(input.dup()))
-    //    y
-    Transforms.tanh(input)
-  }
-
-  /**
-   * Returns the backward errors and mask after updating the layer parameters given the input, output, output, errors
-   * and output mask
-   */
-  override def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): (TraceLayer, INDArray, INDArray) = {
-    val inpError = output.mul(output).subi(1.0).negi().muli(errors).muli(mask)
-    //    val inpError = output.sub(1.0).muli(output.add(1.0)).negi().muli(errors).muli(mask)
-    (this, inpError, mask)
-  }
-
-  override def clearTraces(): TraceLayer = this
+  def apply(weightTraces: INDArray, biasTraces: INDArray, wGrad: INDArray, bGrad: INDArray): (INDArray, INDArray)
 }
 
-object TraceTanhLayer {
-  private val layer = new TraceTanhLayer()
+/** Generates the new trace tensors accumulating the gradient values. */
+object AccumulateTraceUpdater extends TraceUpdater {
+  def name: String = "AccumulateTraceUpdater"
 
-  def apply(): TraceTanhLayer = layer
+  def apply(weightTraces: INDArray, biasTraces: INDArray, wGrad: INDArray, bGrad: INDArray): (INDArray, INDArray) = {
+    val newWeightTraces = weightTraces.add(wGrad)
+    val newBiasTraces = biasTraces.add(bGrad)
+    (newWeightTraces, newBiasTraces)
+  }
 }
+
+/** Generates the new trace tensors clipping the traces to -1 ... 1 range */
+object ReplaceTraceUpdater extends TraceUpdater {
+
+  def name: String = "ReplaceTraceUpdater"
+
+  def apply(weightTraces: INDArray, biasTraces: INDArray, wGrad: INDArray, bGrad: INDArray): (INDArray, INDArray) = {
+    val newWeightTraces = Transforms.hardTanh(weightTraces.add(wGrad))
+    val newBiasTraces = Transforms.hardTanh(biasTraces.add(bGrad))
+    (newWeightTraces, newBiasTraces)
+  }
+}
+
+/** Builds [[TraceUpdater]] from string name */
+object TraceUpdater {
+  val fromString: (String => TraceUpdater) = Seq(AccumulateTraceUpdater).map(u => u.name -> u).toMap
+}
+
