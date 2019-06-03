@@ -21,11 +21,46 @@ The configuration is defined in `maze.yaml` file and consists of a maze map with
 The analysis of data can be done using octave script in `octave` folders.
 See `octave/readme.md`
 
-## Current goal #18
+## Current Goal 19
 
-Run different sessions on maze environment with different agent (QAgent, TDQAgent) and analize the results.
-It is expected that learning rate of TDQAgent should be heighr of QAgent.
+Analyze the learning state values step by step.
+Run the lerning session by
 
-Analyze different network configurations with no hidden layer, one hidden layer or two hidden layer.
+```yaml
+---
+env:
+  map:
+  - "|   O      |"
+  - "|          |"
+  - "|          |"
+  - "|          |"
+  - "|XXXXXX    |"
+  - "|          |"
+  - "|          |"
+  - "|    XXXXXX|"
+  - "|          |"
+  - "|         *|"
+agent:
+  numInputs: 208
+  numActions: 8
+  numHiddens: []
+  seed: 1234
+  learningRate: 1e-3
+  epsilon: 0.01
+  gamma: 0.999
+  lambda: 0.7
+  kappa: 1
+  maxAbsGradients: 1
+  maxAbsParameters: 1e3
+  type: TDAAgent
+  model: maze.zip
+session:
+  numEpisodes: 10
+  maxEpisodeLength: 10
+  sync: 0
+  mode: stats
+  trace: trace.csv
+  dump: maze-dump.csv
+```
 
-Run a QAgent without hidden layer (linear regretion) with 300 episodes limited to max 300 steps.
+Analize the results plotting V and Q for traget cell positions with Octave functions `plotVFromTrace` and `plotQFromTrace`.

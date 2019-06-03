@@ -19,16 +19,16 @@ agent:
   learningRate: 1e-3
   epsilon: 0.01
   gamma: 0.999
-  lambda: 0.7
-  kappa: 2
+  lambda: 0
+  kappa: 1
   maxAbsGradients: 1
   maxAbsParameters: 1e3
   type: TDAAgent
-  model: maze.zip
+  #model: maze.zip
 session:
-  numEpisodes: 100
-  maxEpisodeLength: 3000
+  numEpisodes: 10
+  maxEpisodeLength: 10
   sync: 0
   mode: stats
-#  trace: trace.csv
+  trace: trace.csv
   dump: maze-dump.csv

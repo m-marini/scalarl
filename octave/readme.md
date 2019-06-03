@@ -26,9 +26,9 @@ Each record of the dump file rapresents an episode and the format is composed by
 | STEPCOUNT |      1 |                     1 |
 | RETURNS   |      2 |                     1 |
 | ERRORS    |      3 |                     1 |
-| Q(s,a)    |      4 |     8 x 10 x 10 = 800 |
+| Q         |      4 |     8 x 10 x 10 = 800 |
 
-Q(s,a) consist of 8 action values for 10 columns for 10 rows of possible subject locations
+Q consist of 8 action values for 10 columns for 10 rows of possible subject locations `Q[10][10][8]`
 
 ## Statistics file format
 
@@ -46,6 +46,35 @@ Each record of statistic file rapresentes the statistical data of sampled episod
 | 95% percentile     |      8 |    1 |
 | Maximum            |      9 |    1 |
 
+## plotVFromTrace
+
+Plot the V values from trace file for a given cell position
+
+Syntax
+
+```octave
+H = plotVTraceFromFile(filename, pos)
+```
+
+Example
+
+```octave
+H = plotVTraceFromFile("../trace.cvs", [9,9]])
+```
+
+## plotQFromTrace
+
+Plot the policy values from trace file for a given cell position
+
+Syntax
+```octave
+H = plotQTraceFromFile(filename, pos)
+```
+
+Example
+```octave
+H = plotQTraceFromFile("../trace.cvs", [9,9]])
+```
 ## stats
 
 Computes the statistics on data dump folder.
