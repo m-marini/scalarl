@@ -47,6 +47,8 @@ import org.nd4j.linalg.learning.config.Adam
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 
 import com.typesafe.scalalogging.LazyLogging
+import org.nd4j.linalg.api.rng.Random
+import org.nd4j.linalg.factory.Nd4j
 
 object AgentType extends Enumeration {
   val QAgent, TDAAgent = Value
@@ -132,12 +134,15 @@ case class AgentBuilder(
 
   /** Builds and returns the [[QAgent]] */
   def build(): Agent = {
-    val random = if (_seed != 0) new DefaultRandom(_seed) else new DefaultRandom()
-
+    val random = if (_seed != 0) {
+      Nd4j.getRandomFactory().getNewRandomInstance(_seed)
+    } else {
+      Nd4j.getRandom()
+    }
     _agentType match {
       case AgentType.QAgent =>
         val file = _file.map(f => new File(f)).filter(_.canRead())
-        val net = file.map(loadNet).getOrElse(buildNet())
+        val net = file.map(loadNet).getOrElse(buildNet(random))
         net.init()
         TD0QAgent(
           net = net,
@@ -146,7 +151,7 @@ case class AgentBuilder(
           gamma = _gamma)
       case AgentType.TDAAgent =>
         val file = _file.map(f => new File(f)).filter(_.canRead())
-        val net = file.map(loadTraceNet).getOrElse(buildTraceNet())
+        val net = file.map(loadTraceNet).getOrElse(buildTraceNet(random))
         TDAAgent(
           net = net,
           random = random,
@@ -162,7 +167,7 @@ case class AgentBuilder(
     TraceModelSerializer.restoreTraceNetwork(file)
   }
 
-  private def buildTraceNet(): TraceNetwork = {
+  private def buildTraceNet(random: Random): TraceNetwork = {
     // Computes the number of nodes of initial layers
     val initialNodes = _numInputs +: _numHiddens
     // Creates the hidden layers
@@ -172,6 +177,7 @@ case class AgentBuilder(
         TraceDenseLayer(
           noInputs = ins,
           noOutputs = outs,
+          random = random,
           gamma = _gamma,
           lambda = _lambda,
           learningRate = _learningRate,
@@ -183,6 +189,7 @@ case class AgentBuilder(
     val outLayer = TraceDenseLayer(
       noInputs = initialNodes.last,
       noOutputs = _numActions,
+      random = random,
       gamma = _gamma,
       lambda = _lambda,
       learningRate = _learningRate,
@@ -196,7 +203,7 @@ case class AgentBuilder(
   }
 
   /** Returns the built network for the QAgent */
-  private def buildNet(): MultiLayerNetwork = {
+  private def buildNet(random: Random): MultiLayerNetwork = {
     // Computes the number of nodes of initial layers
     val initialNodes = _numInputs +: _numHiddens
     // Creates the hidden layers

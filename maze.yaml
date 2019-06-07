@@ -22,7 +22,8 @@ agent:
   maxAbsGradients: 1
   maxAbsParameters: 1e3
   type: TDQAgent
-  model: maze.zip
+  loadModel: maze.zip
+  saveModel: maze.zip
 session:
   numEpisodes: 1000
   maxEpisodeLength: 300

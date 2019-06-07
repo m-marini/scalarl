@@ -72,7 +72,7 @@ object MazeMain extends LazyLogging {
     val learningRate = conf.getConf("agent").getDouble("learningRate").get
     val maxAbsGrads = conf.getConf("agent").getDouble("maxAbsGradients").get
     val maxAbsParams = conf.getConf("agent").getDouble("maxAbsParameters").get
-    val model = conf.getConf("agent").getString("model")
+    val loadModel = conf.getConf("agent").getString("loadModel")
     val traceUpdater = conf.getConf("agent").getString("traceUpdater").map(TraceUpdater.fromString).getOrElse(AccumulateTraceUpdater)
     val agentType = conf.getConf("agent").getString("type").map(AgentType.withName).getOrElse(AgentType.QAgent)
 
@@ -90,7 +90,7 @@ object MazeMain extends LazyLogging {
       seed(seed).
       agentType(agentType).
       traceUpdater(traceUpdater)
-    model.
+    loadModel.
       map(baseBuilder.file).
       getOrElse(baseBuilder).
       build()
@@ -155,7 +155,8 @@ object MazeMain extends LazyLogging {
     val beforeQ = beforeAgent.policy(beforeEnv.observation)
     val afterQ = beforeAgent.policy(afterEnv.observation)
     val fitQ = afterAgent.policy(beforeEnv.observation)
-    Nd4j.hstack(head, beforeQ, fitQ, afterQ)
+    val availableActions = beforeEnv.observation.actions.ravel()
+    Nd4j.hstack(head, beforeQ, fitQ, afterQ, availableActions)
   }
 
   def main(args: Array[String]) {
@@ -165,12 +166,12 @@ object MazeMain extends LazyLogging {
     val mode = conf.getConf("session").getString("mode").get
     val dump = conf.getConf("session").getString("dump")
     val trace = conf.getConf("session").getString("trace")
-    val model = conf.getConf("agent").getString("model")
+    val saveModel = conf.getConf("agent").getString("saveModel")
     val maxEpisodeLength = conf.getConf("session").getLong("maxEpisodeLength").getOrElse(Long.MaxValue)
 
     def onEpisode(episode: Episode) {
       for {
-        file <- model
+        file <- saveModel
       } {
         episode.agent.writeModel(file)
       }

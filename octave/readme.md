@@ -4,18 +4,19 @@
 
 The trace file format is composed by:
 
-| Field      | Offset | Size |
-|:-----------|-------:|-----:|
-| EPISODE    |      1 |    1 |
-| STEP       |      2 |    1 |
-| ACTION     |      3 |    1 |
-| REWARD     |      4 |    1 |
-| ENDUP      |      5 |    1 |
-| PREV_POS   |      6 |    2 |
-| RESULT_POS |      8 |    2 |
-| PREV_Q     |     10 |    8 |
-| RESULT_Q   |     18 |    8 |
-| PREV_Q1    |     26 |    8 |
+| Field             | Offset | Size |
+|:------------------|-------:|-----:|
+| EPISODE           |      1 |    1 |
+| STEP              |      2 |    1 |
+| ACTION            |      3 |    1 |
+| REWARD            |      4 |    1 |
+| ENDUP             |      5 |    1 |
+| PREV_POS          |      6 |    2 |
+| RESULT_POS        |      8 |    2 |
+| PREV_Q            |     10 |    8 |
+| RESULT_Q          |     18 |    8 |
+| PREV_Q1           |     26 |    8 |
+! AVAILABLE_ACTIONS |     34 |    8 |
 
 ## Dump file format
 

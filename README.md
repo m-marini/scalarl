@@ -64,3 +64,26 @@ session:
 ```
 
 Analize the results plotting V and Q for traget cell positions with Octave functions `plotVFromTrace` and `plotQFromTrace`.
+
+The experiments did not show any capability of learning. When the subject is far away the target, the agent behave with random exploring actions. If this behavior does not lead to the achievement of the objective, the rewards are negative and the Q values ​​tend to the asymptopic value of $\frac{R}{1-\gamma}$.
+At each step the Q value associated with the action taken is decreased making a new strategy that rewards another action be adopted.
+making a new strategy that rewards another action be adopted.
+The finial behaviour is an equal distribution of probability of choosing the available actions that can be measured by the frequency of actions.
+
+ If the probability is equal distributed between actions the expected  maximum frequency of all action is
+
+ ```math
+ F = \max(f_i) = \left| \frac{n+m-1}{m} \right|
+ ```
+
+the relative difference between the maximun frequency and the expected value is
+
+```math
+\mu = \frac{\max(f_i) - F}{F} = \frac{\max(f_i)}{F} - 1
+```
+
+Let us consider valid the uniform distribution if $\mu \le \mu_0$ then
+
+```math
+\max(f_i) \le (1+\mu_0) F
+```

@@ -30,9 +30,8 @@
 package org.mmarini.scalarl.agents
 
 import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.indexing.NDArrayIndex
-import org.nd4j.linalg.indexing.INDArrayIndex
 
 /**
  */
@@ -139,12 +138,13 @@ object TraceDenseLayer {
   def apply(
     noInputs:     Long,
     noOutputs:    Long,
+    random:       Random,
     gamma:        Double,
     lambda:       Double,
     learningRate: Double,
     traceUpdater: TraceUpdater): TraceDenseLayer = {
     // Xavier initialization
-    val weights = Nd4j.randn(noInputs, noOutputs).muli(2.0 / (noInputs + noOutputs))
+    val weights = Nd4j.randn(Array(noInputs.toInt, noOutputs.toInt), random).muli(2.0 / (noInputs + noOutputs))
     val bias = Nd4j.zeros(1L, noOutputs)
     TraceDenseLayer(
       weights = weights,

@@ -1,7 +1,7 @@
 ---
 env:
   map:
-  - "|   O      |"
+  - "|O         |"
   - "|          |"
   - "|          |"
   - "|          |"
@@ -17,18 +17,19 @@ agent:
   numHiddens: []
   seed: 1234
   learningRate: 1e-3
-  epsilon: 0.01
+  epsilon: 0.00
   gamma: 0.999
   lambda: 0
-  kappa: 1
+  kappa: 3
   maxAbsGradients: 1
   maxAbsParameters: 1e3
   type: TDAAgent
-  #model: maze.zip
+  #loadModel: maze.zip
+  #saveModel: maze.zip
 session:
   numEpisodes: 10
-  maxEpisodeLength: 10
+  maxEpisodeLength: 1000
   sync: 0
   mode: stats
   trace: trace.csv
-  dump: maze-dump.csv
+  #dump: maze-dump.csv
