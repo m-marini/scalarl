@@ -27,7 +27,7 @@ agent:
   #loadModel: maze.zip
   #saveModel: maze.zip
 session:
-  numEpisodes: 10
+  numEpisodes: 1
   maxEpisodeLength: 1000
   sync: 0
   mode: stats

@@ -87,3 +87,17 @@ Let us consider valid the uniform distribution if $\mu \le \mu_0$ then
 ```math
 \max(f_i) \le (1+\mu_0) F
 ```
+
+Use Octave script 
+
+```octave
+plotCoverage(trace-file)
+```
+
+and
+
+```octave
+plotMu(trace-file)
+```
+
+ to plot the maze stats from trace file.
