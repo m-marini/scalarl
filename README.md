@@ -1,5 +1,7 @@
 # ScalaRL
 
+[TOC]
+
 Study of Reinforcement Learning algorithm in a simple environment.
 
 ## Running

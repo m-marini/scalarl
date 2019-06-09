@@ -35,8 +35,7 @@ import org.mmarini.scalarl.Env
 import org.mmarini.scalarl.INDArrayObservation
 import org.mmarini.scalarl.Observation
 import org.mmarini.scalarl.Reward
-import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.indexing.NDArrayIndex
+import org.nd4j.linalg.factory.Nd4j;
 
 /**
  * The environment simulating a subject in a maze.
@@ -50,11 +49,11 @@ import org.nd4j.linalg.indexing.NDArrayIndex
  * @param maze the maze
  * @param subject the current subject position
  */
-case class MazeEnv(
+case class SimpleMazeEnv(
   maze:    Maze,
   subject: MazePos) extends Env {
   private val TargetReward = 10.0
-  private val NoStepReward = -1.0
+  private val NoStepReward = -2
   private val UnitMoveReward = -1.0
 
   private val Deltas: Array[(Int, Int)] = Array(
@@ -92,7 +91,7 @@ case class MazeEnv(
   }
 
   override def reset(): (Env, Observation) = {
-    val next = MazeEnv(
+    val next = SimpleMazeEnv(
       maze = maze,
       subject = maze.initial)
     val obs = next.observation
@@ -102,7 +101,7 @@ case class MazeEnv(
   private def endUp(): Boolean = maze.isTarget(subject)
 
   private def moveCost(pos: MazePos): Double =
-    NoStepReward + subject.distance(pos) * UnitMoveReward
+    if (subject == pos) NoStepReward else subject.distance(pos) * UnitMoveReward
 
   override def step(action: Action): (Env, Observation, Reward, EndUp) = {
     val delta = if (action >= 0 && action < Deltas.length) Deltas(action) else (0, 0)
@@ -128,17 +127,11 @@ case class MazeEnv(
 
     // Computes the environment status
     // array of 2 x widht x height
-    val shape = 2L +: maze.map.shape()
+    val shape = maze.map.shape()
     val observation = Nd4j.zeros(shape: _*)
 
-    // Fills with wall map
-    val ind1 = NDArrayIndex.point(1)
-    val indAll = NDArrayIndex.all()
-    val map = maze.map
-    observation.put(Array(ind1, indAll, indAll), map)
-
     // Fills with subject position
-    observation.putScalar(Array(0, subject.row, subject.col), 1)
+    observation.putScalar(Array(subject.row, subject.col), 1)
 
     val obs = INDArrayObservation(observation = observation.ravel(), actions = actions.ravel())
     obs
@@ -162,9 +155,9 @@ case class MazeEnv(
 
 }
 
-object MazeEnv {
-  def fromStrings(lines: Seq[String]): MazeEnv = {
+object SimpleMazeEnv {
+  def fromStrings(lines: Seq[String]): SimpleMazeEnv = {
     val maze = Maze.fromStrings(lines)
-    MazeEnv(maze, maze.initial)
+    SimpleMazeEnv(maze, maze.initial)
   }
 }

@@ -12,7 +12,7 @@ env:
   - "|          |"
   - "|         *|"
 agent:
-  numInputs: 208
+  numInputs: 100
   numActions: 8
   numHiddens: []
   learningRate: 1e-3
@@ -25,7 +25,7 @@ agent:
   loadModel: maze.zip
   saveModel: maze.zip
 session:
-  numEpisodes: 1000
+  numSteps: 300000
   maxEpisodeLength: 300
   sync: 0
   mode: stats

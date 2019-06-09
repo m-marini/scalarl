@@ -46,7 +46,7 @@ import rx.lang.scala.Subject
 class Session(
   env:              Env,
   agent:            Agent,
-  noEpisode:        Int,
+  noSteps:          Int,
   maxEpisodeLength: Long) {
 
   private val episodeSubj: Subject[Episode] = Subject()
@@ -54,6 +54,53 @@ class Session(
 
   def episodeObs: Observable[Episode] = episodeSubj
   def stepObs: Observable[Step] = stepSubj
+
+  private def runStep(context: SessionContext, sessionStep: Int): SessionContext = {
+    val SessionContext(env0, agent0, obs0, step, episode, totalLoss, returnValue, discount) = context
+
+    // Agent chooses the action
+    val (agent_1, action) = agent0.chooseAction(obs0)
+    // Updates environment
+    val (env1, obs1, reward, endUp) = env0.step(action)
+
+    // Updates agent
+    val (agent1, error) = agent_1.fit(Feedback(obs0, action, reward, obs1, endUp))
+    val stepInfo = Step(step = sessionStep, episode = context.episode, episodeStep = context.step, reward = reward,
+      endUp = endUp, action = action, beforeEnv = env0, beforeAgent = agent0, afterEnv = env1, afterAgent = agent1,
+      session = this)
+    stepSubj.onNext(stepInfo)
+
+    val step1 = step + 1
+    val returnValue1 = returnValue + reward * discount
+    val totalLoss1 = totalLoss + error * error
+    val discount1 = discount * agent.gamma
+
+    if (endUp || step1 >= maxEpisodeLength) {
+      // Episode completed
+
+      // Emits episode event
+      val episodeInfo = Episode(step = sessionStep, episode = episode, stepCount = step1, returnValue = returnValue1,
+        avgLoss = if (step1 > 1) totalLoss1 / step else totalLoss1, env = env1, agent = agent1, session = this)
+      episodeSubj.onNext(episodeInfo)
+
+      // Reinitialize session for next episode
+      val (initialEnv, initialObs) = env1.reset()
+      SessionContext(
+        env = initialEnv,
+        agent = agent1.reset,
+        obs = initialObs,
+        episode = episode + 1)
+    } else {
+      context.copy(
+        env = env1,
+        agent = agent1,
+        obs = obs1,
+        step = step1,
+        totalLoss = totalLoss1,
+        returnValue = returnValue1,
+        discount = discount1)
+    }
+  }
 
   /**
    * Runs the interactions for the number of episodes
@@ -70,58 +117,14 @@ class Session(
    *    - until detection of end of episode
    */
   def run(): Session = {
-    var currentEnv = env
-    var currentAgent = agent
-    for { episode <- 0 until noEpisode } {
-      // Initialize before starting episode
-      val (initialEnv, initialObs) = currentEnv.reset()
-      currentEnv = initialEnv
-      currentAgent = currentAgent.reset
-      var obs = initialObs
-      var endUp = true
-      var step = 0
-      var totalLoss = 0.0
-      var returnValue = 0.0
-      do {
-        val env0 = currentEnv
-        val agent0 = currentAgent
-        val obs0 = obs
+    val (initialEnv, initialObs) = env.reset()
+    val sessionContext = SessionContext(
+      env = initialEnv,
+      agent = agent.reset,
+      obs = initialObs)
 
-        val (agent_1, action) = agent0.chooseAction(obs0)
-        val (env1, obs1, reward, endUp1) = env0.step(action)
-        val (agent1, error) = agent_1.fit(Feedback(obs0, action, reward, obs1, endUp1))
+    (1 to noSteps).foldLeft(sessionContext)(runStep)
 
-        val stepInfo = Step(
-          episode = episode,
-          step = step,
-          reward = reward,
-          endUp = endUp1,
-          action = action,
-          beforeEnv = env0,
-          beforeAgent = agent0,
-          afterEnv = env1,
-          afterAgent = agent1,
-          session = this)
-        stepSubj.onNext(stepInfo)
-
-        step += 1
-        returnValue = returnValue * agent1.gamma + reward
-        totalLoss += error * error
-        currentEnv = env1
-        currentAgent = agent1
-        obs = obs1
-        endUp = endUp1
-      } while (!endUp && step < maxEpisodeLength)
-      val episodeInfo = Episode(
-        episode = episode,
-        stepCount = step,
-        returnValue = returnValue,
-        avgLoss = if (step > 1) totalLoss / (step - 1) else totalLoss,
-        env = currentEnv,
-        agent = currentAgent,
-        session = this)
-      episodeSubj.onNext(episodeInfo)
-    }
     this
   }
 }
@@ -131,13 +134,23 @@ object Session {
    * Returns a session
    */
   def apply(
-    noEpisode:        Int,
+    noSteps:          Int,
     env0:             Env,
     agent0:           Agent,
     maxEpisodeLength: Long): Session =
     new Session(
-      noEpisode = noEpisode,
+      noSteps = noSteps,
       env = env0,
       agent = agent0,
       maxEpisodeLength = maxEpisodeLength)
 }
+
+case class SessionContext(
+  env:         Env,
+  agent:       Agent,
+  obs:         Observation,
+  step:        Int         = 0,
+  episode:     Int         = 0,
+  totalLoss:   Double      = 0,
+  returnValue: Double      = 0,
+  discount:    Double      = 1);

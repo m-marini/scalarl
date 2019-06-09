@@ -40,5 +40,5 @@ import org.nd4j.linalg.factory.Nd4j
  * @param actions the valid action for the current environment status
  */
 case class INDArrayObservation(observation: INDArray, actions: INDArray) extends Observation {
-  lazy val signals: INDArray = Nd4j.hstack(observation, actions)
+  lazy val signals: INDArray = observation
 }

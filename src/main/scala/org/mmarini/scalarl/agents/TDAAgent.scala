@@ -116,7 +116,7 @@ case class TDAAgent(
   override def fit(feedback: Feedback): (Agent, Double) = feedback match {
     case Feedback(obs0, action, reward, obs1, endUp) =>
       val v0 = v(obs0)
-      val v1 = v(obs1)
+      val v1 = if (endUp) 0 else v(obs1)
 
       val a0 = policy(obs0)
       a0.putScalar(action, v0 + (reward + gamma * v1 - v0) / kappa)
