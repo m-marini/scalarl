@@ -208,7 +208,6 @@ object MazeMain extends LazyLogging {
 
     (dump.toSeq ++ trace).foreach(new File(_).delete())
 
-    dump.foreach(new File(_).delete())
     val session = Session(
       noSteps = numSteps,
       env0 = buildEnv(conf),

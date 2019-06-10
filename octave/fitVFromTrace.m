@@ -7,6 +7,6 @@ function V = fitVFromTrace(X)
 ####
 ## The return values @var{V} is the matrix containing V values
 ## @end deftypefn
-  [Q MASK] = fitQromTrace(X);
+  [Q MASK] = fitQFromTrace(X);
   V = vFromQMask(Q, MASK);
 endfunction
