@@ -1,21 +1,40 @@
 # Debug utilities
 
+[TOC]
+
+## Ravel
+
+The ravel function of nd4j transform a tensor in a flat colum vector such that
+
+```octave
+X = [[[1 2 3]; [4 5 6]]; [[10 20 30] [40 50 60]]];
+X.ravel = [ 1 2 3 4 5 6 10 20 30 40 50 60];
+```
+
+the octave inverse function is
+
+```octave
+    permute(reshape(X, 3, 2, 2), [3 : -1 : 1])
+```
+
 ## Trace file format
 
 The trace file format is composed by:
 
-| Field      | Offset | Size |
-|:-----------|-------:|-----:|
-| EPISODE    |      1 |    1 |
-| STEP       |      2 |    1 |
-| ACTION     |      3 |    1 |
-| REWARD     |      4 |    1 |
-| ENDUP      |      5 |    1 |
-| PREV_POS   |      6 |    2 |
-| RESULT_POS |      8 |    2 |
-| PREV_Q     |     10 |    8 |
-| RESULT_Q   |     18 |    8 |
-| PREV_Q1    |     26 |    8 |
+| Field              | Offset | Size |
+|:-------------------|-------:|-----:|
+| EPISODE            |      1 |    1 |
+| STEP               |      2 |    1 |
+| ACTION             |      3 |    1 |
+| REWARD             |      4 |    1 |
+| ENDUP              |      5 |    1 |
+| PREV_POS           |      6 |    2 |
+| RESULT_POS         |      8 |    2 |
+| PREV_Q             |     10 |    8 |
+| RESULT_Q           |     18 |    8 |
+| PREV_Q1            |     26 |    8 |
+| AVAILABLE_ACTIONS  |     34 |    8 |
+| AVAILABLE_ACTIONS1 |     42 |    8 |
 
 ## Dump file format
 
@@ -26,9 +45,20 @@ Each record of the dump file rapresents an episode and the format is composed by
 | STEPCOUNT |      1 |                     1 |
 | RETURNS   |      2 |                     1 |
 | ERRORS    |      3 |                     1 |
-| Q(s,a)    |      4 |     8 x 10 x 10 = 800 |
+| Q         |      4 |     8 x 10 x 10 = 800 |
+| MASK      |    804 |     8 x 10 x 10 = 800 |
 
-Q(s,a) consist of 8 action values for 10 columns for 10 rows of possible subject locations
+`Q` consists of 8 action values for 10 columns for 10 rows of possible subject locations
+
+```octave
+Q = permute(reshape(..., 8, 10, 10), [3 : -1 : 1])
+```
+
+`MASK` consists of 8 action available flags for 10 columns for 10 rows of possible subject locations
+
+```octave
+MASK = permute(reshape(..., 8, 10, 10), [3 : -1 : 1])
+```
 
 ## Statistics file format
 
@@ -46,6 +76,161 @@ Each record of statistic file rapresentes the statistical data of sampled episod
 | 95% percentile     |      8 |    1 |
 | Maximum            |      9 |    1 |
 
+## Trace analysis
+
+The trace analysis allows to understand the learning performance of the agent step by step.
+The trace file contains information of each step for a given session.
+To load the trace run the octave:
+
+```octave
+  X = csvread("trace file");
+```
+
+then you extracts some useful information:
+
+### vFromTrace
+
+It extracs the estimated state values for each step
+
+```octave
+  V = vFromTrace(X);
+```
+
+### afterVFromTrace
+
+It estracts the estimated state value for the resulting state of each step
+
+```octave
+  V = afterVFromTrace(X);
+```
+
+### fitVFromTrace
+
+It extracts the estiamtes state value of fitted agent of each step
+
+```octave
+  V = fitVFromTrace(X);
+```
+
+### greedyActionFromTrace
+
+It extracts the greedy action from the trace file
+
+```octavce
+  GA = greedyActionForma(X);
+```
+
+### policyStats
+
+It extracts the statistics of session related to the states of maze
+
+```octave
+  [N, M, AF, GF] = policyStats(X);
+```
+
+`N` is the frequence the subject lay in the cells
+`M` is the number of actions for each cells
+`AF` is the maximum frequence the subject selected an action
+`GF` is the maximum frequence the greedy policy selected an action
+
+### plotCoverage
+
+It plots the frequence the subject layed in a cell
+
+```octave
+  plotCoverage("../trace.csv");
+```
+
+### plotMu
+
+It plots the ratio of maximum frequence per action of agent policy related to the random policy.
+
+```octave
+  plotMu("../trace.csv");
+```
+
+### plotGMu
+
+It plots the ratio of maximum frequence per action of greedy policy related to the random policy.
+
+```octave
+  plotGMu("../trace.csv");
+```
+
+### plotVFromTrace
+
+Plot the V values from trace file for a given cell position
+
+Syntax
+
+```octave
+H = plotVTraceFromFile(filename, pos)
+```
+
+Example:
+
+```octave
+H = plotVTraceFromFile("../trace.cvs", [9,9]])
+```
+
+## plotQFromTrace
+
+Plot the policy values from trace file for a given cell position
+
+Syntax
+
+```octave
+H = plotQTraceFromFile(filename, pos)
+```
+
+Example
+
+```octave
+H = plotQTraceFromFile("../trace.cvs", [9,9]])
+```
+
+## Dump analysis
+
+The trace analysis allows to understand the learning performance of the agent for each episode.
+The trace file contains information of each episode for a given session.
+To load the dump run the octave:
+
+```octave
+  X = csvread("../maze-dump.csv");
+```
+
+### vFromEpisode
+
+It extracts the final estimation of state values for an episode
+
+```octave
+  V = vFromEpisode(X(i, :));
+```
+
+### plotReturnsFromDump
+
+It plots the returns of session:
+
+```octave
+  plotReturnsFromDump(X);
+```
+
+### plotStepsFromDump
+
+It plots the steps count of session:
+
+```octave
+  plotStepsFromDump(X);
+```
+
+### plotErrorsFromDump
+
+It plots the errors of session:
+
+```octave
+  plotErrorsFromDump(X);
+```
+
 ## stats
 
 Computes the statistics on data dump folder.
@@ -58,51 +243,3 @@ Plot the data on a file in y linear scale
 ## logyPlotFile
 
 Plot the data on a file in y logaritmic scale
-
-## readTrace
-
-Returns the data of state transition capture by the trace file:
-
-- the subject position in the maze environment before step
-- the subject position in the maze environment after step
-- the action applied
-- the reward obtained
-- the action values estimated before step
-- the action values estimated at result position before step
-- the action values estimated at result position after step
-
-## qlearn 
-
-Returns the analysis of state transition data:
-
-- the errors after reinforcement learning
-- the estimation errors
-- the state value estimated at the initial position
-- the state value estimated at the final position
-- the expected action value estimated at initial position after the transition
-- the subject position in the maze environment
-- the action value estimated at that position
-- the action applied
-- the reward obtained
-- the resulting subject position
-- the action value estimated at the resulting position
-- the action value estimated at inital position after the reinforcement learning
-
-## readErrors
-
-Returns the errors from dump of episodes
-
-## readReturns
-
-Returns the returns (discounted sum of rewards) from dump of episodes
-
-## readStepCount
-
-Returns the returns (discounted sum of rewards) from dump of episodes
-
-## readDumpAgent
-
-Returns the agent status for a given episode from dump of episodes:
-
-- `Q` the action values at each position and direction (10, 10, 8)
-- `POS` best action at position (10, 10)

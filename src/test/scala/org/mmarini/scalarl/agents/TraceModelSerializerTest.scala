@@ -37,6 +37,8 @@ import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import scala.math.abs
 import java.io.File
+import org.nd4j.linalg.api.rng.Random
+import org.nd4j.linalg.api.rng.DefaultRandom
 
 class TraceModelSerializerTest extends FunSpec with Matchers {
   val Outputs = 2
@@ -51,6 +53,7 @@ class TraceModelSerializerTest extends FunSpec with Matchers {
     val layer0 = TraceDenseLayer(
       noInputs = Inputs,
       noOutputs = Outputs,
+      random = Nd4j.getRandom(),
       gamma = Gamma,
       lambda = Lambda,
       learningRate = Alpha,
@@ -60,6 +63,7 @@ class TraceModelSerializerTest extends FunSpec with Matchers {
     val outLayer = TraceDenseLayer(
       noInputs = Outputs,
       noOutputs = Outputs,
+      random = Nd4j.getRandom(),
       gamma = Gamma,
       lambda = Lambda,
       learningRate = Alpha,

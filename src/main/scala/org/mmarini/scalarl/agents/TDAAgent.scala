@@ -62,19 +62,24 @@ import org.nd4j.linalg.factory.Nd4j
  *  Updates its strategy policy to optimize the return value (discount sum of rewards)
  *  and the observation of resulting environment
  */
-case class TDQAgent(
+case class TDAAgent(
   net:     TraceNetwork,
   random:  Random,
   epsilon: Double,
   gamma:   Double,
-  lambda:  Double) extends QAgent {
+  lambda:  Double,
+  kappa:   Double) extends TDAgent {
+
+  /** Returns the estimated state value for an observation */
+  def v(observation: Observation): Double =
+    TDAgentUtils.maxWithMask(policy(observation), observation.actions)
 
   /**
    * Returns the q function with action value for an observation
    *
    * @param observationt the observation
    */
-  override def q(observation: Observation): INDArray = {
+  override def policy(observation: Observation): INDArray = {
     val out = net.forward(observation.signals)
     out.last
   }
@@ -110,25 +115,26 @@ case class TDQAgent(
    */
   override def fit(feedback: Feedback): (Agent, Double) = feedback match {
     case Feedback(obs0, action, reward, obs1, endUp) =>
-      val v1 = v(obs1)
+      val v0 = v(obs0)
+      val v1 = if (endUp) 0 else v(obs1)
 
-      val q0 = q(obs0)
-      q0.putScalar(action, reward + gamma * v1)
+      val a0 = policy(obs0)
+      a0.putScalar(action, v0 + (reward + gamma * v1 - v0) / kappa)
 
-      val mask = Nd4j.zeros(q0.shape(): _*)
+      val mask = Nd4j.zeros(a0.shape(): _*)
       mask.putScalar(action, 1)
 
       val aStar = greedyAction(obs0)
       val net1 = if (action == aStar) net else net.clearTraces()
-      val (newNet, error) = net1.backward(obs0.signals, q0, mask)
+      val (newNet, error) = net1.backward(obs0.signals, a0, mask)
 
       (copy(net = newNet), error)
   }
 
-  override def writeModel(file: String): TDQAgent = {
+  override def writeModel(file: String): TDAAgent = {
     TraceModelSerializer.writeModel(net, file)
     this
   }
 
-  override def reset: TDQAgent = copy(net = net.clearTraces())
+  override def reset: TDAAgent = copy(net = net.clearTraces())
 }

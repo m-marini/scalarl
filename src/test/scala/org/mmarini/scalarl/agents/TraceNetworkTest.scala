@@ -40,6 +40,7 @@ import org.scalacheck.Gen
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.ops.impl.transforms.Tanh
+import org.nd4j.linalg.api.rng.DefaultRandom
 
 class TraceNetworkTest extends PropSpec with PropertyChecks with Matchers {
   val MaxInputs = 5
@@ -47,7 +48,9 @@ class TraceNetworkTest extends PropSpec with PropertyChecks with Matchers {
   val Eps = 1e-3
 
   def createNetwork(n: Long, m: Long): TraceNetwork = {
-    val layer1 = TraceDenseLayer(n, m, gamma = 0.0, lambda = 0.0, learningRate = 1e-3,
+    val layer1 = TraceDenseLayer(n, m,
+        random = new DefaultRandom(1L),
+        gamma = 0.0, lambda = 0.0, learningRate = 1e-3,
       traceUpdater = AccumulateTraceUpdater)
     new TraceNetwork(Array(layer1, TraceTanhLayer()))
   }

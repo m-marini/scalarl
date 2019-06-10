@@ -41,24 +41,23 @@ import org.mmarini.scalarl.FileUtils.withFile
 import org.mmarini.scalarl.FileUtils.writeINDArray
 import org.mmarini.scalarl.Session
 import org.mmarini.scalarl.Step
-import org.mmarini.scalarl.agents.TDQAgent
+import org.mmarini.scalarl.agents.AccumulateTraceUpdater
+import org.mmarini.scalarl.agents.AgentType
+import org.mmarini.scalarl.agents.PolicyFunction
+import org.mmarini.scalarl.agents.TDAgent
+import org.mmarini.scalarl.agents.TraceUpdater
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
 
 import com.typesafe.scalalogging.LazyLogging
 import org.mmarini.scalarl.agents.AgentBuilder
-import org.mmarini.scalarl.agents.QAgent
-import org.mmarini.scalarl.agents.TD0QAgent
-import org.mmarini.scalarl.agents.AgentType
-import org.mmarini.scalarl.agents.TraceUpdater
-import org.mmarini.scalarl.agents.AccumulateTraceUpdater
 
 object MazeMain extends LazyLogging {
   private val ClearScreen = "\033[2J\033[H"
 
   private def buildEnv(conf: Configuration): Env = {
     val map = conf.getConf("env").getList[String]("map")
-    MazeEnv.fromStrings(map)
+    SimpleMazeEnv.fromStrings(map)
   }
 
   private def buildAgent(conf: Configuration): Agent = {
@@ -68,10 +67,12 @@ object MazeMain extends LazyLogging {
     val seed = conf.getConf("agent").getLong("seed").getOrElse(0L)
     val epsilon = conf.getConf("agent").getDouble("epsilon").get
     val gamma = conf.getConf("agent").getDouble("gamma").get
+    val lambda = conf.getConf("agent").getDouble("lambda").getOrElse(0.0)
+    val kappa = conf.getConf("agent").getDouble("kappa").getOrElse(1.0)
     val learningRate = conf.getConf("agent").getDouble("learningRate").get
     val maxAbsGrads = conf.getConf("agent").getDouble("maxAbsGradients").get
     val maxAbsParams = conf.getConf("agent").getDouble("maxAbsParameters").get
-    val model = conf.getConf("agent").getString("model")
+    val loadModel = conf.getConf("agent").getString("loadModel")
     val traceUpdater = conf.getConf("agent").getString("traceUpdater").map(TraceUpdater.fromString).getOrElse(AccumulateTraceUpdater)
     val agentType = conf.getConf("agent").getString("type").map(AgentType.withName).getOrElse(AgentType.QAgent)
 
@@ -81,13 +82,15 @@ object MazeMain extends LazyLogging {
       numHiddens(numHiddens: _*).
       epsilon(epsilon).
       gamma(gamma).
+      lambda(lambda).
+      kappa(kappa).
       learningRate(learningRate).
       maxAbsGradient(maxAbsGrads).
       maxAbsParams(maxAbsParams).
       seed(seed).
       agentType(agentType).
       traceUpdater(traceUpdater)
-    model.
+    loadModel.
       map(baseBuilder.file).
       getOrElse(baseBuilder).
       build()
@@ -107,12 +110,14 @@ object MazeMain extends LazyLogging {
    */
   private def createDump(episode: Episode): INDArray = {
     val session = episode.session
-    val qagent = episode.agent.asInstanceOf[QAgent]
+    val agent = episode.agent.asInstanceOf[TDAgent]
     val kpi = Nd4j.create(Array(Array(episode.stepCount, episode.returnValue, episode.avgLoss)))
-    val states = episode.env.asInstanceOf[MazeEnv].dumpStates
-    val q = states.map(qagent.q)
-    val qMat = Nd4j.vstack(q).ravel()
-    Nd4j.hstack(kpi, qMat)
+    val states = episode.env.asInstanceOf[SimpleMazeEnv].dumpStates
+    val policy = states.map(agent.asInstanceOf[PolicyFunction].policy)
+    val policyMat = Nd4j.vstack(policy).ravel()
+    val mask = states.map(_.actions)
+    val maskMat = Nd4j.vstack(mask).ravel()
+    Nd4j.hstack(kpi, policyMat, maskMat)
   }
 
   /**
@@ -133,9 +138,9 @@ object MazeMain extends LazyLogging {
    * - prev q1
    */
   private def createTrace(step: Step): INDArray = {
-    val beforeEnv = step.beforeEnv.asInstanceOf[MazeEnv]
+    val beforeEnv = step.beforeEnv.asInstanceOf[SimpleMazeEnv]
     val beforePos = beforeEnv.subject
-    val afterEnv = step.afterEnv.asInstanceOf[MazeEnv]
+    val afterEnv = step.afterEnv.asInstanceOf[SimpleMazeEnv]
     val afterPos = afterEnv.subject
     val head = Nd4j.create(Array(Array(
       step.episode,
@@ -147,82 +152,74 @@ object MazeMain extends LazyLogging {
       beforePos.col,
       afterPos.row,
       afterPos.col)))
-    val beforeAgent = step.beforeAgent.asInstanceOf[QAgent]
-    val afterAgent = step.afterAgent.asInstanceOf[QAgent]
-    val beforeQ = beforeAgent.q(beforeEnv.observation)
-    val afterQ = beforeAgent.q(afterEnv.observation)
-    val fitQ = afterAgent.q(beforeEnv.observation)
-    Nd4j.hstack(head, beforeQ, fitQ, afterQ)
+    val beforeAgent = step.beforeAgent.asInstanceOf[PolicyFunction]
+    val afterAgent = step.afterAgent.asInstanceOf[PolicyFunction]
+    val beforeQ = beforeAgent.policy(beforeEnv.observation)
+    val afterQ = beforeAgent.policy(afterEnv.observation)
+    val fitQ = afterAgent.policy(beforeEnv.observation)
+    val availableActions = beforeEnv.observation.actions.ravel()
+    val afterAvailableActions = afterEnv.observation.actions.ravel()
+    Nd4j.hstack(head, beforeQ, fitQ, afterQ, availableActions, afterAvailableActions)
+  }
+
+  def onEpisode(saveModel: Option[String], dump: Option[String])(episode: Episode) {
+    for {
+      file <- saveModel
+    } {
+      episode.agent.writeModel(file)
+    }
+    for {
+      file <- dump
+    } {
+      val data = createDump(episode)
+      withFile(file, true)(writeINDArray(_)(data))
+    }
+    logger.info(f"SessionStep ${
+      episode.step
+    }%,d Episode ${
+      episode.episode
+    }%,d, Steps ${
+      episode.stepCount
+    }%,d, loss=${
+      episode.avgLoss
+    }%g ,returns=${
+      episode.returnValue
+    }%g")
+  }
+
+  def onStep(trace: Option[String])(step: Step) {
+    for {
+      file <- trace
+    } {
+      val data = createTrace(step)
+      withFile(file, true)(writeINDArray(_)(data))
+    }
   }
 
   def main(args: Array[String]) {
     val conf = Configuration.fromFile(if (args.isEmpty) "maze.yaml" else args(0))
-    val numEpisodes = conf.getConf("session").getInt("numEpisodes").get
+    val numSteps = conf.getConf("session").getInt("numSteps").get
     val sync = conf.getConf("session").getLong("sync").get
     val mode = conf.getConf("session").getString("mode").get
     val dump = conf.getConf("session").getString("dump")
     val trace = conf.getConf("session").getString("trace")
-    val model = conf.getConf("agent").getString("model")
+    val saveModel = conf.getConf("agent").getString("saveModel")
     val maxEpisodeLength = conf.getConf("session").getLong("maxEpisodeLength").getOrElse(Long.MaxValue)
-
-    def onEpisode(episode: Episode) {
-      for {
-        file <- model
-      } {
-        episode.agent.writeModel(file)
-      }
-      for {
-        file <- dump
-      } {
-        val data = createDump(episode)
-        withFile(file, true)(writeINDArray(_)(data))
-      }
-    }
-
-    def render(step: Step) {
-      val Step(episodeCount, stepCount, _, _, endUp, _, _, env, _, _) = step
-      mode match {
-        case "human" =>
-          print(ClearScreen + "\r")
-          env.asInstanceOf[MazeEnv].render()
-          print(s"\nEpisode ${episodeCount} / Step ${stepCount}")
-          System.out.flush()
-        case "stats" =>
-          if (endUp) {
-            println(s"Episode ${episodeCount} / Step ${stepCount}")
-            System.out.flush()
-          }
-        case _ =>
-          print(ClearScreen + s"\rEpisode ${episodeCount} / Step ${stepCount}")
-          System.out.flush()
-      }
-    }
-
-    def onStep(step: Step) {
-      render(step)
-      for {
-        file <- trace
-      } {
-        val data = createTrace(step)
-        withFile(file, true)(writeINDArray(_)(data))
-      }
-    }
 
     (dump.toSeq ++ trace).foreach(new File(_).delete())
 
-    dump.foreach(new File(_).delete())
     val session = Session(
-      noEpisode = numEpisodes,
+      noSteps = numSteps,
       env0 = buildEnv(conf),
       agent0 = buildAgent(conf),
       maxEpisodeLength = maxEpisodeLength)
 
     session.episodeObs.subscribe(
-      onEpisode(_),
+      onEpisode(saveModel, dump),
       ex => logger.error(ex.getMessage, ex))
 
     session.stepObs.subscribe(
-      onStep(_),
+      onStep(trace),
       ex => logger.error(ex.getMessage, ex))
 
     session.run()

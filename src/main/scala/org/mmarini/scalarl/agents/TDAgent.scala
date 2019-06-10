@@ -35,6 +35,37 @@ import org.mmarini.scalarl.Observation
 import org.nd4j.linalg.api.ndarray.INDArray
 
 /**
+ *
+ */
+trait StateValueFunction {
+  /** Returns the estimated state value for an observation */
+  def v(observation: Observation): Double
+}
+
+/**
+ *
+ */
+trait PolicyFunction {
+  /** Returns the estimated action values for an observation */
+  def policy(observation: Observation): INDArray
+
+  /** Returns the estimated action value for an observation and an action */
+  def actionPolicy(observation: Observation, action: Action): Double = {
+    require(observation.actions.getDouble(action.toLong) > 0.0)
+    policy(observation).getDouble(action.toLong)
+  }
+
+}
+
+/**
+ *
+ */
+trait GreedyActionFunction {
+  /** Returns the estimated greedy action */
+  def greedyAction(observation: Observation): Action
+}
+
+/**
  * The agent acting in the environment
  *
  *  Generates actions to change the status of environment basing on observation of the environment
@@ -43,25 +74,14 @@ import org.nd4j.linalg.api.ndarray.INDArray
  *  Updates its strategy policy to optimize the return value (discount sum of rewards)
  *  and the observation of resulting environment
  */
-trait QAgent extends Agent {
-
-  /** Returns the estimated action values for an observation */
-  def q(observation: Observation): INDArray
-
-  /** Returns the estimated action value for an observation and an action */
-  def q(observation: Observation, action: Action): Double = {
-    require(observation.actions.getDouble(action.toLong) > 0.0)
-    q(observation).getDouble(action.toLong)
-  }
+trait TDAgent extends Agent with StateValueFunction with GreedyActionFunction with PolicyFunction {
 
   /** Returns the estimated greedy action */
   def greedyAction(observation: Observation): Action =
-    maxIdxWithMask(q(observation), observation.actions)
+    TDAgentUtils.maxIdxWithMask(policy(observation), observation.actions)
+}
 
-  /** Returns the estimated state value for an observation */
-  def v(observation: Observation): Double =
-    maxWithMask(q(observation), observation.actions)
-
+object TDAgentUtils {
   /**
    * Returns the index containing the max value of a by masking mask
    *

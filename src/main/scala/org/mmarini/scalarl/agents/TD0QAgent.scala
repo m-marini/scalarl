@@ -52,14 +52,18 @@ case class TD0QAgent(
   net:     MultiLayerNetwork,
   random:  Random,
   epsilon: Double,
-  gamma:   Double) extends QAgent {
+  gamma:   Double) extends TDAgent {
+
+  /** Returns the estimated state value for an observation */
+  def v(observation: Observation): Double =
+    TDAgentUtils.maxWithMask(policy(observation), observation.actions)
 
   /**
    * Returns the q function with action value for an observation
    *
    * @param observationt the observation
    */
-  override def q(observation: Observation): INDArray = {
+  override def policy(observation: Observation): INDArray = {
     val out = net.feedForward(observation.signals)
     val q = out.get(out.size() - 1)
     q
@@ -99,7 +103,7 @@ case class TD0QAgent(
       val v1 = if (endUp) 0.0 else v(obs1)
       val expected = reward + gamma * v1
       val err = expected - v0
-      val q0 = q(obs0)
+      val q0 = policy(obs0)
       q0.putScalar(action, expected)
 
       val newNet = net.clone()
