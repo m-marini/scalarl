@@ -102,4 +102,16 @@ and
 plotMu(trace-file)
 ```
 
- to plot the maze stats from trace file.
+to plot the maze stats from trace file.
+
+The cause of unability to learng was the learning rate
+
+```math
+  \alpha = 1 \times 10^{-3}
+```
+
+to low, increasing it to
+```math
+\alpha = 100 \times 10^{-3}
+```
+allowed the network to learn the maze solution wihtin about 40 episodes.
