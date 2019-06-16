@@ -16,4 +16,10 @@ libraryDependencies += "org.datavec" % "datavec-api" % "1.0.0-beta3"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % Test
 libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % Test
 
-lazy val root = project in file(".")
+publishArtifact in (Compile, packageDoc) := false
+
+lazy val root = (project in file("."))
+  .enablePlugins(JavaAppPackaging)
+  .settings(
+    name := "Maze"
+  )
