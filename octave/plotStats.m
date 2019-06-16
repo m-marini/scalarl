@@ -13,13 +13,13 @@ function plotStats(FNAMES, TITLE, LEGEND, COL = 1)
 ## @end deftypefn
   [RETURNS ERRORS] = compareStats(FNAMES, COL);
   
-  subplot(2, 1, 1);
+  subplot(1, 2, 1);
   plot(RETURNS);
   grid on;
   title([TITLE " Returns" ]);
   legend(LEGEND);
   
-  subplot(2, 1, 2);
+  subplot(1, 2, 2);
   semilogy(ERRORS);
   grid on;
   title([TITLE " Errors" ]);
