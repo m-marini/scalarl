@@ -1,7 +1,7 @@
 ---
 env:
   map:
-  - "|   O      |"
+  - "|O         |"
   - "|          |"
   - "|          |"
   - "|          |"
@@ -15,8 +15,8 @@ agent:
   numInputs: 100
   numActions: 8
   numHiddens: []
-  learningRate: 10e-3
-  epsilon: 0.01
+  learningRate: 0.1
+  epsilon: 0.003
   gamma: 0.999
   lambda: 0.7
   kappa: 1
