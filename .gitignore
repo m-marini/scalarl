@@ -9,7 +9,7 @@
 /.settings
 /.cache-main
 /.cache-tests
-/data
+/data*
 /maze.zip
 /*.csv
 /octave/octave-workspace

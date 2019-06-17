@@ -16,13 +16,19 @@ function plotStats(FNAMES, TITLE, LEGEND, COL = 1)
   subplot(1, 2, 1);
   plot(RETURNS);
   grid on;
+  grid minor on;
   title([TITLE " Returns" ]);
-  legend(LEGEND);
+  legend(LEGEND, "location", "southeast");
+  xlabel("Episodes");
+  ylabel("Returns");
   
   subplot(1, 2, 2);
   semilogy(ERRORS);
   grid on;
+  grid minor on;
   title([TITLE " Errors" ]);
-  legend(LEGEND);
+  legend(LEGEND, "location", "southeast");
+  xlabel("Episodes");
+  ylabel("Errors");
   
 endfunction
