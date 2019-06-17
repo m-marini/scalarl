@@ -1,6 +1,8 @@
 #function plotAlphas()
   BASEPATH = "..";
   COL = 1;
+  TITLE="alpha";
+  PGN_PREFIX = "../analysis/alpha-";
   FNAMES = [
     BASEPATH "/data-alpha-10";
     BASEPATH "/data-alpha-30";
@@ -15,4 +17,4 @@
     "0.3",
 #    "1"
   ];
-  plotStats(FNAMES, "alpha", LEGEND, 1);
+  plotStats(FNAMES, TITLE, LEGEND, COL, PGN_PREFIX);

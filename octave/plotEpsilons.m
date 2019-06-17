@@ -1,6 +1,8 @@
 #function plotAlphas()
   BASEPATH = "..";
   COL = 1;
+  TITLE="epsilon";
+  PGN_PREFIX = "../analysis/epsilon-";
   FNAMES = [
     BASEPATH "/data-epsilon-1";
     BASEPATH "/data-epsilon-3";
@@ -15,4 +17,4 @@
     "0.03",
     "0.1"
   ];
-  plotStats(FNAMES, "epsilon", LEGEND, 1);
+  plotStats(FNAMES, TITLE, LEGEND, COL, PGN_PREFIX);

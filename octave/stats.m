@@ -57,6 +57,7 @@ function [RETURNS ERROS] = stats(fname, N = 100)
     RETURNS(:, i) = X(:, 2);
     ERRORS(:, i) = X(:, 3);
   endif
+  printf("Samples %d ...\n", M);
  endfor
  printf("Writing %s ...\n", [fname "/returns.csv"]);
  RETURNS = write_stats([fname "/returns.csv"], RETURNS);

@@ -15,4 +15,4 @@
     "0.8",
     "0.9"
   ];
-  plotStats(FNAMES, "lambda", LEGEND, 1);
+  plotStats(FNAMES, "lambda", LEGEND, 1, "../analysis/");

@@ -1,4 +1,4 @@
-function plotStats(FNAMES, TITLE, LEGEND, COL = 1)
+function plotStats(FNAMES, TITLE, LEGEND, COL = 1, PGN_PREFIX = "")
 ## -*- texinfo -*-
 ## @deftypefn  {Function File} [ @var{RETURNS} @var{ERRORS} ] = plotStats(@var{FNAMES}, @var(TITLE), @var(LEGEND=, @var(COL) = 1)
 ## Plot the statistica by hyer parameters
@@ -13,7 +13,6 @@ function plotStats(FNAMES, TITLE, LEGEND, COL = 1)
 ## @end deftypefn
   [RETURNS ERRORS] = compareStats(FNAMES, COL);
   
-  subplot(1, 2, 1);
   plot(RETURNS);
   grid on;
   grid minor on;
@@ -21,8 +20,8 @@ function plotStats(FNAMES, TITLE, LEGEND, COL = 1)
   legend(LEGEND, "location", "southeast");
   xlabel("Episodes");
   ylabel("Returns");
+  print([PGN_PREFIX, TITLE, "-returns.png"]);
   
-  subplot(1, 2, 2);
   semilogy(ERRORS);
   grid on;
   grid minor on;
@@ -30,5 +29,6 @@ function plotStats(FNAMES, TITLE, LEGEND, COL = 1)
   legend(LEGEND, "location", "southeast");
   xlabel("Episodes");
   ylabel("Errors");
+  print([PGN_PREFIX TITLE "-errors.png"]);
   
 endfunction
