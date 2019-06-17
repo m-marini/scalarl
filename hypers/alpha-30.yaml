@@ -1,7 +1,7 @@
 ---
 env:
   map:
-  - "|   O      |"
+  - "|O         |"
   - "|          |"
   - "|          |"
   - "|          |"
@@ -15,7 +15,7 @@ agent:
   numInputs: 100
   numActions: 8
   numHiddens: []
-  learningRate: 10e-3
+  learningRate: 0.03
   epsilon: 0.01
   gamma: 0.999
   lambda: 0.7
@@ -26,7 +26,7 @@ agent:
   #loadModel: maze.zip
   #saveModel: maze.zip
 session:
-  numSteps: 10000
+  numSteps: 30000
   maxEpisodeLength: 1000000
   sync: 0
   mode: stats

@@ -1,6 +1,7 @@
 /.project
 /.classpath
 /project/target
+/project/project
 /target
 /.worksheet
 /bin/
@@ -8,7 +9,7 @@
 /.settings
 /.cache-main
 /.cache-tests
-/data
+/data*
 /maze.zip
 /*.csv
 /octave/octave-workspace
