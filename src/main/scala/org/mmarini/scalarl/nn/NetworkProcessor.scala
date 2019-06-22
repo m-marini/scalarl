@@ -1,3 +1,4 @@
+
 package org.mmarini.scalarl.nn
 
 /**
@@ -30,38 +31,91 @@ package org.mmarini.scalarl.nn
  * }}}
  */
 class NetworkProcessor(
-  clearTraceUpdaters: Seq[Updater],
-  forwardUpdaters:    Seq[Updater]) extends Network {
+  clearTraceUpdaters: Array[Updater],
+  forwardUpdaters:    Array[Updater],
+  gradientUpdaters:   Array[Updater],
+  deltaUpdaters:      Array[Updater],
+  optimizerUpdaters:  Array[Updater],
+  traceUpdaters:      Array[Updater],
+  thetaUpdaters:      Array[Updater]) extends Network {
+
+  type Reducer = (LayerData, LayerData) => LayerData
 
   /** Returns the network data with cleared eligibility traces */
-  def clearTrace(data: NetworkData): NetworkData = {
-    val newLayers = for {
-      (updater, layerData) <- clearTraceUpdaters.zip(data.layers)
-    } yield updater(layerData)
-    data.copy(layers = newLayers)
-  }
+  def clearTrace(data: NetworkData): NetworkData =
+    concurrentPass(clearTraceUpdaters)(data)
+
+  def forwardReducer(left: LayerData, right: LayerData) = right + ("inputs" -> left("outputs"))
 
   /** Returns the data with computed outputs */
-  def forward(data: NetworkData): NetworkData = {
-    // Zip updaters with data layers
-    val zipped = forwardUpdaters.zip(data.layers)
+  def forward(data: NetworkData): NetworkData =
+    forwardPass(
+      forwardUpdaters,
+      forwardReducer)(data)
 
-    // fold the zip to create the new sequence of layer data with outputs
-    // and connecting the outputs to inputs of next layer
-    val inputs = data.inputs.get
-    val initialSeed = (Seq[LayerData](), inputs)
-    val (newLayerData, _) = zipped.foldLeft(initialSeed) {
-      case ((output, prevLayerData), (updater, data)) =>
-        val newData = updater(data)
-        (output :+ newData, newData("outputs"))
-    }
-    data.copy(layers = newLayerData)
+  /**
+   * Returns the new [[NetworkData]]
+   * executing updaters on all layers
+   */
+  def concurrentPass(updatersLayer: Array[Updater])(data: NetworkData): NetworkData = {
+    val outLayers = for {
+      (updater, data) <- updatersLayer.zip(data.layers)
+    } yield updater(data)
+    data.copy(layers = outLayers)
   }
 
-  /** Returns the data with changed parameters to fit the labels */
-  def fit(data: NetworkData): NetworkData = {
+  def forwardPass(updaters: Array[Updater], reducer: Reducer)(data: NetworkData): NetworkData = {
+    val zip = updaters.zip(data.layers)
+    val seed = (Seq[LayerData](), Map().asInstanceOf[LayerData])
+    val (newLayerData, _) = zip.foldLeft(seed) {
+      case ((out, in), (updater, layer)) =>
+        val newLayer = updater(reducer(in, layer))
+        (out :+ newLayer, newLayer)
+    }
+    data.copy(layers = newLayerData.toArray)
+  }
+
+  def backwardPass(updaters: Array[Updater], reducer: Reducer)(data: NetworkData): NetworkData = {
+    val zip = updaters.zip(data.layers)
+    val seed = (Seq[LayerData](), Map().asInstanceOf[LayerData])
+    val (newLayerData, _) = zip.foldRight(seed) {
+      case ((updater, layer), (out, in)) =>
+        val newLayer = updater(reducer(in, layer))
+        (newLayer +: out, newLayer)
+    }
+    data.copy(layers = newLayerData.toArray)
+  }
+
+  def maskReducer(left: LayerData, right: LayerData) = left + ("inputMask" -> right("mask"))
+  def deltaReducer(left: LayerData, right: LayerData) = left + ("delta" -> right("delta"))
+
+  /**
+   * Returns the data with changed parameters to fit the labels
+   * The process of bacward consists of
+   * Sequentialization
+   * {{{
+   * |------------------------------|--------------------------|
+   * | forward compute outputs      | backward compute mask    |
+   * | concurrent compute gradients |                          |
+   * |------------------------------|--------------------------|
+   * | backward compute delta       | concurrent compute optim |
+   * |                              | concurrent compute trace |
+   * |------------------------------|--------------------------|
+   * | concurrent update theta      |                          |
+   * |------------------------------|--------------------------|
+   * }}}
+   */
+  override def fit(data: NetworkData): NetworkData = {
     val withOutputs = forward(data)
-    ???
+    val withGradient = concurrentPass(gradientUpdaters)(withOutputs)
+
+    val withDelta = backwardPass(deltaUpdaters, deltaReducer)(withGradient)
+    val withOptim = concurrentPass(optimizerUpdaters)(withDelta)
+    val withTrace = concurrentPass(traceUpdaters)(withOptim)
+
+    val updated = concurrentPass(thetaUpdaters)(withOptim)
+
+    updated
   }
 
 }

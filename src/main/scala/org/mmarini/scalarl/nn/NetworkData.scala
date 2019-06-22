@@ -34,7 +34,7 @@ import org.nd4j.linalg.api.ndarray.INDArray
 /**
  *
  */
-case class NetworkData(labels: INDArray, layers: Seq[LayerData]) {
+case class NetworkData(labels: INDArray, layers: Array[LayerData]) {
 
   def setInputs(inputs: INDArray): NetworkData = {
     val first = layers.head + ("inputs" -> inputs)

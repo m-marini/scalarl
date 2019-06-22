@@ -32,13 +32,21 @@ package org.mmarini.scalarl.nn
 import org.yaml.snakeyaml.Yaml
 import io.circe.Json
 
+trait NetworkTopology {
+  def nextLayer(layer: LayerBuilder): Option[LayerBuilder]
+  def prevLayer(layer: LayerBuilder): Option[LayerBuilder]
+}
+
 case class NetworkBuilder(
   noInputs:     Int,
   lossFunction: LossFunction,
   initializer:  Initializer,
   optimizer:    Optimizer,
   traceMode:    TraceMode,
-  layers:       Seq[LayerBuilder]) {
+  layers:       Array[LayerBuilder]) extends NetworkTopology {
+
+  def nextLayer(layer: LayerBuilder): Option[LayerBuilder] = ???
+  def prevLayer(layer: LayerBuilder): Option[LayerBuilder] = ???
 
   def setNoInputs(noInputs: Int): NetworkBuilder = copy(noInputs = noInputs)
   def setLossFunction(lossFunction: LossFunction): NetworkBuilder = copy(lossFunction = lossFunction)
@@ -57,10 +65,15 @@ case class NetworkBuilder(
 
   def buildProcessor: NetworkProcessor = {
     val clearTraceUpdaters = layers.map(_.buildClearTrace(this))
-    val forwardTraceUpdaters = layers.map(_.buildForward(this))
+    val forwardUpdaters = layers.map(_.buildForward(this))
     new NetworkProcessor(
       clearTraceUpdaters = clearTraceUpdaters,
-      forwardUpdaters = None.orNull)
+      forwardUpdaters = forwardUpdaters,
+      gradientUpdaters = Array(),
+      deltaUpdaters = Array(),
+      optimizerUpdaters = Array(),
+      traceUpdaters = Array(),
+      thetaUpdaters = Array())
   }
 }
 
@@ -73,7 +86,7 @@ object NetworkBuilder {
     initializer = XavierInitializer,
     optimizer = SGDOptimizer(alpha = DefaultAlpha),
     traceMode = NoneTraceMode,
-    layers = Seq())
+    layers = Array())
 
   def fromYaml(yaml: Yaml): NetworkBuilder = ???
 

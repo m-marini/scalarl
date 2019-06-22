@@ -39,52 +39,15 @@ import io.circe.yaml.syntax.AsYaml
 import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.PropSpec
 import org.scalacheck.Gen
+import org.scalatest.GivenWhenThen
 
-class LayerBuilderTest extends PropSpec with PropertyChecks with Matchers {
-  val Epsilon = 1e-6
-  
-  val tanhLayer = ActivationLayerBuilder(TanhActivationFunction)
-
-  def inputsGen = Gen.choose(-1.0, 1.0).map(v => Nd4j.ones(2).mul(v))
-  def inputsDataGen = inputsGen.map(inputs => Map("inputs" -> inputs))
-
-  property("""Given an Activation layer builder
-  and a initial layer data with 2 random input
-  when build a clear trace updater
-  and apply to initial layer
-  then should result the same input layer""") {
-    forAll(
-      (inputsDataGen, "inputData")) {
-        inputData =>
-          val updater = tanhLayer.buildClearTrace(None.orNull)
-          val newData = updater(inputData)
-
-          newData should be theSameInstanceAs inputData
-      }
-  }
-
-  property("""Given an Activation layer builder
-  and a initial layer data with 2 random input
-  when build a forward updater
-  and apply to initial layer
-  then should result the layer with activaetd outputs""") {
-    forAll(
-      (inputsDataGen, "inputData")) {
-        inputData =>
-          val updater = tanhLayer.buildClearTrace(None.orNull)
-          val newData = updater(inputData)
-
-          newData.keySet should contain("outputs")
-
-          val outputs = newData("outputs")
-
-          outputs.size(0) shouldBe 2
-
-          val expected = 0.0
-          for { i <- 0L until 2 } {
-            val y = outputs.getDouble(i)
-            y shouldBe expected +- Epsilon
-          }
-      }
-  }
+abstract class MockTopology extends NetworkTopology {
+  def prevLayer(layer: LayerBuilder): Option[LayerBuilder] = ???
+  def nextLayer(layer: LayerBuilder): Option[LayerBuilder] = ???
+  def noOutputs(topology: NetworkTopology): Int = ???
+  def noInputs(topology: NetworkTopology): Int = ???
+  def buildClearTrace(context: NetworkTopology): Updater = ???
+  def buildForward(context: NetworkTopology): Updater = ???
+  def buildMask(context: NetworkTopology): Updater = ???
+  def toJson: Json = ???
 }

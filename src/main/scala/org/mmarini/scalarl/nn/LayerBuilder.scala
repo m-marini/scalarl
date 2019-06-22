@@ -31,6 +31,8 @@ package org.mmarini.scalarl.nn
 
 import io.circe.Json
 import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.indexing.NDArrayIndex
 
 /**
  * Defines layer architecture and builds the layer functional updater such that for clear trace.
@@ -42,13 +44,22 @@ import org.nd4j.linalg.factory.Nd4j
  */
 trait LayerBuilder {
 
+  /** Returns the number of inputs */
+  def noInputs(topology: NetworkTopology): Int = topology.prevLayer(this).map(_.noOutputs(topology)).getOrElse(0)
+
+  /** Returns the number of outputs */
+  def noOutputs(topology: NetworkTopology): Int
+
   /** Returns the updater that clears the eligibility traces of the layer */
-  def buildClearTrace(context: NetworkBuilder): Updater
+  def buildClearTrace(topology: NetworkTopology): Updater
 
-  /** Returns the updater that forward the inputs */
-  def buildForward(context: NetworkBuilder): Updater
+  /** Returns the updater that forwards the inputs */
+  def buildForward(topology: NetworkTopology): Updater
 
-  /** Returns the json rappresentation of layer */
+  /** Returns the updater that computes the gradient */
+  def buildGradient(topology: NetworkTopology): Updater
+
+  /** Returns the json representation of layer */
   def toJson: Json
 }
 
@@ -59,9 +70,13 @@ trait LayerBuilder {
  */
 case class ActivationLayerBuilder(activation: ActivationFunction) extends LayerBuilder {
 
-  override def buildClearTrace(context: NetworkBuilder): Updater = UpdaterFactory.identityUpdater
+  def noOutputs(topology: NetworkTopology): Int = noInputs(topology)
 
-  def buildForward(context: NetworkBuilder): Updater = ???
+  def buildClearTrace(context: NetworkTopology): Updater = UpdaterFactory.identityUpdater
+
+  def buildGradient(topology: NetworkTopology): Updater = activation.buildGradient
+
+  def buildForward(context: NetworkTopology): Updater = activation.buildActivation
 
   lazy val toJson = Json.obj(
     "type" -> Json.fromString("ACTIVATION"),
@@ -72,15 +87,58 @@ case class ActivationLayerBuilder(activation: ActivationFunction) extends LayerB
  * Defines the activation layer architecture and build the layer functional updater such that for clear trace.
  */
 case class DenseLayerBuilder(noOutputs: Int) extends LayerBuilder {
-  def noInputs(context: NetworkBuilder): Int = ???
 
-  def buildClearTrace(context: NetworkBuilder): Updater = {
+  def noOutputs(topology: NetworkTopology): Int = noOutputs
+
+  def buildClearTrace(context: NetworkTopology): Updater = {
     val n = noInputs(context)
-    val zeroTrace = Nd4j.zeros(n * (noOutputs + 1))
+    val zeroTrace = Nd4j.zeros((n + 1) * noOutputs)
     (data: LayerData) => data + ("trace" -> zeroTrace)
   }
 
-  def buildForward(context: NetworkBuilder): Updater = ???
+  /** Returns the converter og thetas to weights */
+  def weights(topology: NetworkTopology): INDArray => INDArray = {
+    val n = noInputs(topology)
+    val m = noOutputs
+    (theta: INDArray) => theta.get(NDArrayIndex.interval(0, n * m)).reshape(n, m)
+  }
+
+  /** Returns the converter of thetas to bias */
+  def bias(topology: NetworkTopology): INDArray => INDArray = {
+    val n = noInputs(topology)
+    val m = noOutputs
+    (theta: INDArray) => theta.get(NDArrayIndex.interval(n * m, n * (m + 1)))
+  }
+
+  def buildForward(topology: NetworkTopology): Updater = {
+    val fw = weights(topology)
+    val fb = bias(topology)
+
+    // Creates the updater
+    (data: LayerData) => {
+      val inputs = data("inputs")
+      val theta = data("theta")
+      val w = fw(theta)
+      val b = fb(theta)
+      val y = inputs.mmul(w).addi(b)
+      data + ("outputs" -> y)
+    }
+  }
+
+  def buildGradient(topology: NetworkTopology): Updater = {
+    val n = noInputs(topology)
+    val m = noOutputs
+    val bGrad = Nd4j.ones(m)
+
+    // Creates the updater
+    (data: LayerData) => {
+      val inputs = data("inputs")
+      val wGrad = inputs.transpose().broadcast(n, m)
+      val wFlatten= wGrad.ravel()
+      val grad = Nd4j.hstack(wFlatten, bGrad)
+      data + ("gradient" -> grad)
+    }
+  }
 
   lazy val toJson = Json.obj(
     "type" -> Json.fromString("DENSE"),

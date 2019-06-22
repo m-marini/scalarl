@@ -29,42 +29,13 @@
 
 package org.mmarini.scalarl.nn
 
-import org.yaml.snakeyaml.Yaml
 import io.circe.Json
-import org.nd4j.linalg.ops.transforms.Transforms
 
-/**
- * Defines the activation function used in activation layer
- *
- *  - [[TanhActivationFunction]] defines the activation function that apply tanh to all inputs
- */
-trait ActivationFunction {
-
-  /** Returns the updater that creates the outputs */
-  def buildActivation: Updater
-
-  /** Returns the updater that creates the gradient */
-  def buildGradient: Updater
-
-  def toJson: Json
+abstract class MockLayerBuilder extends LayerBuilder {
+  def noOutputs(topology: NetworkTopology): Int = ???
+  def buildClearTrace(topology: NetworkTopology): Updater = ???
+  def buildForward(topology: NetworkTopology): Updater = ???
+  def buildMask(topology: NetworkTopology): Updater = ???
+  def buildGradient(topology: NetworkTopology): Updater = ???
+  def toJson: Json = ???
 }
-
-object TanhActivationFunction extends ActivationFunction {
-
-  val buildActivation = (data: LayerData) => {
-    val inputs = data("inputs")
-    val outputs = Transforms.tanh(inputs)
-    data + ("outputs" -> outputs)
-  }
-
-  val buildGradient = (data: LayerData) => {
-    val outputs = data("outputs")
-    val grad = outputs.mul(outputs).subi(1.0).negi()
-    data + ("gradient" -> grad)
-  }
-
-  lazy val toJson = Json.fromString("TANH")
-}
-//object HardTanhActivationFunctionBuilder extends ActivationFunctionBuilder
-//object SigmoidActivationFunctionBuilder extends ActivationFunctionBuilder
-//object ReluActivationFunctionBuilder extends ActivationFunctionBuilder
