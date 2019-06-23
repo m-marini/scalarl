@@ -72,3 +72,52 @@ To build an activation layer I
 To build a dense layer I do not neet 
 
 - must define the number of output nodes
+
+## Learning process concurrency
+
+Each node rappresente the process activity and between brackets if the activity is forward/backward sequenced throw layers or concurrent updated or in a single layer
+
+```mermaid
+graph TD
+
+START(("Start"))
+FORWARD["Forward outputs (forward)"]
+LOSS["Loss (single)"]
+GRADIENT["Gradient (cocnurrent)"]
+OPTIMIZE["Optimize (concurernt)"]
+DELTA["Delta (backward)"]
+TRACE["Trace (concurrent)"]
+UPDATE["Update (concurrent)"]
+END((END))
+
+START-- inputs -->FORWARD
+START-- labels, mask -->LOSS
+START-- clear trace -->TRACE
+FORWARD-- outputs -->GRADIENT
+FORWARD-- outpus -->LOSS
+LOSS--delta -->DELTA
+GRADIENT-- gradient -->OPTIMIZE
+OPTIMIZE-- feedback -->TRACE
+TRACE-- feedback -->UPDATE
+GRADIENT-- gradient -->DELTA
+DELTA-- delta-->UPDATE
+TRACE-- trace -->END
+OPTIMIZE-- m1, m2 -->END
+UPDATE-- theta -->END
+
+classDef node fill:#fc4,stroke:#000;
+linkStyle 0 stroke:#000,stroke-width:2px;
+linkStyle 1 stroke:#000,stroke-width:2px;
+linkStyle 2 stroke:#000,stroke-width:2px;
+linkStyle 3 stroke:#000,stroke-width:2px;
+linkStyle 4 stroke:#000,stroke-width:2px;
+linkStyle 5 stroke:#000,stroke-width:2px;
+linkStyle 6 stroke:#000,stroke-width:2px;
+linkStyle 7 stroke:#000,stroke-width:2px;
+linkStyle 8 stroke:#000,stroke-width:2px;
+linkStyle 9 stroke:#000,stroke-width:2px;
+linkStyle 10 stroke:#000,stroke-width:2px;
+linkStyle 11 stroke:#000,stroke-width:2px;
+linkStyle 12 stroke:#000,stroke-width:2px;
+linkStyle 13 stroke:#000,stroke-width:2px;
+```

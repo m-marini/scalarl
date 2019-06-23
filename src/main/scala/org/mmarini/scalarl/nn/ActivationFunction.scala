@@ -43,8 +43,8 @@ trait ActivationFunction {
   /** Returns the updater that creates the outputs */
   def buildActivation: Updater
 
-  /** Returns the updater that creates the gradient */
-  def buildGradient: Updater
+  /** Returns the updater that backwards the delta values to inputs */
+  def buildDelta: Updater
 
   def toJson: Json
 }
@@ -57,10 +57,12 @@ object TanhActivationFunction extends ActivationFunction {
     data + ("outputs" -> outputs)
   }
 
-  val buildGradient = (data: LayerData) => {
+  val buildDelta = (data: LayerData) => {
     val outputs = data("outputs")
+    val delta = data("delta")
     val grad = outputs.mul(outputs).subi(1.0).negi()
-    data + ("gradient" -> grad)
+    val inpDelta = grad.muli(delta)
+    data + ("inputDelta" -> inpDelta)
   }
 
   lazy val toJson = Json.fromString("TANH")

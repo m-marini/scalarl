@@ -59,6 +59,9 @@ trait LayerBuilder {
   /** Returns the updater that computes the gradient */
   def buildGradient(topology: NetworkTopology): Updater
 
+  /** Returns the updater that computes the delta by backwording errors */
+  def buildDelta(topology: NetworkTopology): Updater
+
   /** Returns the json representation of layer */
   def toJson: Json
 }
@@ -74,9 +77,11 @@ case class ActivationLayerBuilder(activation: ActivationFunction) extends LayerB
 
   def buildClearTrace(context: NetworkTopology): Updater = UpdaterFactory.identityUpdater
 
-  def buildGradient(topology: NetworkTopology): Updater = activation.buildGradient
+  def buildGradient(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater
 
   def buildForward(context: NetworkTopology): Updater = activation.buildActivation
+
+  def buildDelta(context: NetworkTopology): Updater = activation.buildDelta
 
   lazy val toJson = Json.obj(
     "type" -> Json.fromString("ACTIVATION"),
@@ -134,9 +139,22 @@ case class DenseLayerBuilder(noOutputs: Int) extends LayerBuilder {
     (data: LayerData) => {
       val inputs = data("inputs")
       val wGrad = inputs.transpose().broadcast(n, m)
-      val wFlatten= wGrad.ravel()
+      val wFlatten = wGrad.ravel()
       val grad = Nd4j.hstack(wFlatten, bGrad)
       data + ("gradient" -> grad)
+    }
+  }
+
+  def buildDelta(topology: NetworkTopology): Updater = {
+    val fw = weights(topology)
+
+    // Creates the updater
+    (data: LayerData) => {
+      val delta = data("delta")
+      val theta = data("theta")
+      val w = fw(theta)
+      val inpDelta = delta.mmul(w.transpose())
+      data + ("inputDelta" -> inpDelta)
     }
   }
 

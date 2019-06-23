@@ -43,9 +43,6 @@ package org.mmarini.scalarl.nn
  * Computes the outputs for the inputs and change data parameter to fit the labels
  */
 trait Network {
-  /** Returns the data with cleared eligibility traces */
-  def clearTrace(data: NetworkData): NetworkData
-
   /** Returns the data with computed outputs */
   def forward(data: NetworkData): NetworkData
 

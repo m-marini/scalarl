@@ -37,5 +37,4 @@ import org.nd4j.linalg.api.ndarray.INDArray
 package object nn {
   type LayerData = Map[String, INDArray]
   type Updater = LayerData => LayerData
-  type UpdaterFactory = Layer => Updater
 }

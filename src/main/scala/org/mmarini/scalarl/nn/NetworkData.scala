@@ -34,19 +34,24 @@ import org.nd4j.linalg.api.ndarray.INDArray
 /**
  *
  */
-case class NetworkData(labels: INDArray, layers: Array[LayerData]) {
+case class NetworkData(layers: Array[LayerData]) {
 
-  def setInputs(inputs: INDArray): NetworkData = {
-    val first = layers.head + ("inputs" -> inputs)
-    copy(layers = first +: layers.tail)
+  def setInputs(inputs: INDArray, clearTrace: INDArray): NetworkData = {
+    val first = layers.head +
+      ("inputs" -> inputs) +
+      ("clearTrace" -> clearTrace)
+    val newLayers = first +: layers.tail.map(_ + ("clearTrace" -> clearTrace))
+    copy(layers = newLayers)
   }
 
   def setLabels(labels: INDArray, mask: INDArray): NetworkData = {
-    val last = layers.last + ("mask" -> mask)
+    val last = layers.last +
+      ("mask" -> mask)
+    ("labels" -> labels)
     copy(layers = layers.init :+ last)
   }
 
   def inputs = layers.head.get("inputs")
-  
+
   def ouputs: Option[INDArray] = layers.last.get("outputs")
 }

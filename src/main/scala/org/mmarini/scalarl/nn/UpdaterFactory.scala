@@ -37,47 +37,9 @@ object UpdaterFactory {
    *
    */
   val identityUpdater = (data: LayerData) => data
-
-  val paramsUpdater = (layer: Layer) => layer match {
-    case _: DenseLayer => (data: LayerData) => {
-      //      val delta = localData.delta
-      //      val dParms = localData.dParms
-      //      val parms = localData.parms.add(dParms)
-      //      localData.copy(parms)
-      ???
-    }
-    case _ => identityUpdater
-  }
-
-  //  def adamOptimizer(alpha: Double, beta1: Double, beta2: Double) = (layer: Layer) => identityUpdater
-
-  def sgdUpdater(alpha: Double): UpdaterFactory = (layer: Layer) => layer match {
-    case _: DenseLayer => (data: LayerData) => {
-      //      val localData = data.asInstanceOf[DenseLayerData]
-      //      val grad = localData.gradient
-      //      val dParms = grad.mul(alpha)
-      //      localData.copy(dParms = dParms)
-      ???
-    }
-    case _ => identityUpdater
-  }
-
-  def traceUpdater(gamma: Double, lambda: Double): UpdaterFactory = (layer: Layer) => layer match {
-    case denseLayer: DenseLayer => (data: LayerData) => {
-      //      val localData = data.asInstanceOf[DenseLayerData]
-      //      val traces = localData.traces
-      //      val dParms = localData.dParms
-      //
-      //      // E' = E lambda gamma + dParms
-      //      val newTrace = traces.mul(lambda * gamma).addi(dParms)
-      //      localData.copy(traces = newTrace, dParms = newTrace)
-      ???
-    }
-    case _ => identityUpdater
-  }
-
-  def compose(factories: Seq[UpdaterFactory]): UpdaterFactory = (layer: Layer) =>
-    factories.map(factory => factory(layer)).foldLeft(identityUpdater)((acc, updater) =>
-      (data: LayerData) =>
-        updater(acc(data)))
+//
+//  def compose(factories: Seq[UpdaterFactory]): UpdaterFactory = (layer: Layer) =>
+//    factories.map(factory => factory(layer)).foldLeft(identityUpdater)((acc, updater) =>
+//      (data: LayerData) =>
+//        updater(acc(data)))
 }

@@ -66,14 +66,21 @@ case class NetworkBuilder(
   def buildProcessor: NetworkProcessor = {
     val clearTraceUpdaters = layers.map(_.buildClearTrace(this))
     val forwardUpdaters = layers.map(_.buildForward(this))
+    val gradientUpdaters = layers.map(_.buildGradient(this))
+    val deltaUpdaters = layers.map(_.buildDelta(this))
+    val optimizerUpdaters = layers.map(_ => optimizer.buildOptimizer)
+    val traceUpdaters = Array[Updater]()
+    val thetaUpdaters = Array[Updater]()
+
     new NetworkProcessor(
       clearTraceUpdaters = clearTraceUpdaters,
       forwardUpdaters = forwardUpdaters,
-      gradientUpdaters = Array(),
-      deltaUpdaters = Array(),
-      optimizerUpdaters = Array(),
-      traceUpdaters = Array(),
-      thetaUpdaters = Array())
+      gradientUpdaters = gradientUpdaters,
+      lossUpdater = lossFunction.buildGradient,
+      deltaUpdaters = deltaUpdaters,
+      optimizerUpdaters = optimizerUpdaters,
+      traceUpdaters = traceUpdaters,
+      thetaUpdaters = thetaUpdaters)
   }
 }
 

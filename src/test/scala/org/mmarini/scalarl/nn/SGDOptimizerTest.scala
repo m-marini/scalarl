@@ -39,57 +39,52 @@ import io.circe.yaml.syntax.AsYaml
 import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.PropSpec
 import org.scalacheck.Gen
+import org.scalatest.GivenWhenThen
 
-class ActivationFunctionTest extends PropSpec with PropertyChecks with Matchers {
+class SGDOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
   val Epsilon = 1e-6
+  val Alpha = 0.1
 
-  val tanh = TanhActivationFunction
+  Nd4j.create()
 
-  def valueGen = Gen.choose(-1.0, 1.0)
+  describe("SGDOptimizer") {
+    it("should generate optimizer updater") {
 
-  property("""Given an Activation Function
-  and a initial layer data with 2 random input
-  when build a activation updater
-  and apply it to initial layer
-  then should result the layer with activated outputs""") {
-    forAll(
-      (valueGen, "value")) {
-        value =>
-          val inputs = Nd4j.ones(2).mul(value)
-          val inputData = Map("inputs" -> inputs)
-          val updater = tanh.buildActivation
-          val newData = updater(inputData)
+      Given("a sgd optimizer")
+      val opt = SGDOptimizer(Alpha)
 
-          val outputs = newData("outputs")
+      And("a layer data with gradients")
+      val gradient = Nd4j.create(Array(1.0, 2.0))
+      val inputsData = Map("gradient" -> gradient)
 
-          val x = inputData("inputs").getDouble(0L);
-          val y = Nd4j.ones(2).mul(Math.tanh(x));
+      When("build a optimizer updater")
+      val updater = opt.buildOptimizer
 
-          newData.get("outputs") should contain(y)
-      }
-  }
+      And("apply to initial layer")
+      val newData = updater(inputsData)
 
-  property("""Given an Activation Function
-  and a initial layer data with 2 random input
-  when build a gradient updater
-  and apply it to initial layer
-  then should result the layer with gradient""") {
-    forAll(
-      (valueGen, "value")) {
-        value =>
-          val inputs = Nd4j.ones(2).mul(value)
-          val y = Math.tanh(value)
-          val outputs = Nd4j.ones(2).mul(y)
-          val inputData = Map(
-            "inputs" -> inputs,
-            "outputs" -> outputs)
-          val updater: Updater = tanh.buildDelta
-          val newData = updater(inputData)
+      Then("should result the feedback")
+      val feedback = Nd4j.create(Array(0.1, 0.2))
+      newData.get("feedback") should contain(feedback)
+    }
 
-          val g = (1 - y) * (1 + y)
-          val expected = Nd4j.ones(2).mul(g)
+    it("should generate null optimizer updater for no parametered layer") {
 
-          newData.get("gradient") should contain(expected)
-      }
+      Given("a sgd optimizer")
+      val opt = SGDOptimizer(Alpha)
+
+      And("a layer data without gradients")
+      val gradient = Nd4j.create(Array(1.0, 2.0))
+      val inputsData: LayerData = Map()
+
+      When("build a optimizer updater")
+      val updater = opt.buildOptimizer
+
+      And("apply to initial layer")
+      val newData = updater(inputsData)
+
+      Then("should result the feedback")
+      newData should be theSameInstanceAs(inputsData)
+    }
   }
 }

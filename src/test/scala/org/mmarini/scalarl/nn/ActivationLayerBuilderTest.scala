@@ -106,9 +106,33 @@ Given an Activation layer builder
           val withOutputs = inputsData + ("outputs" -> Nd4j.ones(2).mul(y))
           val newData = updater(withOutputs)
 
-          val g = 1 - y * y
-          val expected = Nd4j.ones(2).mul(g)
-          newData.get("gradient") should contain(expected)
+          newData should be theSameInstanceAs (withOutputs)
+      }
+  }
+
+  property("""
+Given an Activation layer builder
+  and a initial layer data with 2 random input and delta and gradient
+  when build a delta updater
+  and apply to initial layer
+  then should result the delta input""") {
+    forAll(
+      (valueGen, "value"),
+      (valueGen, "delta")) {
+        (value, delta) =>
+          val (inputs, inputsData) = buildInputs(value)
+          val grad = 1 - value * value
+          val expectedDelta = delta * grad
+
+          val withDelta = inputsData +
+            ("delta" -> Nd4j.ones(2).mul(delta)) +
+            ("outputs" -> Nd4j.ones(2).mul(value))
+
+          val updater = tanhLayer.buildDelta(None.orNull)
+          val newData = updater(withDelta)
+
+          val expected = Nd4j.ones(2).mul(expectedDelta)
+          newData.get("inputDelta") should contain(expected)
       }
   }
 }

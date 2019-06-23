@@ -56,7 +56,7 @@ class NetworkBuilderTest extends FunSpec with PropertyChecks with Matchers {
       addLayer(DenseLayerBuilder(2)).
       addLayer(ActivationLayerBuilder(TanhActivationFunction)).
       setTraceMode(AccumulateTraceMode(0.8, 0.9)).
-      setOptimizer(AdamOptimizerBuilder(0.1, 0.8, 0.9, 0.5))
+      setOptimizer(AdamOptimizer(0.1, 0.8, 0.9, 0.5))
 
     describe("When toJson") {
       val json = builder.toJson

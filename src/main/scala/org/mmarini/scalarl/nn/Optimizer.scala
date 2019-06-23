@@ -33,16 +33,36 @@ import org.yaml.snakeyaml.Yaml
 import io.circe.Json
 
 trait Optimizer {
+
+  def buildOptimizer: Updater
+
   def toJson: Json
 }
 
 case class SGDOptimizer(alpha: Double) extends Optimizer {
+
+  val buildOptimizer: Updater = (data: LayerData) => {
+    val gradient = data.get("gradient")
+    val feedback = gradient.map(g => g.mul(alpha))
+    feedback.
+      map(f => data + ("feedback" -> f)).
+      getOrElse(data)
+  }
+
   lazy val toJson = Json.obj(
     "mode" -> Json.fromString("SGD"),
     "alpha" -> Json.fromDoubleOrNull(alpha))
 }
 
-case class AdamOptimizerBuilder(alpha: Double, beta1: Double, beta2: Double, epsilon: Double) extends Optimizer {
+case class AdamOptimizer(alpha: Double, beta1: Double, beta2: Double, epsilon: Double) extends Optimizer {
+  val buildOptimizer: Updater = (data: LayerData) => {
+    val gradient = data.get("gradient")
+    val feedback = gradient.map(g => g.mul(alpha))
+    feedback.
+      map(f => data + ("feedback" -> f)).
+      getOrElse(data)
+  }
+
   lazy val toJson = Json.obj(
     "mode" -> Json.fromString("ADAM"),
     "alpha" -> Json.fromDoubleOrNull(alpha),

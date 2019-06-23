@@ -34,6 +34,7 @@ class NetworkProcessor(
   clearTraceUpdaters: Array[Updater],
   forwardUpdaters:    Array[Updater],
   gradientUpdaters:   Array[Updater],
+  lossUpdater:        Updater,
   deltaUpdaters:      Array[Updater],
   optimizerUpdaters:  Array[Updater],
   traceUpdaters:      Array[Updater],
@@ -89,31 +90,29 @@ class NetworkProcessor(
   def maskReducer(left: LayerData, right: LayerData) = left + ("inputMask" -> right("mask"))
   def deltaReducer(left: LayerData, right: LayerData) = left + ("delta" -> right("delta"))
 
+  def computeLoss(data: NetworkData): NetworkData = {
+    val outLayer = data.layers.last
+    val withLoss = lossUpdater(outLayer)
+    val newLayers = data.layers.init :+ withLoss
+    data.copy(layers = newLayers)
+  }
+
   /**
    * Returns the data with changed parameters to fit the labels
-   * The process of bacward consists of
-   * Sequentialization
-   * {{{
-   * |------------------------------|--------------------------|
-   * | forward compute outputs      | backward compute mask    |
-   * | concurrent compute gradients |                          |
-   * |------------------------------|--------------------------|
-   * | backward compute delta       | concurrent compute optim |
-   * |                              | concurrent compute trace |
-   * |------------------------------|--------------------------|
-   * | concurrent update theta      |                          |
-   * |------------------------------|--------------------------|
-   * }}}
    */
   override def fit(data: NetworkData): NetworkData = {
     val withOutputs = forward(data)
+
     val withGradient = concurrentPass(gradientUpdaters)(withOutputs)
 
-    val withDelta = backwardPass(deltaUpdaters, deltaReducer)(withGradient)
+    val withLoss = computeLoss(withGradient)
+
+    val withDelta = backwardPass(deltaUpdaters, deltaReducer)(withLoss)
+
     val withOptim = concurrentPass(optimizerUpdaters)(withDelta)
     val withTrace = concurrentPass(traceUpdaters)(withOptim)
 
-    val updated = concurrentPass(thetaUpdaters)(withOptim)
+    val updated = concurrentPass(thetaUpdaters)(withTrace)
 
     updated
   }

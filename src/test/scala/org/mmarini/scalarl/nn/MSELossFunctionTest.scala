@@ -29,24 +29,48 @@
 
 package org.mmarini.scalarl.nn
 
+import org.scalatest.FunSpec
+import org.scalatest.Matchers
+import org.scalatest.prop.PropertyChecks
+
+import io.circe.Json
+import io.circe.yaml
+import io.circe.yaml.syntax.AsYaml
 import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.ops.transforms.Transforms
+import org.scalatest.PropSpec
+import org.scalacheck.Gen
 
-class OutputLayer(
-  config:  Config,
-  noNodes: Int) {
+class MSELossFunctionTest extends PropSpec with PropertyChecks with Matchers {
+  val Epsilon = 1e-6
 
-  /** Generate new LayerData containing the computed output for the inputData */
-  def forwardPass(data: LayerData): LayerData = data
+  val loss = MSELossFunction
 
-  def clearTraces(data: LayerData): LayerData = data
+  def valueGen = Gen.choose(-1.0, 1.0)
 
-  def backwardPass(data: LayerData): LayerData = {
-    val outputs = data("outputs")
-    val errors = data("errors")
-    val mask = data("mask")
-    val inputErrors = outputs.mul(outputs).subi(1.0).negi().muli(errors).muli(mask)
-    data + ("inputErrors" -> inputErrors)
+  property("""Given an Activation Function
+  and a initial layer data with 2 random input
+  when build a activation updater
+  and apply it to initial layer
+  then should result the layer with activaetd outputs""") {
+    forAll(
+      (valueGen, "y"),
+      (valueGen, "label")) {
+        (y, label) =>
+          val outputs = Nd4j.ones(2).mul(y)
+          val labels = Nd4j.ones(2).mul(label)
+          val mask = Nd4j.create(Array(0.0, 1.0))
+
+          val inputData = Map(
+            "outputs" -> outputs,
+            "labels" -> labels,
+            "mask" -> mask)
+
+          val updater = loss.buildGradient
+          val newData = updater(inputData)
+
+          val expectedDelta = mask.mul(label - y)
+
+          newData.get("delta") should contain(expectedDelta)
+      }
   }
 }
