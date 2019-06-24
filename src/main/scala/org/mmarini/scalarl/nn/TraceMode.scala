@@ -33,15 +33,34 @@ import org.yaml.snakeyaml.Yaml
 import io.circe.Json
 
 trait TraceMode {
+  def buildTrace: Updater
   def toJson: Json
 }
 
 object NoneTraceMode extends TraceMode {
+
+  val buildTrace = UpdaterFactory.identityUpdater
+
   lazy val toJson = Json.obj(
     "mode" -> Json.fromString("NONE"))
 }
 
 case class AccumulateTraceMode(lambda: Double, gamma: Double) extends TraceMode {
+
+  val buildTrace: Updater = {
+    val mul = lambda * gamma
+
+    (data: LayerData) =>
+      data.get("trace").map(trace => {
+        val feedback = data("feedback")
+        val noClearTrace = data("noClearTrace")
+        val newTrace = trace.mul(mul).muli(noClearTrace).addi(feedback)
+        data +
+          ("trace" -> newTrace) +
+          ("feedback" -> newTrace)
+      }).getOrElse(data)
+  }
+
   lazy val toJson = Json.obj(
     "mode" -> Json.fromString("ACCUMULATE"),
     "lambda" -> Json.fromDoubleOrNull(lambda),

@@ -76,16 +76,15 @@ class AdamOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
       // m1 = | -0.2 0.4 |
       // m2 = | 0.3 0.4 |
       // m1' = M1 beta1 + g (1 - beta1) = | -0.19   0.38 |
-      // m2' = M2 beta2 + g2 (1 - bet2) = | 0.29969   0.39964 |
-      // 
+      // m2' = M2 beta2 + g2 (1 - bet2) = | 0.29971   0.49954 |
 
-      val feedback = Nd4j.create(Array(0.010974  -0.019008))
+      val feedback = Nd4j.create(Array(-0.010974, 0.017001))
       newData.get("feedback") should contain(feedback)
 
       val newM1 = Nd4j.create(Array(-0.19, 0.38))
       newData.get("m1") should contain(newM1)
 
-      val newM2 = Nd4j.create(Array(-0.29969, 0.39964))
+      val newM2 = Nd4j.create(Array(0.29971 , 0.49954))
       newData.get("m2") should contain(newM2)
     }
 

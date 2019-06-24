@@ -31,6 +31,7 @@ package org.mmarini.scalarl.nn
 
 import org.yaml.snakeyaml.Yaml
 import io.circe.Json
+import org.nd4j.linalg.ops.transforms.Transforms
 
 trait Optimizer {
 
@@ -55,12 +56,30 @@ case class SGDOptimizer(alpha: Double) extends Optimizer {
 }
 
 case class AdamOptimizer(alpha: Double, beta1: Double, beta2: Double, epsilon: Double) extends Optimizer {
-  val buildOptimizer: Updater = (data: LayerData) => {
-    val gradient = data.get("gradient")
-    val feedback = gradient.map(g => g.mul(alpha))
-    feedback.
-      map(f => data + ("feedback" -> f)).
-      getOrElse(data)
+  val omb1 = 1 - beta1
+  val omb2 = 1 - beta2
+  val buildOptimizer: Updater = {
+    (data: LayerData) =>
+      data.get("gradient").
+        map(g => {
+          val m1 = data("m1")
+          val m2 = data("m2")
+          val g2 = g.mul(g)
+          // m1 = m1 b1 + g(1-b1)
+          // m1^ = m1/(1-b1)
+          val newM1 = m1.mul(beta1).addi(g.mul(omb1))
+          val newM2 = m2.mul(beta2).addi(g2.mul(omb2))
+
+          val m1Norm = newM1.div(omb1)
+          val m2Norm = newM2.div(omb2)
+
+          val feedback = m1Norm.divi(Transforms.sqrt(m2Norm).addi(epsilon)).muli(alpha)
+
+          data +
+            ("m1" -> newM1) +
+            ("m2" -> newM2) +
+            ("feedback" -> feedback)
+        }).getOrElse(data)
   }
 
   lazy val toJson = Json.obj(
