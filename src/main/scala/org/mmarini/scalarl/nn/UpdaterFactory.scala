@@ -37,9 +37,11 @@ object UpdaterFactory {
    *
    */
   val identityUpdater = (data: LayerData) => data
-//
-//  def compose(factories: Seq[UpdaterFactory]): UpdaterFactory = (layer: Layer) =>
-//    factories.map(factory => factory(layer)).foldLeft(identityUpdater)((acc, updater) =>
-//      (data: LayerData) =>
-//        updater(acc(data)))
+
+  val thetaUpdater = (data: LayerData) =>
+    data.get("feedback").map(feedback => {
+      val theta = data("theta")
+      val newTheta = theta.add(feedback)
+      data + ("theta" -> newTheta)
+    }).getOrElse(data)
 }

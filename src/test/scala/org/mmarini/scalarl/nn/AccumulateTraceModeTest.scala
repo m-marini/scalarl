@@ -117,7 +117,7 @@ class AccumulateTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
       val newData = updater(inputsData)
 
       Then("should result the initial layer")
-      newData should be theSameInstanceAs(inputsData)
+      newData should be theSameInstanceAs (inputsData)
     }
   }
 }

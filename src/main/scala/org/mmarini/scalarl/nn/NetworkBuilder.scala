@@ -70,7 +70,7 @@ case class NetworkBuilder(
     val deltaUpdaters = layers.map(_.buildDelta(this))
     val optimizerUpdaters = layers.map(_ => optimizer.buildOptimizer)
     val traceUpdaters = layers.map(_ => traceMode.buildTrace)
-    val thetaUpdaters = Array[Updater]()
+    val thetaUpdaters = layers.map(_ => UpdaterFactory.thetaUpdater)
 
     new NetworkProcessor(
       clearTraceUpdaters = clearTraceUpdaters,

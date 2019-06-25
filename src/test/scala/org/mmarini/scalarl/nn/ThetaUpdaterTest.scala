@@ -41,49 +41,42 @@ import org.scalatest.PropSpec
 import org.scalacheck.Gen
 import org.scalatest.GivenWhenThen
 
-class SGDOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
-  val Epsilon = 1e-6
-  val Alpha = 0.1
+class ThetaUpdaterTest extends FunSpec with GivenWhenThen with Matchers {
+  val Epsilon = 1e-3
 
   Nd4j.create()
 
-  describe("SGDOptimizer") {
-    it("should generate optimizer updater") {
+  describe("ThetaUpdaterTest") {
+    it("should generate updated theta") {
+      Given("an theta updater")
+      val updater = UpdaterFactory.thetaUpdater
 
-      Given("a sgd optimizer")
-      val opt = SGDOptimizer(Alpha)
+      And("a layer data with feedback and theta")
+      val feedback = Nd4j.create(Array(0.1, 0.2))
+      val theta = Nd4j.create(Array(0.3, 0.4))
+      val inputsData = Map(
+        "feedback" -> feedback,
+        "theta" -> theta)
 
-      And("a layer data with gradients")
-      val gradient = Nd4j.create(Array(1.0, 2.0))
-      val inputsData = Map("gradient" -> gradient)
-
-      When("build a optimizer updater")
-      val updater = opt.buildOptimizer
-
-      And("apply to initial layer")
+      When("apply to initial layer")
       val newData = updater(inputsData)
 
-      Then("should result the feedback")
-      val feedback = Nd4j.create(Array(0.1, 0.2))
-      newData.get("feedback") should contain(feedback)
+      Then("should result the theta updated")
+      val expetcedTheta = Nd4j.create(Array(0.4, 0.6))
+      newData.get("theta") should contain(expetcedTheta)
     }
 
-    it("should generate null optimizer updater for no parametered layer") {
+    it("should generate nothing if no feedback provided") {
+      Given("an theta updater")
+      val updater = UpdaterFactory.thetaUpdater
 
-      Given("a sgd optimizer")
-      val opt = SGDOptimizer(Alpha)
-
-      And("a layer data without gradients")
-      val gradient = Nd4j.create(Array(1.0, 2.0))
+      And("a layer data without feedback")
       val inputsData: LayerData = Map()
 
-      When("build a optimizer updater")
-      val updater = opt.buildOptimizer
-
-      And("apply to initial layer")
+      When("apply to initial layer")
       val newData = updater(inputsData)
 
-      Then("should result the feedback")
+      Then("should result the feedback updated")
       newData should be theSameInstanceAs (inputsData)
     }
   }

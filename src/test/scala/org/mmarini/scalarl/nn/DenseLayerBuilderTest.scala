@@ -187,31 +187,8 @@ class DenseLayerBuilderTest extends FunSpec with GivenWhenThen with Matchers {
       // | 0.1 0.2 | x | 0.1 0.3 0.5 | = | 0.05 0.11 0.17 |
       //               | 0.2 0.4 0.6 |
       Then("should result bias")
-      val expectedDelta = Nd4j.create(Array(0.05, 0.11,  0.17))
+      val expectedDelta = Nd4j.create(Array(0.05, 0.11, 0.17))
       outData.get("inputDelta") should contain(expectedDelta)
-    }
-
-    it("should generate optimizer parameters") {
-
-      Given("a dense layer builder with 2 outputs")
-      val layer = DenseLayerBuilder(noOutputs = 2)
-
-      And("a initial layer with outpus, labels, mask")
-      val delta = Nd4j.create(Array(0.1, 0.2))
-      val withDelta = initialLayerData +
-        ("gradient" -> delta)
-
-      When("build a gradient updater")
-      val converter = layer.buildDelta(mockTopology)
-
-      And("apply to initial layer")
-      val outData = converter(withDelta)
-
-      // | 0.1 0.2 | x | 0.1 0.3 0.5 | = | 0.05 0.11 0.17 |
-      //               | 0.2 0.4 0.6 |
-      Then("should result bias")
-      val expectedDelta = Nd4j.create(Array(0.05, 0.11,  0.17))
-      outData.get("feedback") should contain(expectedDelta)
     }
   }
 }

@@ -84,7 +84,7 @@ class AdamOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
       val newM1 = Nd4j.create(Array(-0.19, 0.38))
       newData.get("m1") should contain(newM1)
 
-      val newM2 = Nd4j.create(Array(0.29971 , 0.49954))
+      val newM2 = Nd4j.create(Array(0.29971, 0.49954))
       newData.get("m2") should contain(newM2)
     }
 
