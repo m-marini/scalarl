@@ -39,57 +39,56 @@ import io.circe.yaml.syntax.AsYaml
 import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.PropSpec
 import org.scalacheck.Gen
+import org.scalatest.GivenWhenThen
 
-class ActivationFunctionTest extends PropSpec with PropertyChecks with Matchers {
+class ActivationFunctionTest extends FunSpec with Matchers with GivenWhenThen {
   val Epsilon = 1e-6
 
-  val tanh = TanhActivationFunction
+  describe("TanhActivationFunction") {
+    it("should compute the activation value") {
+      Given("an Activation Function")
+      val tanh = TanhActivationFunction
 
-  def valueGen = Gen.choose(-1.0, 1.0)
+      And("an initial layer data with 3 inputs")
+      val inputs = Nd4j.create(Array(-1.0, 0.0, 1.0))
+      val inputData = Map("inputs" -> inputs)
 
-  property("""Given an Activation Function
-  and a initial layer data with 2 random input
-  when build a activation updater
-  and apply it to initial layer
-  then should result the layer with activated outputs""") {
-    forAll(
-      (valueGen, "value")) {
-        value =>
-          val inputs = Nd4j.ones(2).mul(value)
-          val inputData = Map("inputs" -> inputs)
-          val updater = tanh.buildActivation
-          val newData = updater(inputData)
+      When("build a activation updater")
+      val updater = tanh.buildActivation
 
-          val outputs = newData("outputs")
+      And("apply it to initial layer")
+      val newData = updater(inputData)
 
-          val x = inputData("inputs").getDouble(0L);
-          val y = Nd4j.ones(2).mul(Math.tanh(x));
-
-          newData.get("outputs") should contain(y)
-      }
+      Then("should result the layer with activated outputs")
+      val expected = Nd4j.create(Array(math.tanh(-1), math.tanh(0), math.tanh(1)))
+      newData.get("outputs") should contain(expected)
+    }
   }
 
-  property("""Given an Activation Function
-  and a initial layer data with 2 random input
-  when build a gradient updater
-  and apply it to initial layer
-  then should result the layer with gradient""") {
-    forAll(
-      (valueGen, "value")) {
-        value =>
-          val inputs = Nd4j.ones(2).mul(value)
-          val y = Math.tanh(value)
-          val outputs = Nd4j.ones(2).mul(y)
-          val inputData = Map(
-            "inputs" -> inputs,
-            "outputs" -> outputs)
-          val updater: Updater = tanh.buildDelta
-          val newData = updater(inputData)
+  describe("TanhActivationFunction") {
+    it("should backward delta") {
+      Given("an Activation Function")
+      val tanh = TanhActivationFunction
 
-          val g = (1 - y) * (1 + y)
-          val expected = Nd4j.ones(2).mul(g)
+      And("an input layer data with 3 outputs and delta")
+      val outputs = Nd4j.create(Array(math.tanh(-1), math.tanh(0), math.tanh(1)))
+      val delta = Nd4j.create(Array(0.1, -0.1, 0.2))
+      val inputData = Map(
+        "outputs" -> outputs,
+        "delta" -> delta)
 
-          newData.get("gradient") should contain(expected)
-      }
+      When("build a delta updater")
+      val updater = tanh.buildDelta
+
+      And("apply it to initial layer")
+      val newData = updater(inputData)
+
+      Then("should result the layer with inputDelta")
+      val expected = Nd4j.create(Array(
+        (1 - math.tanh(-1) * math.tanh(-1)) * 0.1,
+        -0.1,
+        (1 - math.tanh(1) * math.tanh(1)) * 0.2))
+      newData.get("inputDelta") should contain(expected)
+    }
   }
 }

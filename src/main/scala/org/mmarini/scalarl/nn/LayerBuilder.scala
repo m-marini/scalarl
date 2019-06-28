@@ -29,10 +29,12 @@
 
 package org.mmarini.scalarl.nn
 
-import io.circe.Json
-import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.api.rng.Random
+import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.indexing.NDArrayIndex
+
+import io.circe.Json
 
 /**
  * Defines layer architecture and builds the layer functional updater such that for clear trace.
@@ -62,8 +64,38 @@ trait LayerBuilder {
   /** Returns the updater that computes the delta by backwording errors */
   def buildDelta(topology: NetworkTopology): Updater
 
+  /** Returns the layer data for the [[LayerBuilder]] */
+  def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): LayerData
+
   /** Returns the json representation of layer */
   def toJson: Json
+}
+
+case class InputLayerBuilder(noInputs: Int) extends LayerBuilder {
+
+  /** Returns the number of inputs */
+  override def noInputs(topology: NetworkTopology): Int = noInputs
+
+  /** Returns the number of outputs */
+  override def noOutputs(topology: NetworkTopology): Int = noInputs
+
+  /** Returns the updater that clears the eligibility traces of the layer */
+  override def buildClearTrace(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater
+
+  /** Returns the updater that forwards the inputs */
+  override def buildForward(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater
+
+  /** Returns the updater that computes the gradient */
+  override def buildGradient(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater
+
+  /** Returns the updater that computes the delta by backwording errors */
+  override def buildDelta(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater
+
+  /** Returns the layer data for the [[LayerBuilder]] */
+  override def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): LayerData = Map()
+
+  /** Returns the json representation of layer */
+  override def toJson: Json = Json.Null
 }
 
 /**
@@ -82,6 +114,8 @@ case class ActivationLayerBuilder(activation: ActivationFunction) extends LayerB
   def buildForward(context: NetworkTopology): Updater = activation.buildActivation
 
   def buildDelta(context: NetworkTopology): Updater = activation.buildDelta
+
+  def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): LayerData = Map()
 
   lazy val toJson = Json.obj(
     "type" -> Json.fromString("ACTIVATION"),
@@ -156,6 +190,20 @@ case class DenseLayerBuilder(noOutputs: Int) extends LayerBuilder {
       val inpDelta = delta.mmul(w.transpose())
       data + ("inputDelta" -> inpDelta)
     }
+  }
+
+  def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): LayerData = {
+    val n = noInputs(topology)
+    val m = noOutputs
+    val weights = initializer.build(n, m, random)
+    val bias = Nd4j.zeros(m)
+    val theta = Nd4j.hstack(weights.ravel(), bias)
+    val zeros = Nd4j.zeros(n * m + m)
+    Map(
+      "theta" -> theta,
+      "trace" -> zeros,
+      "m1" -> zeros,
+      "m2" -> zeros)
   }
 
   lazy val toJson = Json.obj(

@@ -31,6 +31,8 @@ package org.mmarini.scalarl.nn
 
 import org.yaml.snakeyaml.Yaml
 import io.circe.Json
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.api.rng.Random
 
 trait NetworkTopology {
   def nextLayer(layer: LayerBuilder): Option[LayerBuilder]
@@ -38,22 +40,34 @@ trait NetworkTopology {
 }
 
 case class NetworkBuilder(
-  noInputs:     Int,
   lossFunction: LossFunction,
   initializer:  Initializer,
   optimizer:    Optimizer,
   traceMode:    TraceMode,
   layers:       Array[LayerBuilder]) extends NetworkTopology {
 
-  def nextLayer(layer: LayerBuilder): Option[LayerBuilder] = ???
-  def prevLayer(layer: LayerBuilder): Option[LayerBuilder] = ???
+  def nextLayer(layer: LayerBuilder): Option[LayerBuilder] = {
+    val idx = layers.indexOf(layer)
+    if (idx >= 0 && idx + 1 < layers.length) Some(layers(idx + 1)) else None
+  }
 
-  def setNoInputs(noInputs: Int): NetworkBuilder = copy(noInputs = noInputs)
+  def prevLayer(layer: LayerBuilder): Option[LayerBuilder] = {
+    val idx = layers.indexOf(layer)
+    if (idx >= 1) Some(layers(idx - 1)) else None
+  }
+
+  def setNoInputs(noInputs: Int): NetworkBuilder = {
+    val newLayers = InputLayerBuilder(noInputs) +: layers.tail
+    copy(layers = newLayers)
+  }
+
+  def noInputs: Int = layers.head.asInstanceOf[InputLayerBuilder].noInputs
+
   def setLossFunction(lossFunction: LossFunction): NetworkBuilder = copy(lossFunction = lossFunction)
   def setInitializer(initializer: Initializer): NetworkBuilder = copy(initializer = initializer)
   def setOptimizer(optimizer: Optimizer): NetworkBuilder = copy(optimizer = optimizer)
   def setTraceMode(traceMode: TraceMode): NetworkBuilder = copy(traceMode = traceMode)
-  def addLayer(layer: LayerBuilder): NetworkBuilder = copy(layers = layers :+ layer)
+  def addLayers(layers: LayerBuilder*): NetworkBuilder = copy(layers = this.layers ++ layers)
 
   lazy val toJson: Json = Json.obj(
     "noInputs" -> Json.fromInt(noInputs),
@@ -82,18 +96,22 @@ case class NetworkBuilder(
       traceUpdaters = traceUpdaters,
       thetaUpdaters = thetaUpdaters)
   }
+
+  def buildData(random: Random): NetworkData = {
+    val layerData = layers.map(_.buildData(this, initializer, random))
+    new NetworkData(layerData)
+  }
 }
 
 object NetworkBuilder {
   val DefaultAlpha = 0.1
 
   def apply(): NetworkBuilder = NetworkBuilder(
-    noInputs = 0,
     lossFunction = MSELossFunction,
     initializer = XavierInitializer,
     optimizer = SGDOptimizer(alpha = DefaultAlpha),
     traceMode = NoneTraceMode,
-    layers = Array())
+    layers = Array(InputLayerBuilder(0)))
 
   def fromYaml(yaml: Yaml): NetworkBuilder = ???
 

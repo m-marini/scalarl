@@ -29,93 +29,114 @@
 
 package org.mmarini.scalarl.nn
 
+import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.FunSpec
+import org.scalatest.GivenWhenThen
 import org.scalatest.Matchers
-import org.scalatest.prop.PropertyChecks
 
-import io.circe.Json
-import io.circe.yaml
-import io.circe.yaml.syntax.AsYaml
+class NetworkBuilderTest extends FunSpec with GivenWhenThen with Matchers {
 
-class NetworkBuilderTest extends FunSpec with PropertyChecks with Matchers {
+  describe("A NetworkBuilder") {
+    it("should create a new builder") {
+      Given("a netwok builder")
+      val builder = NetworkBuilder()
 
-  describe("Given an network builder") {
-    val builder = NetworkBuilder()
-    describe("When setNoInputs") {
+      When("setNoInputs")
       val newBuilder = builder.setNoInputs(10)
-      it("Then should create a new builder") {
-        newBuilder should not be (builder)
-        newBuilder.noInputs shouldBe 10
-      }
-    }
-  }
 
-  describe("Given an network builder") {
-    val builder = NetworkBuilder().
-      setNoInputs(10).
-      addLayer(DenseLayerBuilder(2)).
-      addLayer(ActivationLayerBuilder(TanhActivationFunction)).
-      setTraceMode(AccumulateTraceMode(0.8, 0.9)).
-      setOptimizer(AdamOptimizer(0.1, 0.8, 0.9, 0.5))
-
-    describe("When toJson") {
-      val json = builder.toJson
-      val txt = json.asYaml.spaces2
-      it("Then should create a json object") {
-        txt shouldBe """optimizer:
-  beta2: 0.9
-  mode: ADAM
-  beta1: 0.8
-  epsilon: 0.5
-  alpha: 0.1
-lossFunction: MSE
-noInputs: 10
-layers:
-- type: DENSE
-  noOutputs: 2
-- type: ACTIVATION
-  activation: TANH
-traceMode:
-  mode: ACCUMULATE
-  lambda: 0.8
-  gamma: 0.9
-initializer: XAVIER
-"""
-      }
+      Then("Then should create a new builder")
+      newBuilder should not be (builder)
+      newBuilder.noInputs shouldBe 10
     }
-  }
 
-  describe("Given circe") {
-    val json = yaml.parser.parse("""
-foo: Hello, World
-bar:
-    one: One Third
-    two: 33.333333
-baz:
-    - Hello
-    - World
-""")
-    val v = json.right.get
-    it("") {
-      "" shouldBe ""
-    }
-  }
+    it("should build network data") {
+      Given("a netwok builder")
+      val builder = NetworkBuilder().
+        setNoInputs(2).
+        addLayers(
+          DenseLayerBuilder(2),
+          ActivationLayerBuilder(TanhActivationFunction))
+      And("a random generator")
+      val random = Nd4j.getRandomFactory().getNewRandomInstance(1234)
 
-  describe("gen  yaml") {
-    val x = (1 to 3).map(Json.fromInt).toArray
-    val doc = Json.obj(
-      "a" -> Json.fromInt(69),
-      "b" -> Json.fromString("aa"),
-      "c" -> Json.arr(x: _*))
-    val txt = doc.asYaml.spaces2 // 2 spaces for each indent level
-    it("") {
-      txt shouldBe """a: 69
-b: aa
-c:
-- 1
-- 2
-- 3
-"""
+      When("initialize data")
+      val data = builder.buildData(random)
+
+      Then("should return the expected value")
+      data.layers should have size (3)
+
+      data.layers(1).keySet should contain("theta")
+      data.layers(1).keySet should contain("trace")
+      data.layers(1).keySet should contain("m1")
+      data.layers(1).keySet should contain("m2")
+
     }
+    //
+    //    val builder = NetworkBuilder().
+    //      setNoInputs(10).
+    //      addLayer(DenseLayerBuilder(2)).
+    //      addLayer(ActivationLayerBuilder(TanhActivationFunction)).
+    //      setTraceMode(AccumulateTraceMode(0.8, 0.9)).
+    //      setOptimizer(AdamOptimizer(0.1, 0.8, 0.9, 0.5))
+    //
+    //    describe("When toJson") {
+    //      val json = builder.toJson
+    //      val txt = json.asYaml.spaces2
+    //      it("Then should create a json object") {
+    //        txt shouldBe """optimizer:
+    //  beta2: 0.9
+    //  mode: ADAM
+    //  beta1: 0.8
+    //  epsilon: 0.5
+    //  alpha: 0.1
+    //lossFunction: MSE
+    //noInputs: 10
+    //layers:
+    //- type: DENSE
+    //  noOutputs: 2
+    //- type: ACTIVATION
+    //  activation: TANH
+    //traceMode:
+    //  mode: ACCUMULATE
+    //  lambda: 0.8
+    //  gamma: 0.9
+    //initializer: XAVIER
+    //"""
+    //      }
+    //    }
+    //  }
+    //
+    //  describe("Given circe") {
+    //    val json = yaml.parser.parse("""
+    //foo: Hello, World
+    //bar:
+    //    one: One Third
+    //    two: 33.333333
+    //baz:
+    //    - Hello
+    //    - World
+    //""")
+    //    val v = json.right.get
+    //    it("") {
+    //      "" shouldBe ""
+    //    }
+    //  }
+    //
+    //  describe("gen  yaml") {
+    //    val x = (1 to 3).map(Json.fromInt).toArray
+    //    val doc = Json.obj(
+    //      "a" -> Json.fromInt(69),
+    //      "b" -> Json.fromString("aa"),
+    //      "c" -> Json.arr(x: _*))
+    //    val txt = doc.asYaml.spaces2 // 2 spaces for each indent level
+    //    it("") {
+    //      txt shouldBe """a: 69
+    //b: aa
+    //c:
+    //- 1
+    //- 2
+    //- 3
+    //"""
+    //    }
   }
 }

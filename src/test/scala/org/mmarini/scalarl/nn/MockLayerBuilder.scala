@@ -29,6 +29,8 @@
 
 package org.mmarini.scalarl.nn
 
+import org.nd4j.linalg.api.rng.Random
+
 import io.circe.Json
 
 abstract class MockLayerBuilder extends LayerBuilder {
@@ -38,5 +40,6 @@ abstract class MockLayerBuilder extends LayerBuilder {
   def buildMask(topology: NetworkTopology): Updater = ???
   def buildGradient(topology: NetworkTopology): Updater = ???
   def buildDelta(topology: NetworkTopology): Updater = ???
+  def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): LayerData = ???
   def toJson: Json = ???
 }

@@ -169,7 +169,6 @@ class DenseLayerBuilderTest extends FunSpec with GivenWhenThen with Matchers {
     }
 
     it("should generate backward delta") {
-
       Given("a dense layer builder with 2 outputs")
       val layer = DenseLayerBuilder(noOutputs = 2)
 
@@ -189,6 +188,30 @@ class DenseLayerBuilderTest extends FunSpec with GivenWhenThen with Matchers {
       Then("should result bias")
       val expectedDelta = Nd4j.create(Array(0.05, 0.11, 0.17))
       outData.get("inputDelta") should contain(expectedDelta)
+    }
+
+    it("should generate initial theta") {
+      Given("a dense layer builder with 2 outputs")
+      val layer = DenseLayerBuilder(noOutputs = 2)
+      And("a random generator")
+      val random = Nd4j.getRandomFactory().getNewRandomInstance(1234)
+      And("a topology with previous layer")
+      val topology = mockTopology
+
+      When("build initial data")
+      val data = layer.buildData(topology, XavierInitializer, random)
+
+      Then("should result trace data")
+      data.get("trace") should contain(Nd4j.zeros(8))
+
+      And("should result m1 data")
+      data.get("m1") should contain(Nd4j.zeros(8))
+
+      And("should result m2 data")
+      data.get("m2") should contain(Nd4j.zeros(8))
+
+      And("should result theta data")
+      data.get("theta").map(_.shape()) should contain(Array(1, 8))
     }
   }
 }
