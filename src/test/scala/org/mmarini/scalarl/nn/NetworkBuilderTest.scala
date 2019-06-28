@@ -33,8 +33,11 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
 import org.scalatest.Matchers
+import org.nd4j.linalg.api.ndarray.INDArray
 
 class NetworkBuilderTest extends FunSpec with GivenWhenThen with Matchers {
+
+  def loss(a: INDArray, b: INDArray): Double = a.squaredDistance(b)
 
   describe("A NetworkBuilder") {
     it("should create a new builder") {
@@ -71,7 +74,45 @@ class NetworkBuilderTest extends FunSpec with GivenWhenThen with Matchers {
       data.layers(1).keySet should contain("m2")
 
     }
-    //
+
+    it("should improve the prediction") {
+      Given("a NetworkBuilder with 2 input")
+      val builder = NetworkBuilder().
+        setNoInputs(2).
+        setOptimizer(SGDOptimizer(0.1)).
+        setTraceMode(AccumulateTraceMode(0, 0)).
+        addLayers(
+          DenseLayerBuilder(2),
+          ActivationLayerBuilder(TanhActivationFunction))
+
+      And("a random generator")
+      val random = Nd4j.getRandomFactory().getNewRandomInstance(1234)
+
+      And("data network with input, labels, mask, clearTrace")
+      val inputs = Nd4j.create(Array(0.5, 0.5))
+      val clearTrace = Nd4j.zeros(1)
+      val labels = Nd4j.create(Array(0.2, 0.8))
+      val mask = Nd4j.create(Array(0.0, 1.0))
+      val data = builder.buildData(random).
+        setInputs(inputs, clearTrace).
+        setLabels(labels, mask)
+
+      When("build network processor")
+      val proc = builder.buildProcessor
+
+      And("fit")
+      val fitted = proc.fit(data)
+
+      And("forward")
+      val outData = proc.forward(fitted)
+
+      Then("should return a smaller loss value")
+      val err1 = loss(labels, fitted.ouputs.get)
+      val err2 = loss(labels, outData.ouputs.get)
+
+      err2 should be <= (err1)
+    }
+
     //    val builder = NetworkBuilder().
     //      setNoInputs(10).
     //      addLayer(DenseLayerBuilder(2)).

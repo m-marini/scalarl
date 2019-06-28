@@ -83,7 +83,8 @@ case class InputLayerBuilder(noInputs: Int) extends LayerBuilder {
   override def buildClearTrace(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater
 
   /** Returns the updater that forwards the inputs */
-  override def buildForward(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater
+  override def buildForward(topology: NetworkTopology): Updater = (data: LayerData) =>
+    data + ("outputs" -> data("inputs"))
 
   /** Returns the updater that computes the gradient */
   override def buildGradient(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater

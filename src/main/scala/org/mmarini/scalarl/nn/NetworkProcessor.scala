@@ -46,7 +46,8 @@ class NetworkProcessor(
   def clearTrace(data: NetworkData): NetworkData =
     concurrentPass(clearTraceUpdaters)(data)
 
-  def forwardReducer(left: LayerData, right: LayerData) = right + ("inputs" -> left("outputs"))
+  def forwardReducer(left: LayerData, right: LayerData) =
+    left.get("outputs").map(outputs => right + ("inputs" -> outputs)).getOrElse(right)
 
   /** Returns the data with computed outputs */
   def forward(data: NetworkData): NetworkData =
@@ -81,14 +82,14 @@ class NetworkProcessor(
     val seed = (Seq[LayerData](), Map().asInstanceOf[LayerData])
     val (newLayerData, _) = zip.foldRight(seed) {
       case ((updater, layer), (out, in)) =>
-        val newLayer = updater(reducer(in, layer))
+        val newLayer = updater(reducer(layer, in))
         (newLayer +: out, newLayer)
     }
     data.copy(layers = newLayerData.toArray)
   }
 
-  def maskReducer(left: LayerData, right: LayerData) = left + ("inputMask" -> right("mask"))
-  def deltaReducer(left: LayerData, right: LayerData) = left + ("delta" -> right("delta"))
+  def deltaReducer(left: LayerData, right: LayerData) =
+    right.get("inputDelta").map(inputDelta => left + ("delta" -> inputDelta)).getOrElse(left)
 
   def computeLoss(data: NetworkData): NetworkData = {
     val outLayer = data.layers.last
