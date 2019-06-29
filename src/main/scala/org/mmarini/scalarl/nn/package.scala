@@ -36,5 +36,5 @@ import org.nd4j.linalg.api.ndarray.INDArray
  */
 package object nn {
   type NetworkData = Map[String, INDArray]
-  type Updater = NetworkData => NetworkData
+  type Operation = NetworkData => NetworkData
 }

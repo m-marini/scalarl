@@ -30,22 +30,41 @@
 package org.mmarini.scalarl.nn
 
 /**
- *
+ * Computes the outputs for the inputs and change data parameter to fit the labels
  */
-object UpdaterFactory {
-  /**
-   *
-   */
-  val identityUpdater = (data: NetworkData) => data
+trait OperationBuilder {
+  def build: Operation
+  def then(f1: Operation): OperationBuilder
+  def then(u: OperationBuilder): OperationBuilder
+}
 
-  def thetaUpdater(key: String) = (data: NetworkData) =>
+object OperationBuilder {
+  def apply(f: Operation): OperationBuilder = new MonoOperationBuilder(f)
+  def apply(): OperationBuilder = IdentityBuilder
+
+  def thetaBuilder(key: String): OperationBuilder = new MonoOperationBuilder(data =>
     data.get(s"${key}.feedback").map(feedback => {
       val theta = data(s"${key}.theta")
       val newTheta = theta.add(feedback)
       data + (s"${key}.theta" -> newTheta)
-    }).getOrElse(data)
+    }).getOrElse(data))
+}
 
-  def sequence(updaters: Seq[Updater]): Updater =
-    updaters.tail.foldLeft(updaters.head)((acc, updater) => (data: NetworkData) =>
-      updater(acc(data)))
+class MonoOperationBuilder(f: Operation) extends OperationBuilder {
+  def build = f
+
+  def then(f1: Operation): OperationBuilder =
+    new MonoOperationBuilder(data => f1(f(data)))
+
+  def then(u: OperationBuilder): OperationBuilder =
+    if (u == IdentityBuilder) this else then(u.build)
+}
+
+object IdentityBuilder extends OperationBuilder {
+  val build = data => data
+
+  def then(f1: NetworkData => NetworkData): OperationBuilder = new MonoOperationBuilder(f1)
+
+  def then(u: OperationBuilder): OperationBuilder = 
+    if (u == IdentityBuilder) this else then(u.build)
 }

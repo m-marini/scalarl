@@ -54,16 +54,16 @@ trait LayerBuilder {
   def noOutputs(topology: NetworkTopology): Int
 
   /** Returns the updater that clears the eligibility traces of the layer */
-  def buildClearTrace(topology: NetworkTopology): Updater
+  def clearTraceBuilder(topology: NetworkTopology): OperationBuilder
 
   /** Returns the updater that forwards the inputs */
-  def buildForward(topology: NetworkTopology): Updater
+  def forwardBuilder(topology: NetworkTopology): OperationBuilder
 
   /** Returns the updater that computes the gradient */
-  def buildGradient(topology: NetworkTopology): Updater
+  def gradientBuilder(topology: NetworkTopology): OperationBuilder
 
   /** Returns the updater that computes the delta by backwording errors */
-  def buildDelta(topology: NetworkTopology): Updater
+  def deltaBuilder(topology: NetworkTopology): OperationBuilder
 
   /** Returns the layer data for the [[LayerBuilder]] */
   def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): NetworkData
@@ -87,17 +87,17 @@ case class InputLayerBuilder(id: String, noInputs: Int) extends LayerBuilder wit
   override def noOutputs(topology: NetworkTopology): Int = noInputs
 
   /** Returns the updater that clears the eligibility traces of the layer */
-  override def buildClearTrace(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater
+  override def clearTraceBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder()
 
   /** Returns the updater that forwards the inputs */
-  override def buildForward(topology: NetworkTopology): Updater = (data: NetworkData) =>
-    data + (key("outputs") -> data("inputs"))
+  override def forwardBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder(data =>
+    data + (key("outputs") -> data("inputs")))
 
   /** Returns the updater that computes the gradient */
-  override def buildGradient(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater
+  override def gradientBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder()
 
   /** Returns the updater that computes the delta by backwording errors */
-  override def buildDelta(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater
+  override def deltaBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder()
 
   /** Returns the layer data for the [[LayerBuilder]] */
   override def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): NetworkData = Map()
@@ -114,23 +114,23 @@ case class InputLayerBuilder(id: String, noInputs: Int) extends LayerBuilder wit
 case class ActivationLayerBuilder(id: String, activation: ActivationFunction) extends LayerBuilder with KeyBuilder {
   def noOutputs(topology: NetworkTopology): Int = noInputs(topology)
 
-  def buildClearTrace(context: NetworkTopology): Updater = UpdaterFactory.identityUpdater
+  def clearTraceBuilder(context: NetworkTopology): OperationBuilder = OperationBuilder()
 
-  def buildGradient(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater
+  def gradientBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder()
 
-  def buildForward(context: NetworkTopology): Updater = (data: NetworkData) => {
+  override def forwardBuilder(context: NetworkTopology): OperationBuilder = OperationBuilder(data => {
     val inputs = data(key("inputs"))
     val outputs = activation.activate(inputs)
     data + (key("outputs") -> outputs)
-  }
+  })
 
-  def buildDelta(context: NetworkTopology): Updater = (data: NetworkData) => {
+  def deltaBuilder(context: NetworkTopology): OperationBuilder = OperationBuilder(data => {
     val inputs = data(key("inputs"))
     val outputs = data(key("outputs"))
     val delta = data(key("delta"))
     val inputDelta = activation.inputDelta(inputs, outputs, delta)
     data + (key("inputDelta") -> inputDelta)
-  }
+  })
 
   def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): NetworkData = Map()
 
@@ -146,10 +146,10 @@ case class ActivationLayerBuilder(id: String, activation: ActivationFunction) ex
 case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder with KeyBuilder {
   def noOutputs(topology: NetworkTopology): Int = noOutputs
 
-  def buildClearTrace(context: NetworkTopology): Updater = {
+  def clearTraceBuilder(context: NetworkTopology): OperationBuilder = {
     val n = noInputs(context)
     val zeroTrace = Nd4j.zeros((n + 1) * noOutputs)
-    (data: NetworkData) => data + (key("trace") -> zeroTrace)
+    OperationBuilder(_ + (key("trace") -> zeroTrace))
   }
 
   /** Returns the converter og thetas to weights */
@@ -166,47 +166,47 @@ case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder wi
     (theta: INDArray) => theta.get(NDArrayIndex.interval(n * m, n * (m + 1)))
   }
 
-  def buildForward(topology: NetworkTopology): Updater = {
+  override def forwardBuilder(topology: NetworkTopology): OperationBuilder = {
     val fw = weights(topology)
     val fb = bias(topology)
 
     // Creates the updater
-    (data: NetworkData) => {
+    OperationBuilder(data => {
       val inputs = data(key("inputs"))
       val theta = data(key("theta"))
       val w = fw(theta)
       val b = fb(theta)
       val y = inputs.mmul(w).addi(b)
       data + (key("outputs") -> y)
-    }
+    })
   }
 
-  def buildGradient(topology: NetworkTopology): Updater = {
+  def gradientBuilder(topology: NetworkTopology): OperationBuilder = {
     val n = noInputs(topology)
     val m = noOutputs
     val bGrad = Nd4j.ones(m)
 
     // Creates the updater
-    (data: NetworkData) => {
+    OperationBuilder(data => {
       val inputs = data(key("inputs"))
       val wGrad = inputs.transpose().broadcast(n, m)
       val wFlatten = wGrad.ravel()
       val grad = Nd4j.hstack(wFlatten, bGrad)
       data + (key("gradient") -> grad)
-    }
+    })
   }
 
-  def buildDelta(topology: NetworkTopology): Updater = {
+  def deltaBuilder(topology: NetworkTopology): OperationBuilder = {
     val fw = weights(topology)
 
     // Creates the updater
-    (data: NetworkData) => {
+    OperationBuilder(data => {
       val delta = data(key("delta"))
       val theta = data(key("theta"))
       val w = fw(theta)
       val inpDelta = delta.mmul(w.transpose())
       data + (key("inputDelta") -> inpDelta)
-    }
+    })
   }
 
   def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): NetworkData = {

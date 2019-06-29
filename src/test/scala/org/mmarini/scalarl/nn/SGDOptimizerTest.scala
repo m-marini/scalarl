@@ -29,17 +29,10 @@
 
 package org.mmarini.scalarl.nn
 
-import org.scalatest.FunSpec
-import org.scalatest.Matchers
-import org.scalatest.prop.PropertyChecks
-
-import io.circe.Json
-import io.circe.yaml
-import io.circe.yaml.syntax.AsYaml
 import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.PropSpec
-import org.scalacheck.Gen
+import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
+import org.scalatest.Matchers
 
 class SGDOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
   val Epsilon = 1e-6
@@ -58,7 +51,7 @@ class SGDOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
       val inputsData = Map("l.gradient" -> gradient)
 
       When("build a optimizer updater")
-      val updater = opt.buildOptimizer("l")
+      val updater = opt.optimizeBuilder("l").build
 
       And("apply to initial layer")
       val newData = updater(inputsData)
@@ -78,7 +71,7 @@ class SGDOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
       val inputsData: NetworkData = Map()
 
       When("build a optimizer updater")
-      val updater = opt.buildOptimizer("l")
+      val updater = opt.optimizeBuilder("l").build
 
       And("apply to initial layer")
       val newData = updater(inputsData)

@@ -104,33 +104,33 @@ class NetworkBuilderTest extends FunSpec with GivenWhenThen with Matchers {
         addLayers(
           DenseLayerBuilder("0", 2),
           ActivationLayerBuilder("1", TanhActivationFunction))
-
       And("a random generator")
       val random = Nd4j.getRandomFactory().getNewRandomInstance(1234)
-
-      And("data network with input, labels, mask, clearTrace")
+      And("data network")
+      val data = builder.buildData(random)
+      And("inputs")
       val inputs = Nd4j.create(Array(0.5, 0.5))
-      val clearTrace = Nd4j.zeros(1)
+      And("noClearTrace")
+      val noClearTrace = Nd4j.zeros(1)
+      And("labels")
       val labels = Nd4j.create(Array(0.2, 0.8))
+      And("mask")
       val mask = Nd4j.create(Array(0.0, 1.0))
       //      val data = builder.buildData(random).
       //        setInputs(inputs, clearTrace).
       //        setLabels(labels, mask)
 
-      When("build network processor")
+      When("create processor")
       val proc = builder.buildProcessor
-
-      And("fit")
-      //      val fitted = proc.fit(data)
-
+      And("fit data")
+      val fitted = proc.fit(data, inputs, labels, mask, noClearTrace)
       And("forward")
-      //      val outData = proc.forward(fitted)
+      val out1 = proc.forward(fitted, inputs)
 
       Then("should return a smaller loss value")
-      //      val err1 = loss(labels, fitted.ouputs.get)
-      //      val err2 = loss(labels, outData.ouputs.get)
-      //
-      //      err2 should be <= (err1)
+      val err1 = loss(labels, fitted("outputs"))
+      val err2 = loss(labels, out1)
+      err2 should be < (err1)
     }
 
     //    val builder = NetworkBuilder().

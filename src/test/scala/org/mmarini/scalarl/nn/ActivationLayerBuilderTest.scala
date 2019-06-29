@@ -29,16 +29,11 @@
 
 package org.mmarini.scalarl.nn
 
-import org.scalatest.FunSpec
-import org.scalatest.Matchers
-import org.scalatest.prop.PropertyChecks
-
-import io.circe.Json
-import io.circe.yaml
-import io.circe.yaml.syntax.AsYaml
 import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.PropSpec
 import org.scalacheck.Gen
+import org.scalatest.Matchers
+import org.scalatest.PropSpec
+import org.scalatest.prop.PropertyChecks
 
 class ActivationLayerBuilderTest extends PropSpec with PropertyChecks with Matchers {
   val Epsilon = 1e-6
@@ -65,7 +60,7 @@ Given an Activation layer builder
       (valueGen, "value")) {
         value =>
           val (inputs, inputsData) = buildInputs(value)
-          val updater = tanhLayer.buildClearTrace(None.orNull)
+          val updater = tanhLayer.clearTraceBuilder(None.orNull).build
           val newData = updater(inputsData)
 
           newData should be theSameInstanceAs inputsData
@@ -82,8 +77,8 @@ Given an Activation layer builder
       (valueGen, "value")) {
         value =>
           val (inputs, inputsData) = buildInputs(value)
-          val updater = tanhLayer.buildForward(None.orNull)
-          val newData = updater(inputsData)
+          val updater = tanhLayer.forwardBuilder(None.orNull)
+          val newData = updater.build(inputsData)
 
           val y = Math.tanh(value)
           val expected = Nd4j.ones(2).mul(y)
@@ -101,7 +96,7 @@ Given an Activation layer builder
       (valueGen, "value")) {
         value =>
           val (inputs, inputsData) = buildInputs(value)
-          val updater = tanhLayer.buildGradient(None.orNull)
+          val updater = tanhLayer.gradientBuilder(None.orNull).build
           val y = Math.tanh(value)
           val withOutputs = inputsData + ("tanh.outputs" -> Nd4j.ones(2).mul(y))
           val newData = updater(withOutputs)
@@ -128,7 +123,7 @@ Given an Activation layer builder
             ("tanh.delta" -> Nd4j.ones(2).mul(delta)) +
             ("tanh.outputs" -> Nd4j.ones(2).mul(value))
 
-          val updater = tanhLayer.buildDelta(None.orNull)
+          val updater = tanhLayer.deltaBuilder(None.orNull).build
           val newData = updater(withDelta)
 
           val expected = Nd4j.ones(2).mul(expectedDelta)

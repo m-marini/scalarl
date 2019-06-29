@@ -33,8 +33,8 @@ import org.nd4j.linalg.api.ndarray.INDArray
  * }}}
  */
 class NetworkProcessor(
-  _forward: Updater,
-  _fit:     Updater)
+  _forward: Operation,
+  _fit:     Operation)
   extends Network {
 
   /** Returns the data with computed outputs */

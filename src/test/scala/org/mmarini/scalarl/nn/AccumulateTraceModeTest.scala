@@ -56,7 +56,7 @@ class AccumulateTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
         "noClearTrace" -> clearTrace)
 
       When("build a trace updater")
-      val updater = traceMode.buildTrace("l")
+      val updater = traceMode.traceBuilder("l").build
 
       And("apply to initial layer")
       val newData = updater(inputsData)
@@ -83,7 +83,7 @@ class AccumulateTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
         "noClearTrace" -> clearTrace)
 
       When("build a trace updater")
-      val updater = traceMode.buildTrace("l")
+      val updater = traceMode.traceBuilder("l").build
 
       And("apply to initial layer")
       val newData = updater(inputsData)
@@ -104,7 +104,7 @@ class AccumulateTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
       val inputsData: NetworkData = Map()
 
       When("build a trace updater")
-      val updater = traceMode.buildTrace("l")
+      val updater = traceMode.traceBuilder("l").build
 
       And("apply to initial layer")
       val newData = updater(inputsData)

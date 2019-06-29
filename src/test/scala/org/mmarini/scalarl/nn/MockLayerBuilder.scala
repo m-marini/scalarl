@@ -36,11 +36,10 @@ import io.circe.Json
 abstract class MockLayerBuilder extends LayerBuilder {
   def id: String = ???
   def noOutputs(topology: NetworkTopology): Int = ???
-  def buildClearTrace(topology: NetworkTopology): Updater = ???
-  def buildForward(topology: NetworkTopology): Updater = ???
-  def buildMask(topology: NetworkTopology): Updater = ???
-  def buildGradient(topology: NetworkTopology): Updater = ???
-  def buildDelta(topology: NetworkTopology): Updater = ???
+  def clearTraceBuilder(topology: NetworkTopology): OperationBuilder = ???
+  def forwardBuilder(topology: NetworkTopology): OperationBuilder = ???
+  def gradientBuilder(topology: NetworkTopology): OperationBuilder = ???
+  def deltaBuilder(topology: NetworkTopology): OperationBuilder = ???
   def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): NetworkData = ???
   def toJson: Json = ???
 }

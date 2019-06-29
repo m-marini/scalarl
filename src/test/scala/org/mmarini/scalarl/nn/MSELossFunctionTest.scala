@@ -29,16 +29,11 @@
 
 package org.mmarini.scalarl.nn
 
-import org.scalatest.FunSpec
-import org.scalatest.Matchers
-import org.scalatest.prop.PropertyChecks
-
-import io.circe.Json
-import io.circe.yaml
-import io.circe.yaml.syntax.AsYaml
 import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.PropSpec
 import org.scalacheck.Gen
+import org.scalatest.Matchers
+import org.scalatest.PropSpec
+import org.scalatest.prop.PropertyChecks
 
 class MSELossFunctionTest extends PropSpec with PropertyChecks with Matchers {
   val Epsilon = 1e-6
@@ -65,7 +60,7 @@ class MSELossFunctionTest extends PropSpec with PropertyChecks with Matchers {
             "labels" -> labels,
             "mask" -> mask)
 
-          val updater = loss.buildGradient
+          val updater = loss.deltaBuilder.build
           val newData = updater(inputData)
 
           val expectedDelta = mask.mul(label - y)

@@ -29,17 +29,10 @@
 
 package org.mmarini.scalarl.nn
 
-import org.scalatest.FunSpec
-import org.scalatest.Matchers
-import org.scalatest.prop.PropertyChecks
-
-import io.circe.Json
-import io.circe.yaml
-import io.circe.yaml.syntax.AsYaml
 import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.PropSpec
-import org.scalacheck.Gen
+import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
+import org.scalatest.Matchers
 
 class InputLayerBuilderTest extends FunSpec with Matchers with GivenWhenThen {
   val Epsilon = 1e-6
@@ -57,7 +50,7 @@ class InputLayerBuilderTest extends FunSpec with Matchers with GivenWhenThen {
 
       When("build the updater")
       And("apply to initial data")
-      val newData = layer.buildForward(mockTopology)(data)
+      val newData = layer.forwardBuilder(mockTopology).build(data)
 
       Then("should result the layer with activated outputs")
       newData.get("l.outputs") should contain(inputs)

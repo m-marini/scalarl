@@ -42,7 +42,7 @@ class ThetaUpdaterTest extends FunSpec with GivenWhenThen with Matchers {
   describe("ThetaUpdaterTest") {
     it("should generate updated theta") {
       Given("an theta updater")
-      val updater = UpdaterFactory.thetaUpdater("l")
+      val updater = OperationBuilder.thetaBuilder("l").build
 
       And("a layer data with feedback and theta")
       val feedback = Nd4j.create(Array(0.1, 0.2))
@@ -61,7 +61,7 @@ class ThetaUpdaterTest extends FunSpec with GivenWhenThen with Matchers {
 
     it("should generate nothing if no feedback provided") {
       Given("an theta updater")
-      val updater = UpdaterFactory.thetaUpdater("l")
+      val updater = OperationBuilder.thetaBuilder("l").build
 
       And("a layer data without feedback")
       val inputsData: NetworkData = Map()

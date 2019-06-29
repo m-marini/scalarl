@@ -29,11 +29,11 @@
 
 package org.mmarini.scalarl.nn
 
+import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.yaml.snakeyaml.Yaml
 
 import io.circe.Json
-import org.nd4j.linalg.api.ndarray.INDArray
 
 trait NetworkTopology {
   def nextLayer(layer: LayerBuilder): Option[LayerBuilder]
@@ -78,55 +78,92 @@ case class NetworkBuilder(
     "traceMode" -> traceMode.toJson,
     "layers" -> Json.arr(layers.map(_.toJson).toArray: _*))
 
-  private def forwardUpdater = {
+  private def internalForwardBuilder = {
     // Forwards updater of each layer
-    val layerForwards = layers.map(_.buildForward(this))
+    val layerForwards = layers.map(layer =>
+      layer.forwardBuilder(this))
     // merger updaters for each layer interconnection
     val in2Out = for {
       (prev, next) <- layers.zip(layers.tail)
     } yield {
-      val inKey = s"${next.id}.inputs"
-      val outKey = s"${prev.id}.outputs"
-      (data: NetworkData) => data + (inKey -> data(outKey))
+      val toKey = s"${next.id}.inputs"
+      val fromKey = s"${prev.id}.outputs"
+      OperationBuilder(data =>
+        data + (toKey -> data(fromKey)))
     }
     // Sequence the forward updaters and the mergers
     val seq = for {
-      (forward, in2oOut) <- layerForwards.zip(in2Out)
-      layer <- Seq(forward, in2oOut)
-    } yield layer
-    // Final output extractor
-    val finalUpdater = (data: NetworkData) =>
-      data + ("outputs" -> data(s"${layers.last.id}.outputs"))
-    //create the final updater
-    UpdaterFactory.sequence(seq :+ layerForwards.last :+ finalUpdater)
+      (forward, in2Out) <- layerForwards.zip(in2Out)
+      builder <- Seq(forward, in2Out)
+    } yield builder
+    // Output Extractor
+    val key = s"${layers.last.id}.outputs"
+    val outputExractor = OperationBuilder(data =>
+      data + ("outputs" -> data(key)))
+
+    seq :+ layerForwards.last :+ outputExractor
   }
 
-  def buildProcessor: NetworkProcessor = {
-    new NetworkProcessor(
-      _forward = forwardUpdater,
-      _fit = None.orNull)
+  private def forwardBuilder =
+    internalForwardBuilder.
+      foldLeft(OperationBuilder())((acc, builder) =>
+        acc.then(builder))
+
+  private def backwardBuilder = {
+    val reverseLayer = layers.reverse
+    val layerBackward = reverseLayer.map(layer =>
+      layer.deltaBuilder(this))
+
+    // merger updaters for each layer interconnection
+    val in2Out = for {
+      (next, prev) <- reverseLayer.zip(reverseLayer.tail)
+    } yield {
+      val toKey = s"${prev.id}.delta"
+      val fromKey = s"${next.id}.inputDelta"
+      OperationBuilder(data =>
+        data + (toKey -> data(fromKey)))
+    }
+    // Sequence the backword updaters and the mergers
+    val seq = for {
+      (deltaLayer, in2Out) <- layerBackward.zip(in2Out)
+      builder <- Seq(deltaLayer, in2Out)
+    } yield builder
+
+    // deltaFeed
+    val key = s"${reverseLayer.head.id}.delta"
+    val deltaFeed = OperationBuilder(data =>
+      data + (key -> data("delta")))
+
+    deltaFeed +: seq :+ layerBackward.last
   }
 
-  //  /**
-  //   * Returns the data with changed parameters to fit the labels
-  //   */
-  //  override def fit(data: LayerData): LayerData = {
-  //    val withOutputs = forward(data)
-  //
-  //    val withGradient = concurrentPass(gradientUpdaters)(withOutputs)
-  //
-  //    val withLoss = computeLoss(withGradient)
-  //
-  //    val withDelta = backwardPass(deltaUpdaters, deltaReducer)(withLoss)
-  //
-  //    val withOptim = concurrentPass(optimizerUpdaters)(withDelta)
-  //    val withTrace = concurrentPass(traceUpdaters)(withOptim)
-  //
-  //    val updated = concurrentPass(thetaUpdaters)(withTrace)
-  //
-  //    updated
-  //  }
+  private def fitBuilder = {
+    val forward = internalForwardBuilder
 
+    val gradient = layers.map(_.gradientBuilder(this))
+
+    val loss = lossFunction.deltaBuilder
+
+    val delta = backwardBuilder
+
+    val optim = layers.map(layer =>
+      optimizer.optimizeBuilder(layer.id))
+
+    val trace = layers.map(layer =>
+      layer.clearTraceBuilder(this))
+
+    val updated = layers.map(layer =>
+      OperationBuilder.thetaBuilder(layer.id))
+
+    val all = (forward ++ gradient :+ loss) ++ delta ++ optim ++ trace ++ updated
+
+    all.foldLeft(OperationBuilder())((acc, builder) =>
+      acc.then(builder))
+  }
+
+  def buildProcessor: NetworkProcessor = new NetworkProcessor(
+    _forward = forwardBuilder.build,
+    _fit = fitBuilder.build)
 
   def buildData(random: Random): NetworkData =
     layers.foldLeft(Map[String, INDArray]())((data, layer) =>
@@ -144,5 +181,4 @@ object NetworkBuilder {
     layers = Array(InputLayerBuilder("inputs", 0)))
 
   def fromYaml(yaml: Yaml): NetworkBuilder = ???
-
 }

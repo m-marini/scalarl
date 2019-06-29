@@ -32,13 +32,13 @@ package org.mmarini.scalarl.nn
 import io.circe.Json
 
 trait TraceMode {
-  def buildTrace(key: String): Updater
+  def traceBuilder(key: String): OperationBuilder
   def toJson: Json
 }
 
 object NoneTraceMode extends TraceMode {
 
-  def buildTrace(key: String): Updater = UpdaterFactory.identityUpdater
+  def traceBuilder(key: String): OperationBuilder = OperationBuilder()
 
   lazy val toJson = Json.obj(
     "mode" -> Json.fromString("NONE"))
@@ -46,10 +46,10 @@ object NoneTraceMode extends TraceMode {
 
 case class AccumulateTraceMode(lambda: Double, gamma: Double) extends TraceMode {
 
-  def buildTrace(key: String): Updater = {
+  def traceBuilder(key: String): OperationBuilder = {
     val mul = lambda * gamma
 
-    (data: NetworkData) =>
+    OperationBuilder(data =>
       data.get(s"${key}.trace").map(trace => {
         val feedback = data(s"${key}.feedback")
         val noClearTrace = data("noClearTrace")
@@ -57,7 +57,7 @@ case class AccumulateTraceMode(lambda: Double, gamma: Double) extends TraceMode 
         data +
           (s"${key}.trace" -> newTrace) +
           (s"${key}.feedback" -> newTrace)
-      }).getOrElse(data)
+      }).getOrElse(data))
   }
 
   lazy val toJson = Json.obj(

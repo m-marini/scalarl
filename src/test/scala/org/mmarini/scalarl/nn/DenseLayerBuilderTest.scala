@@ -29,17 +29,10 @@
 
 package org.mmarini.scalarl.nn
 
-import org.scalatest.FunSpec
-import org.scalatest.Matchers
-import org.scalatest.prop.PropertyChecks
-
-import io.circe.Json
-import io.circe.yaml
-import io.circe.yaml.syntax.AsYaml
 import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.PropSpec
-import org.scalacheck.Gen
+import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
+import org.scalatest.Matchers
 
 class DenseLayerBuilderTest extends FunSpec with GivenWhenThen with Matchers {
   val Epsilon = 1e-6
@@ -87,7 +80,7 @@ class DenseLayerBuilderTest extends FunSpec with GivenWhenThen with Matchers {
       val inputsData = initialLayerData
 
       When("build a clear trace updater")
-      val updater = layer.buildClearTrace(mockTopology)
+      val updater = layer.clearTraceBuilder(mockTopology).build
 
       And("apply to initial layer")
       val newData = updater(inputsData)
@@ -105,10 +98,10 @@ class DenseLayerBuilderTest extends FunSpec with GivenWhenThen with Matchers {
       val inputsData = initialLayerData
 
       When("build a forward updater")
-      val updater = layer.buildForward(mockTopology)
+      val updater = layer.forwardBuilder(mockTopology)
 
       And("apply to initial layer")
-      val newData = updater(inputsData)
+      val newData = updater.build(inputsData)
 
       Then("should result the output from linear combination of inputs")
       newData.get("l.outputs") should contain(expectedOutputs)
@@ -159,7 +152,7 @@ class DenseLayerBuilderTest extends FunSpec with GivenWhenThen with Matchers {
       val withMask = initialLayerData + ("l.outputs" -> expectedOutputs)
 
       When("build a gradient updater")
-      val converter = layer.buildGradient(mockTopology)
+      val converter = layer.gradientBuilder(mockTopology).build
 
       And("apply to initial layer")
       val outData = converter(withMask)
@@ -178,7 +171,7 @@ class DenseLayerBuilderTest extends FunSpec with GivenWhenThen with Matchers {
         ("l.delta" -> delta)
 
       When("build a gradient updater")
-      val converter = layer.buildDelta(mockTopology)
+      val converter = layer.deltaBuilder(mockTopology).build
 
       And("apply to initial layer")
       val outData = converter(withDelta)
