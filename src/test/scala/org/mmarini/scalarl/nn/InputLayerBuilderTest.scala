@@ -27,14 +27,40 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl
+package org.mmarini.scalarl.nn
 
-import org.nd4j.linalg.api.ndarray.INDArray
+import org.scalatest.FunSpec
+import org.scalatest.Matchers
+import org.scalatest.prop.PropertyChecks
 
-/**
- *
- */
-package object nn {
-  type NetworkData = Map[String, INDArray]
-  type Updater = NetworkData => NetworkData
+import io.circe.Json
+import io.circe.yaml
+import io.circe.yaml.syntax.AsYaml
+import org.nd4j.linalg.factory.Nd4j
+import org.scalatest.PropSpec
+import org.scalacheck.Gen
+import org.scalatest.GivenWhenThen
+
+class InputLayerBuilderTest extends FunSpec with Matchers with GivenWhenThen {
+  val Epsilon = 1e-6
+
+  val mockTopology = new MockTopology()
+
+  describe("InputLayerBuilder") {
+    it("should create a forwaed updater") {
+      Given("an InputLayerBuilder")
+      val layer = InputLayerBuilder("l", 3)
+
+      And("an initial layer data with 3 inputs")
+      val inputs = Nd4j.create(Array(-1.0, 0.0, 1.0))
+      val data = Map("inputs" -> inputs)
+
+      When("build the updater")
+      And("apply to initial data")
+      val newData = layer.buildForward(mockTopology)(data)
+
+      Then("should result the layer with activated outputs")
+      newData.get("l.outputs") should contain(inputs)
+    }
+  }
 }

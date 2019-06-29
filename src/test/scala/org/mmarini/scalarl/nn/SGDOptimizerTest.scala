@@ -55,17 +55,17 @@ class SGDOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
 
       And("a layer data with gradients")
       val gradient = Nd4j.create(Array(1.0, 2.0))
-      val inputsData = Map("gradient" -> gradient)
+      val inputsData = Map("l.gradient" -> gradient)
 
       When("build a optimizer updater")
-      val updater = opt.buildOptimizer
+      val updater = opt.buildOptimizer("l")
 
       And("apply to initial layer")
       val newData = updater(inputsData)
 
       Then("should result the feedback")
       val feedback = Nd4j.create(Array(0.1, 0.2))
-      newData.get("feedback") should contain(feedback)
+      newData.get("l.feedback") should contain(feedback)
     }
 
     it("should generate null optimizer updater for no parametered layer") {
@@ -75,10 +75,10 @@ class SGDOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
 
       And("a layer data without gradients")
       val gradient = Nd4j.create(Array(1.0, 2.0))
-      val inputsData: LayerData = Map()
+      val inputsData: NetworkData = Map()
 
       When("build a optimizer updater")
-      val updater = opt.buildOptimizer
+      val updater = opt.buildOptimizer("l")
 
       And("apply to initial layer")
       val newData = updater(inputsData)

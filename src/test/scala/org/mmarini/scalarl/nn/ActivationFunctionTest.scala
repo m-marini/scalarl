@@ -51,17 +51,13 @@ class ActivationFunctionTest extends FunSpec with Matchers with GivenWhenThen {
 
       And("an initial layer data with 3 inputs")
       val inputs = Nd4j.create(Array(-1.0, 0.0, 1.0))
-      val inputData = Map("inputs" -> inputs)
 
-      When("build a activation updater")
-      val updater = tanh.buildActivation
-
-      And("apply it to initial layer")
-      val newData = updater(inputData)
+      When("activate")
+      val newData = tanh.activate(inputs)
 
       Then("should result the layer with activated outputs")
       val expected = Nd4j.create(Array(math.tanh(-1), math.tanh(0), math.tanh(1)))
-      newData.get("outputs") should contain(expected)
+      newData shouldBe expected
     }
   }
 
@@ -71,24 +67,19 @@ class ActivationFunctionTest extends FunSpec with Matchers with GivenWhenThen {
       val tanh = TanhActivationFunction
 
       And("an input layer data with 3 outputs and delta")
+      val inputs = Nd4j.create(Array(-1.0, 0.0, 1.0))
       val outputs = Nd4j.create(Array(math.tanh(-1), math.tanh(0), math.tanh(1)))
       val delta = Nd4j.create(Array(0.1, -0.1, 0.2))
-      val inputData = Map(
-        "outputs" -> outputs,
-        "delta" -> delta)
 
       When("build a delta updater")
-      val updater = tanh.buildDelta
+      val newData = tanh.inputDelta(inputs, outputs, delta)
 
-      And("apply it to initial layer")
-      val newData = updater(inputData)
-
-      Then("should result the layer with inputDelta")
+      Then("should result inputDelta")
       val expected = Nd4j.create(Array(
         (1 - math.tanh(-1) * math.tanh(-1)) * 0.1,
         -0.1,
         (1 - math.tanh(1) * math.tanh(1)) * 0.2))
-      newData.get("inputDelta") should contain(expected)
+      newData shouldBe expected
     }
   }
 }

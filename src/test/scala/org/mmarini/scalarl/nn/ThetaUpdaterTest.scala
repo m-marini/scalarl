@@ -29,17 +29,10 @@
 
 package org.mmarini.scalarl.nn
 
-import org.scalatest.FunSpec
-import org.scalatest.Matchers
-import org.scalatest.prop.PropertyChecks
-
-import io.circe.Json
-import io.circe.yaml
-import io.circe.yaml.syntax.AsYaml
 import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.PropSpec
-import org.scalacheck.Gen
+import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
+import org.scalatest.Matchers
 
 class ThetaUpdaterTest extends FunSpec with GivenWhenThen with Matchers {
   val Epsilon = 1e-3
@@ -49,29 +42,29 @@ class ThetaUpdaterTest extends FunSpec with GivenWhenThen with Matchers {
   describe("ThetaUpdaterTest") {
     it("should generate updated theta") {
       Given("an theta updater")
-      val updater = UpdaterFactory.thetaUpdater
+      val updater = UpdaterFactory.thetaUpdater("l")
 
       And("a layer data with feedback and theta")
       val feedback = Nd4j.create(Array(0.1, 0.2))
       val theta = Nd4j.create(Array(0.3, 0.4))
       val inputsData = Map(
-        "feedback" -> feedback,
-        "theta" -> theta)
+        "l.feedback" -> feedback,
+        "l.theta" -> theta)
 
       When("apply to initial layer")
       val newData = updater(inputsData)
 
       Then("should result the theta updated")
       val expetcedTheta = Nd4j.create(Array(0.4, 0.6))
-      newData.get("theta") should contain(expetcedTheta)
+      newData.get("l.theta") should contain(expetcedTheta)
     }
 
     it("should generate nothing if no feedback provided") {
       Given("an theta updater")
-      val updater = UpdaterFactory.thetaUpdater
+      val updater = UpdaterFactory.thetaUpdater("l")
 
       And("a layer data without feedback")
-      val inputsData: LayerData = Map()
+      val inputsData: NetworkData = Map()
 
       When("apply to initial layer")
       val newData = updater(inputsData)

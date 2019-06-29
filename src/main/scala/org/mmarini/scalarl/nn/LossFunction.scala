@@ -40,7 +40,7 @@ trait LossFunction {
 object MSELossFunction extends LossFunction {
   lazy val toJson = Json.fromString("MSE")
 
-  lazy val buildGradient: Updater = (data: LayerData) => {
+  lazy val buildGradient: Updater = (data: NetworkData) => {
     val outputs = data("outputs")
     val labels = data("labels")
     val mask = data("mask")

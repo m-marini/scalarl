@@ -29,10 +29,11 @@
 
 package org.mmarini.scalarl.nn
 
+import org.nd4j.linalg.api.rng.Random
 import org.yaml.snakeyaml.Yaml
+
 import io.circe.Json
 import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.api.rng.Random
 
 trait NetworkTopology {
   def nextLayer(layer: LayerBuilder): Option[LayerBuilder]
@@ -44,7 +45,7 @@ case class NetworkBuilder(
   initializer:  Initializer,
   optimizer:    Optimizer,
   traceMode:    TraceMode,
-  layers:       Array[LayerBuilder]) extends NetworkTopology {
+  layers:       Seq[LayerBuilder]) extends NetworkTopology {
 
   def nextLayer(layer: LayerBuilder): Option[LayerBuilder] = {
     val idx = layers.indexOf(layer)
@@ -57,7 +58,7 @@ case class NetworkBuilder(
   }
 
   def setNoInputs(noInputs: Int): NetworkBuilder = {
-    val newLayers = InputLayerBuilder(noInputs) +: layers.tail
+    val newLayers = InputLayerBuilder("inputs", noInputs) +: layers.tail
     copy(layers = newLayers)
   }
 
@@ -77,30 +78,59 @@ case class NetworkBuilder(
     "traceMode" -> traceMode.toJson,
     "layers" -> Json.arr(layers.map(_.toJson).toArray: _*))
 
+  private def forwardUpdater = {
+    // Forwards updater of each layer
+    val layerForwards = layers.map(_.buildForward(this))
+    // merger updaters for each layer interconnection
+    val in2Out = for {
+      (prev, next) <- layers.zip(layers.tail)
+    } yield {
+      val inKey = s"${next.id}.inputs"
+      val outKey = s"${prev.id}.outputs"
+      (data: NetworkData) => data + (inKey -> data(outKey))
+    }
+    // Sequence the forward updaters and the mergers
+    val seq = for {
+      (forward, in2oOut) <- layerForwards.zip(in2Out)
+      layer <- Seq(forward, in2oOut)
+    } yield layer
+    // Final output extractor
+    val finalUpdater = (data: NetworkData) =>
+      data + ("outputs" -> data(s"${layers.last.id}.outputs"))
+    //create the final updater
+    UpdaterFactory.sequence(seq :+ layerForwards.last :+ finalUpdater)
+  }
+
   def buildProcessor: NetworkProcessor = {
-    val clearTraceUpdaters = layers.map(_.buildClearTrace(this))
-    val forwardUpdaters = layers.map(_.buildForward(this))
-    val gradientUpdaters = layers.map(_.buildGradient(this))
-    val deltaUpdaters = layers.map(_.buildDelta(this))
-    val optimizerUpdaters = layers.map(_ => optimizer.buildOptimizer)
-    val traceUpdaters = layers.map(_ => traceMode.buildTrace)
-    val thetaUpdaters = layers.map(_ => UpdaterFactory.thetaUpdater)
-
     new NetworkProcessor(
-      clearTraceUpdaters = clearTraceUpdaters,
-      forwardUpdaters = forwardUpdaters,
-      gradientUpdaters = gradientUpdaters,
-      lossUpdater = lossFunction.buildGradient,
-      deltaUpdaters = deltaUpdaters,
-      optimizerUpdaters = optimizerUpdaters,
-      traceUpdaters = traceUpdaters,
-      thetaUpdaters = thetaUpdaters)
+      _forward = forwardUpdater,
+      _fit = None.orNull)
   }
 
-  def buildData(random: Random): NetworkData = {
-    val layerData = layers.map(_.buildData(this, initializer, random))
-    new NetworkData(layerData)
-  }
+  //  /**
+  //   * Returns the data with changed parameters to fit the labels
+  //   */
+  //  override def fit(data: LayerData): LayerData = {
+  //    val withOutputs = forward(data)
+  //
+  //    val withGradient = concurrentPass(gradientUpdaters)(withOutputs)
+  //
+  //    val withLoss = computeLoss(withGradient)
+  //
+  //    val withDelta = backwardPass(deltaUpdaters, deltaReducer)(withLoss)
+  //
+  //    val withOptim = concurrentPass(optimizerUpdaters)(withDelta)
+  //    val withTrace = concurrentPass(traceUpdaters)(withOptim)
+  //
+  //    val updated = concurrentPass(thetaUpdaters)(withTrace)
+  //
+  //    updated
+  //  }
+
+
+  def buildData(random: Random): NetworkData =
+    layers.foldLeft(Map[String, INDArray]())((data, layer) =>
+      data ++ layer.buildData(this, initializer, random))
 }
 
 object NetworkBuilder {
@@ -111,7 +141,7 @@ object NetworkBuilder {
     initializer = XavierInitializer,
     optimizer = SGDOptimizer(alpha = DefaultAlpha),
     traceMode = NoneTraceMode,
-    layers = Array(InputLayerBuilder(0)))
+    layers = Array(InputLayerBuilder("inputs", 0)))
 
   def fromYaml(yaml: Yaml): NetworkBuilder = ???
 

@@ -29,17 +29,10 @@
 
 package org.mmarini.scalarl.nn
 
-import org.scalatest.FunSpec
-import org.scalatest.Matchers
-import org.scalatest.prop.PropertyChecks
-
-import io.circe.Json
-import io.circe.yaml
-import io.circe.yaml.syntax.AsYaml
 import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.PropSpec
-import org.scalacheck.Gen
+import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
+import org.scalatest.Matchers
 
 class AccumulateTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
   val Gamma = 0.9
@@ -58,22 +51,22 @@ class AccumulateTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
       val trace = Nd4j.create(Array(0.0, 0.3))
       val clearTrace = Nd4j.create(Array(1.0))
       val inputsData = Map(
-        "feedback" -> feedback,
-        "trace" -> trace,
+        "l.feedback" -> feedback,
+        "l.trace" -> trace,
         "noClearTrace" -> clearTrace)
 
       When("build a trace updater")
-      val updater = traceMode.buildTrace
+      val updater = traceMode.buildTrace("l")
 
       And("apply to initial layer")
       val newData = updater(inputsData)
 
       Then("should result the feedback updated")
       val expetcedFeedback = Nd4j.create(Array(0.1, 0.3 * 0.9 * 0.8 + 0.2))
-      newData.get("feedback") should contain(expetcedFeedback)
+      newData.get("l.feedback") should contain(expetcedFeedback)
 
       And("trace updated")
-      newData.get("trace") should contain(expetcedFeedback)
+      newData.get("l.trace") should contain(expetcedFeedback)
     }
 
     it("should generate trace updater with clear trace") {
@@ -85,22 +78,22 @@ class AccumulateTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
       val trace = Nd4j.create(Array(0.0, 0.3))
       val clearTrace = Nd4j.create(Array(0.0))
       val inputsData = Map(
-        "feedback" -> feedback,
-        "trace" -> trace,
+        "l.feedback" -> feedback,
+        "l.trace" -> trace,
         "noClearTrace" -> clearTrace)
 
       When("build a trace updater")
-      val updater = traceMode.buildTrace
+      val updater = traceMode.buildTrace("l")
 
       And("apply to initial layer")
       val newData = updater(inputsData)
 
       Then("should result the feedback updated")
       val expetcedFeedback = Nd4j.create(Array(0.1, 0.2))
-      newData.get("feedback") should contain(expetcedFeedback)
+      newData.get("l.feedback") should contain(expetcedFeedback)
 
       And("trace updated")
-      newData.get("trace") should contain(expetcedFeedback)
+      newData.get("l.trace") should contain(expetcedFeedback)
     }
 
     it("should generate trace updater for no trace layer") {
@@ -108,10 +101,10 @@ class AccumulateTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
       val traceMode = AccumulateTraceMode(Gamma, Lambda)
 
       And("a layer data without trace")
-      val inputsData: LayerData = Map()
+      val inputsData: NetworkData = Map()
 
       When("build a trace updater")
-      val updater = traceMode.buildTrace
+      val updater = traceMode.buildTrace("l")
 
       And("apply to initial layer")
       val newData = updater(inputsData)

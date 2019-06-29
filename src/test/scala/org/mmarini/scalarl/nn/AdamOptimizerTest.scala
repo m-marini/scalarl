@@ -60,12 +60,12 @@ class AdamOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
       val m1 = Nd4j.create(Array(-0.2, 0.4))
       val m2 = Nd4j.create(Array(0.3, 0.5))
       val inputsData = Map(
-        "gradient" -> gradient,
-        "m1" -> m1,
-        "m2" -> m2)
+        "l.gradient" -> gradient,
+        "l.m1" -> m1,
+        "l.m2" -> m2)
 
       When("build a optimizer updater")
-      val updater = opt.buildOptimizer
+      val updater = opt.buildOptimizer("l")
 
       And("apply to initial layer")
       val newData = updater(inputsData)
@@ -79,13 +79,13 @@ class AdamOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
       // m2' = M2 beta2 + g2 (1 - bet2) = | 0.29971   0.49954 |
 
       val feedback = Nd4j.create(Array(-0.010974, 0.017001))
-      newData.get("feedback") should contain(feedback)
+      newData.get("l.feedback") should contain(feedback)
 
       val newM1 = Nd4j.create(Array(-0.19, 0.38))
-      newData.get("m1") should contain(newM1)
+      newData.get("l.m1") should contain(newM1)
 
       val newM2 = Nd4j.create(Array(0.29971, 0.49954))
-      newData.get("m2") should contain(newM2)
+      newData.get("l.m2") should contain(newM2)
     }
 
     it("should generate null optimizer updater for no parametered layer") {
@@ -95,10 +95,10 @@ class AdamOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
 
       And("a layer data without gradients")
       val gradient = Nd4j.create(Array(1.0, 2.0))
-      val inputsData: LayerData = Map()
+      val inputsData: NetworkData = Map()
 
       When("build a optimizer updater")
-      val updater = opt.buildOptimizer
+      val updater = opt.buildOptimizer("l")
 
       And("apply to initial layer")
       val newData = updater(inputsData)

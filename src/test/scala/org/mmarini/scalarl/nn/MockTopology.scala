@@ -29,25 +29,13 @@
 
 package org.mmarini.scalarl.nn
 
-import org.scalatest.FunSpec
-import org.scalatest.Matchers
-import org.scalatest.prop.PropertyChecks
-
-import io.circe.Json
-import io.circe.yaml
-import io.circe.yaml.syntax.AsYaml
-import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.PropSpec
-import org.scalacheck.Gen
-import org.scalatest.GivenWhenThen
-
-abstract class MockTopology extends NetworkTopology {
+class MockTopology extends NetworkTopology {
   def prevLayer(layer: LayerBuilder): Option[LayerBuilder] = ???
   def nextLayer(layer: LayerBuilder): Option[LayerBuilder] = ???
-  def noOutputs(topology: NetworkTopology): Int = ???
-  def noInputs(topology: NetworkTopology): Int = ???
-  def buildClearTrace(context: NetworkTopology): Updater = ???
-  def buildForward(context: NetworkTopology): Updater = ???
-  def buildMask(context: NetworkTopology): Updater = ???
-  def toJson: Json = ???
+  //  def noOutputs(topology: NetworkTopology): Int = ???
+  //  def noInputs(topology: NetworkTopology): Int = ???
+  //  def buildClearTrace(context: NetworkTopology): Updater = ???
+  //  def buildForward(context: NetworkTopology): Updater = ???
+  //  def buildMask(context: NetworkTopology): Updater = ???
+  //  def toJson: Json = ???
 }

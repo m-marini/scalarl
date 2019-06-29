@@ -32,6 +32,7 @@ package org.mmarini.scalarl.nn
 import org.yaml.snakeyaml.Yaml
 import io.circe.Json
 import org.nd4j.linalg.ops.transforms.Transforms
+import org.nd4j.linalg.api.ndarray.INDArray
 
 /**
  * Defines the activation function used in activation layer
@@ -41,28 +42,22 @@ import org.nd4j.linalg.ops.transforms.Transforms
 trait ActivationFunction {
 
   /** Returns the updater that creates the outputs */
-  def buildActivation: Updater
+  def activate(inputs: INDArray): INDArray
 
   /** Returns the updater that backwards the delta values to inputs */
-  def buildDelta: Updater
+  def inputDelta(inputs: INDArray, outputs: INDArray, delta: INDArray): INDArray
 
   def toJson: Json
 }
 
 object TanhActivationFunction extends ActivationFunction {
 
-  val buildActivation = (data: LayerData) => {
-    val inputs = data("inputs")
-    val outputs = Transforms.tanh(inputs)
-    data + ("outputs" -> outputs)
-  }
+  def activate(inputs: INDArray): INDArray =
+    Transforms.tanh(inputs)
 
-  val buildDelta = (data: LayerData) => {
-    val outputs = data("outputs")
-    val delta = data("delta")
+  def inputDelta(inputs: INDArray, outputs: INDArray, delta: INDArray): INDArray = {
     val grad = outputs.mul(outputs).subi(1.0).negi()
-    val inpDelta = grad.muli(delta)
-    data + ("inputDelta" -> inpDelta)
+    grad.muli(delta)
   }
 
   lazy val toJson = Json.fromString("TANH")

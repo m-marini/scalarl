@@ -29,24 +29,24 @@
 
 package org.mmarini.scalarl.nn
 
-import org.yaml.snakeyaml.Yaml
-import io.circe.Json
 import org.nd4j.linalg.ops.transforms.Transforms
+
+import io.circe.Json
 
 trait Optimizer {
 
-  def buildOptimizer: Updater
+  def buildOptimizer(key: String): Updater
 
   def toJson: Json
 }
 
 case class SGDOptimizer(alpha: Double) extends Optimizer {
 
-  val buildOptimizer: Updater = (data: LayerData) => {
-    val gradient = data.get("gradient")
+  def buildOptimizer(key: String): Updater = (data: NetworkData) => {
+    val gradient = data.get(s"${key}.gradient")
     val feedback = gradient.map(g => g.mul(alpha))
     feedback.
-      map(f => data + ("feedback" -> f)).
+      map(f => data + (s"${key}.feedback" -> f)).
       getOrElse(data)
   }
 
@@ -58,12 +58,12 @@ case class SGDOptimizer(alpha: Double) extends Optimizer {
 case class AdamOptimizer(alpha: Double, beta1: Double, beta2: Double, epsilon: Double) extends Optimizer {
   val omb1 = 1 - beta1
   val omb2 = 1 - beta2
-  val buildOptimizer: Updater = {
-    (data: LayerData) =>
-      data.get("gradient").
+  def buildOptimizer(key: String): Updater = {
+    (data: NetworkData) =>
+      data.get(s"${key}.gradient").
         map(g => {
-          val m1 = data("m1")
-          val m2 = data("m2")
+          val m1 = data(s"${key}.m1")
+          val m2 = data(s"${key}.m2")
           val g2 = g.mul(g)
           // m1 = m1 b1 + g(1-b1)
           // m1^ = m1/(1-b1)
@@ -76,9 +76,9 @@ case class AdamOptimizer(alpha: Double, beta1: Double, beta2: Double, epsilon: D
           val feedback = m1Norm.divi(Transforms.sqrt(m2Norm).addi(epsilon)).muli(alpha)
 
           data +
-            ("m1" -> newM1) +
-            ("m2" -> newM2) +
-            ("feedback" -> feedback)
+            (s"${key}.m1" -> newM1) +
+            (s"${key}.m2" -> newM2) +
+            (s"${key}.feedback" -> feedback)
         }).getOrElse(data)
   }
 

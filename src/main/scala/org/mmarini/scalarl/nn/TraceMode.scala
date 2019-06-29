@@ -29,17 +29,16 @@
 
 package org.mmarini.scalarl.nn
 
-import org.yaml.snakeyaml.Yaml
 import io.circe.Json
 
 trait TraceMode {
-  def buildTrace: Updater
+  def buildTrace(key: String): Updater
   def toJson: Json
 }
 
 object NoneTraceMode extends TraceMode {
 
-  val buildTrace = UpdaterFactory.identityUpdater
+  def buildTrace(key: String): Updater = UpdaterFactory.identityUpdater
 
   lazy val toJson = Json.obj(
     "mode" -> Json.fromString("NONE"))
@@ -47,17 +46,17 @@ object NoneTraceMode extends TraceMode {
 
 case class AccumulateTraceMode(lambda: Double, gamma: Double) extends TraceMode {
 
-  val buildTrace: Updater = {
+  def buildTrace(key: String): Updater = {
     val mul = lambda * gamma
 
-    (data: LayerData) =>
-      data.get("trace").map(trace => {
-        val feedback = data("feedback")
+    (data: NetworkData) =>
+      data.get(s"${key}.trace").map(trace => {
+        val feedback = data(s"${key}.feedback")
         val noClearTrace = data("noClearTrace")
         val newTrace = trace.mul(mul).muli(noClearTrace).addi(feedback)
         data +
-          ("trace" -> newTrace) +
-          ("feedback" -> newTrace)
+          (s"${key}.trace" -> newTrace) +
+          (s"${key}.feedback" -> newTrace)
       }).getOrElse(data)
   }
 

@@ -45,6 +45,7 @@ import io.circe.Json
  *
  */
 trait LayerBuilder {
+  def id: String
 
   /** Returns the number of inputs */
   def noInputs(topology: NetworkTopology): Int = topology.prevLayer(this).map(_.noOutputs(topology)).getOrElse(0)
@@ -65,13 +66,19 @@ trait LayerBuilder {
   def buildDelta(topology: NetworkTopology): Updater
 
   /** Returns the layer data for the [[LayerBuilder]] */
-  def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): LayerData
+  def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): NetworkData
 
   /** Returns the json representation of layer */
   def toJson: Json
 }
 
-case class InputLayerBuilder(noInputs: Int) extends LayerBuilder {
+trait KeyBuilder {
+  def id: String
+
+  def key(name: String): String = s"${id}.${name}"
+}
+
+case class InputLayerBuilder(id: String, noInputs: Int) extends LayerBuilder with KeyBuilder {
 
   /** Returns the number of inputs */
   override def noInputs(topology: NetworkTopology): Int = noInputs
@@ -83,8 +90,8 @@ case class InputLayerBuilder(noInputs: Int) extends LayerBuilder {
   override def buildClearTrace(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater
 
   /** Returns the updater that forwards the inputs */
-  override def buildForward(topology: NetworkTopology): Updater = (data: LayerData) =>
-    data + ("outputs" -> data("inputs"))
+  override def buildForward(topology: NetworkTopology): Updater = (data: NetworkData) =>
+    data + (key("outputs") -> data("inputs"))
 
   /** Returns the updater that computes the gradient */
   override def buildGradient(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater
@@ -93,7 +100,7 @@ case class InputLayerBuilder(noInputs: Int) extends LayerBuilder {
   override def buildDelta(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater
 
   /** Returns the layer data for the [[LayerBuilder]] */
-  override def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): LayerData = Map()
+  override def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): NetworkData = Map()
 
   /** Returns the json representation of layer */
   override def toJson: Json = Json.Null
@@ -104,21 +111,31 @@ case class InputLayerBuilder(noInputs: Int) extends LayerBuilder {
  *
  * @constructor Creates an activation layer
  */
-case class ActivationLayerBuilder(activation: ActivationFunction) extends LayerBuilder {
-
+case class ActivationLayerBuilder(id: String, activation: ActivationFunction) extends LayerBuilder with KeyBuilder {
   def noOutputs(topology: NetworkTopology): Int = noInputs(topology)
 
   def buildClearTrace(context: NetworkTopology): Updater = UpdaterFactory.identityUpdater
 
   def buildGradient(topology: NetworkTopology): Updater = UpdaterFactory.identityUpdater
 
-  def buildForward(context: NetworkTopology): Updater = activation.buildActivation
+  def buildForward(context: NetworkTopology): Updater = (data: NetworkData) => {
+    val inputs = data(key("inputs"))
+    val outputs = activation.activate(inputs)
+    data + (key("outputs") -> outputs)
+  }
 
-  def buildDelta(context: NetworkTopology): Updater = activation.buildDelta
+  def buildDelta(context: NetworkTopology): Updater = (data: NetworkData) => {
+    val inputs = data(key("inputs"))
+    val outputs = data(key("outputs"))
+    val delta = data(key("delta"))
+    val inputDelta = activation.inputDelta(inputs, outputs, delta)
+    data + (key("inputDelta") -> inputDelta)
+  }
 
-  def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): LayerData = Map()
+  def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): NetworkData = Map()
 
   lazy val toJson = Json.obj(
+    "id" -> Json.fromString(id),
     "type" -> Json.fromString("ACTIVATION"),
     "activation" -> activation.toJson)
 }
@@ -126,14 +143,13 @@ case class ActivationLayerBuilder(activation: ActivationFunction) extends LayerB
 /**
  * Defines the activation layer architecture and build the layer functional updater such that for clear trace.
  */
-case class DenseLayerBuilder(noOutputs: Int) extends LayerBuilder {
-
+case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder with KeyBuilder {
   def noOutputs(topology: NetworkTopology): Int = noOutputs
 
   def buildClearTrace(context: NetworkTopology): Updater = {
     val n = noInputs(context)
     val zeroTrace = Nd4j.zeros((n + 1) * noOutputs)
-    (data: LayerData) => data + ("trace" -> zeroTrace)
+    (data: NetworkData) => data + (key("trace") -> zeroTrace)
   }
 
   /** Returns the converter og thetas to weights */
@@ -155,13 +171,13 @@ case class DenseLayerBuilder(noOutputs: Int) extends LayerBuilder {
     val fb = bias(topology)
 
     // Creates the updater
-    (data: LayerData) => {
-      val inputs = data("inputs")
-      val theta = data("theta")
+    (data: NetworkData) => {
+      val inputs = data(key("inputs"))
+      val theta = data(key("theta"))
       val w = fw(theta)
       val b = fb(theta)
       val y = inputs.mmul(w).addi(b)
-      data + ("outputs" -> y)
+      data + (key("outputs") -> y)
     }
   }
 
@@ -171,12 +187,12 @@ case class DenseLayerBuilder(noOutputs: Int) extends LayerBuilder {
     val bGrad = Nd4j.ones(m)
 
     // Creates the updater
-    (data: LayerData) => {
-      val inputs = data("inputs")
+    (data: NetworkData) => {
+      val inputs = data(key("inputs"))
       val wGrad = inputs.transpose().broadcast(n, m)
       val wFlatten = wGrad.ravel()
       val grad = Nd4j.hstack(wFlatten, bGrad)
-      data + ("gradient" -> grad)
+      data + (key("gradient") -> grad)
     }
   }
 
@@ -184,16 +200,16 @@ case class DenseLayerBuilder(noOutputs: Int) extends LayerBuilder {
     val fw = weights(topology)
 
     // Creates the updater
-    (data: LayerData) => {
-      val delta = data("delta")
-      val theta = data("theta")
+    (data: NetworkData) => {
+      val delta = data(key("delta"))
+      val theta = data(key("theta"))
       val w = fw(theta)
       val inpDelta = delta.mmul(w.transpose())
-      data + ("inputDelta" -> inpDelta)
+      data + (key("inputDelta") -> inpDelta)
     }
   }
 
-  def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): LayerData = {
+  def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): NetworkData = {
     val n = noInputs(topology)
     val m = noOutputs
     val weights = initializer.build(n, m, random)
@@ -201,13 +217,14 @@ case class DenseLayerBuilder(noOutputs: Int) extends LayerBuilder {
     val theta = Nd4j.hstack(weights.ravel(), bias)
     val zeros = Nd4j.zeros(n * m + m)
     Map(
-      "theta" -> theta,
-      "trace" -> zeros,
-      "m1" -> zeros,
-      "m2" -> zeros)
+      key("theta") -> theta,
+      key("trace") -> zeros,
+      key("m1") -> zeros,
+      key("m2") -> zeros)
   }
 
   lazy val toJson = Json.obj(
+    "id" -> Json.fromString(id),
     "type" -> Json.fromString("DENSE"),
     "noOutputs" -> Json.fromInt(noOutputs))
 }

@@ -29,6 +29,8 @@
 
 package org.mmarini.scalarl.nn
 
+import org.nd4j.linalg.api.ndarray.INDArray
+
 /*
  * learning phase:
  * 1. calcolo degli outputs di tutti i layers (forward)
@@ -44,8 +46,13 @@ package org.mmarini.scalarl.nn
  */
 trait Network {
   /** Returns the data with computed outputs */
-  def forward(data: NetworkData): NetworkData
+  def forward(data: NetworkData, inputs: INDArray): INDArray
 
   /** Returns the data with changed parameters to fit the labels */
-  def fit(data: NetworkData): NetworkData
+  def fit(
+    data:         NetworkData,
+    inputs:       INDArray,
+    labels:       INDArray,
+    mask:         INDArray,
+    noClearTrace: INDArray): NetworkData
 }

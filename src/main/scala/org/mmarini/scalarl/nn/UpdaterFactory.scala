@@ -36,12 +36,16 @@ object UpdaterFactory {
   /**
    *
    */
-  val identityUpdater = (data: LayerData) => data
+  val identityUpdater = (data: NetworkData) => data
 
-  val thetaUpdater = (data: LayerData) =>
-    data.get("feedback").map(feedback => {
-      val theta = data("theta")
+  def thetaUpdater(key: String) = (data: NetworkData) =>
+    data.get(s"${key}.feedback").map(feedback => {
+      val theta = data(s"${key}.theta")
       val newTheta = theta.add(feedback)
-      data + ("theta" -> newTheta)
+      data + (s"${key}.theta" -> newTheta)
     }).getOrElse(data)
+
+  def sequence(updaters: Seq[Updater]): Updater =
+    updaters.tail.foldLeft(updaters.head)((acc, updater) => (data: NetworkData) =>
+      updater(acc(data)))
 }
