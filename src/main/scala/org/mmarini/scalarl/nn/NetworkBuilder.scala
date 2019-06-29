@@ -138,13 +138,7 @@ case class NetworkBuilder(
   }
 
   private def fitBuilder = {
-    val forward = internalForwardBuilder
-
     val gradient = layers.map(_.gradientBuilder(this))
-
-    val loss = lossFunction.deltaBuilder
-
-    val delta = backwardBuilder
 
     val optim = layers.map(layer =>
       optimizer.optimizeBuilder(layer.id))
@@ -155,7 +149,14 @@ case class NetworkBuilder(
     val updated = layers.map(layer =>
       OperationBuilder.thetaBuilder(layer.id))
 
-    val all = (forward ++ gradient :+ loss) ++ delta ++ optim ++ trace ++ updated
+    val all = (internalForwardBuilder ++
+      gradient :+
+      lossFunction.deltaBuilder :+
+      lossFunction.lossBuilder) ++
+      backwardBuilder ++
+      optim ++
+      trace ++
+      updated
 
     all.foldLeft(OperationBuilder())((acc, builder) =>
       acc.then(builder))

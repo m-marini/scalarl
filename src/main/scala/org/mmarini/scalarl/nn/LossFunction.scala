@@ -34,17 +34,28 @@ import io.circe.Json
 trait LossFunction {
   def toJson: Json
 
+  def lossBuilder: OperationBuilder
+
   def deltaBuilder: OperationBuilder
 }
 
 object MSELossFunction extends LossFunction {
   lazy val toJson = Json.fromString("MSE")
 
-  lazy val deltaBuilder: OperationBuilder = OperationBuilder(data => {
+  lazy val deltaBuilder = OperationBuilder(data => {
     val outputs = data("outputs")
     val labels = data("labels")
     val mask = data("mask")
     val delta = labels.sub(outputs).muli(mask)
     data + ("delta" -> delta)
+  })
+
+  lazy val lossBuilder = OperationBuilder(data => {
+    val outputs = data("outputs")
+    val labels = data("labels")
+    val mask = data("mask")
+    val diff = outputs.sub(labels).muli(mask)
+    val loss = diff.muli(diff).sum(1)
+    data + ("loss" -> loss)
   })
 }

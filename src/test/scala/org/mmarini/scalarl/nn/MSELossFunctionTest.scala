@@ -30,42 +30,100 @@
 package org.mmarini.scalarl.nn
 
 import org.nd4j.linalg.factory.Nd4j
-import org.scalacheck.Gen
+import org.scalatest.FunSpec
+import org.scalatest.GivenWhenThen
 import org.scalatest.Matchers
-import org.scalatest.PropSpec
-import org.scalatest.prop.PropertyChecks
 
-class MSELossFunctionTest extends PropSpec with PropertyChecks with Matchers {
+class MSELossFunctionTest extends FunSpec with GivenWhenThen with Matchers {
   val Epsilon = 1e-6
 
-  val loss = MSELossFunction
+  describe("MSELossFunctionTest") {
+    it("should compute the delta for loss function with mask") {
+      Given("a MSE loss function")
+      val loss = MSELossFunction
+      And("a initial data with 2 random output, mask, label")
+      val outputs = Nd4j.create(Array(0.1, 0.9))
+      val labels = Nd4j.create(Array(0.5, 0.3))
+      val mask = Nd4j.create(Array(0.0, 1.0))
+      val initialData = Map(
+        "outputs" -> outputs,
+        "mask" -> mask,
+        "labels" -> labels)
 
-  def valueGen = Gen.choose(-1.0, 1.0)
+      When("build a delta updater")
+      val updater = loss.deltaBuilder.build
+      And("appling to initial data")
+      val result = updater(initialData)
 
-  property("""Given an Activation Function
-  and a initial layer data with 2 random input
-  when build a activation updater
-  and apply it to initial layer
-  then should result the layer with activaetd outputs""") {
-    forAll(
-      (valueGen, "y"),
-      (valueGen, "label")) {
-        (y, label) =>
-          val outputs = Nd4j.ones(2).mul(y)
-          val labels = Nd4j.ones(2).mul(label)
-          val mask = Nd4j.create(Array(0.0, 1.0))
+      Then("should result the delta value")
+      val delta = Nd4j.create(Array(0.0, 0.3 - 0.9))
+      result.get("delta") should contain(delta)
+    }
 
-          val inputData = Map(
-            "outputs" -> outputs,
-            "labels" -> labels,
-            "mask" -> mask)
+    it("should compute the loss for loss function with mask") {
+      Given("a MSE loss function")
+      val loss = MSELossFunction
+      And("a initial data with 2 random output, mask, label")
+      val outputs = Nd4j.create(Array(0.1, 0.9))
+      val labels = Nd4j.create(Array(0.5, 0.3))
+      val mask = Nd4j.create(Array(0.0, 1.0))
+      val initialData = Map(
+        "outputs" -> outputs,
+        "mask" -> mask,
+        "labels" -> labels)
 
-          val updater = loss.deltaBuilder.build
-          val newData = updater(inputData)
+      When("build a loss updater")
+      val updater = loss.lossBuilder.build
+      And("appling to initial data")
+      val result = updater(initialData)
 
-          val expectedDelta = mask.mul(label - y)
+      Then("should result the delta value")
+      val delta = Nd4j.create(Array(0.6 * 0.6))
+      result.get("loss") should contain(delta)
+    }
 
-          newData.get("delta") should contain(expectedDelta)
-      }
+    it("should compute the delta for loss function without mask") {
+      Given("a MSE loss function")
+      val loss = MSELossFunction
+      And("a initial data with 2 random output, mask, label")
+      val outputs = Nd4j.create(Array(0.1, 0.9))
+      val labels = Nd4j.create(Array(0.5, 0.3))
+      val mask = Nd4j.ones(2)
+      val initialData = Map(
+        "outputs" -> outputs,
+        "mask" -> mask,
+        "labels" -> labels)
+
+      When("build a delta updater")
+      val updater = loss.deltaBuilder.build
+      And("appling to initial data")
+      val result = updater(initialData)
+
+      Then("should result the delta value")
+      val delta = Nd4j.create(Array(0.5 - 0.1, 0.3 - 0.9))
+      result.get("delta") should contain(delta)
+    }
+  }
+
+  it("should compute the loss for loss function without mask") {
+    Given("a MSE loss function")
+    val loss = MSELossFunction
+    And("a initial data with 2 random output, mask, label")
+    val outputs = Nd4j.create(Array(0.1, 0.9))
+    val labels = Nd4j.create(Array(0.5, 0.3))
+    val mask = Nd4j.ones(2)
+    val initialData = Map(
+      "outputs" -> outputs,
+      "mask" -> mask,
+      "labels" -> labels)
+
+    When("build a loss updater")
+    val updater = loss.lossBuilder.build
+    And("appling to initial data")
+    val result = updater(initialData)
+
+    Then("should result the delta value")
+    val delta = Nd4j.create(Array(0.4 * 0.4 + 0.6 * 0.6))
+    result.get("loss") should contain(delta)
   }
 }

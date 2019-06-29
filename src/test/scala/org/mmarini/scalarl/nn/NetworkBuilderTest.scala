@@ -116,20 +116,22 @@ class NetworkBuilderTest extends FunSpec with GivenWhenThen with Matchers {
       val labels = Nd4j.create(Array(0.2, 0.8))
       And("mask")
       val mask = Nd4j.create(Array(0.0, 1.0))
-      //      val data = builder.buildData(random).
-      //        setInputs(inputs, clearTrace).
-      //        setLabels(labels, mask)
 
       When("create processor")
       val proc = builder.buildProcessor
       And("fit data")
       val fitted = proc.fit(data, inputs, labels, mask, noClearTrace)
-      And("forward")
-      val out1 = proc.forward(fitted, inputs)
+      And("fit again")
+      val fitted2 = proc.fit(fitted, inputs, labels, mask, noClearTrace)
 
       Then("should return a smaller loss value")
+
+      val loss1 = fitted("loss").getDouble(0L)
+      val loss2 = fitted2("loss").getDouble(0L)
+      loss2 should be < (loss1)
+
       val err1 = loss(labels, fitted("outputs"))
-      val err2 = loss(labels, out1)
+      val err2 = loss(labels, fitted2("outputs"))
       err2 should be < (err1)
     }
 
