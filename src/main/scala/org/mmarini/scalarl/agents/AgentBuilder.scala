@@ -188,11 +188,14 @@ case class AgentBuilder(
       builder <- Array[LayerBuilder](dense, act)
     } yield builder
 
+    val withOutputs = hiddens :+
+      DenseLayerBuilder("outputs.dense", _numActions)
+
     NetworkBuilder().
       setNoInputs(_numInputs).
       setOptimizer(SGDOptimizer(_learningRate)).
       setTraceMode(AccumulateTraceMode(_lambda, _gamma)).
-      addLayers(hiddens: _*)
+      addLayers(withOutputs: _*)
   }
 
   private def loadNet(file: File): MultiLayerNetwork = {

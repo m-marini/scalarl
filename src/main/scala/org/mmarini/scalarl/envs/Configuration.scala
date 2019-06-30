@@ -30,58 +30,14 @@
 package org.mmarini.scalarl.envs
 
 import java.io.FileReader
-
-import scala.collection.JavaConversions.`deprecated asScalaBuffer`
-import scala.collection.JavaConversions.`deprecated mapAsScalaMap`
-
-import org.yaml.snakeyaml.Yaml
 import java.io.Reader
 
-class Configuration(conf: Map[String, Any]) {
-  def getConf(key: String): Configuration = conf.get(key) match {
-    case Some(m: java.util.Map[_, _]) => new Configuration(m.toMap.asInstanceOf[Map[String, Any]])
-    case _                            => new Configuration(Map())
-  }
-
-  def getNumber(key: String): Option[Number] = conf.get(key) match {
-    case Some(n: Number) => Some(n)
-    case _               => None
-  }
-
-  def getInt(key: String): Option[Int] = getNumber(key).map(_.intValue())
-
-  def getLong(key: String): Option[Long] = getNumber(key).map(_.longValue())
-
-  def getDouble(key: String): Option[Double] = getNumber(key).map(_.doubleValue())
-
-  def getString(key: String): Option[String] = conf.get(key) match {
-    case Some(s: String) => Some(s)
-    case _               => None
-  }
-
-  def getList[T](key: String): List[T] = {
-    val x = conf.get(key)
-    x match {
-      case Some(l: java.util.List[_]) => l.asInstanceOf[java.util.List[T]].toList
-      case _                          => List()
-    }
-  }
-
-  def getConfList(key: String): List[Configuration] = {
-    val x = conf.get(key)
-    x match {
-      case Some(l: java.util.List[_]) => l.asInstanceOf[java.util.List[java.util.Map[String, Any]]].toList.map(c => new Configuration(c.toMap))
-      case _                          => List()
-    }
-  }
-}
+import io.circe.Json
+import io.circe.yaml.parser
 
 object Configuration {
 
-  def fromFile(file: String): Configuration = fromReader(new FileReader(file))
+  def jsonFromFile(file: String): Json = jsonFromReader(new FileReader(file))
 
-  def fromReader(reader: Reader): Configuration = {
-    val conf = new Yaml().load(reader)
-    new Configuration(conf.asInstanceOf[java.util.Map[String, Any]].toMap)
-  }
+  def jsonFromReader(reader: Reader): Json = parser.parse(reader).right.get
 }
