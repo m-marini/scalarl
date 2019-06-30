@@ -29,14 +29,28 @@
 
 package org.mmarini.scalarl.agents
 
+import java.io.File
+
+import org.deeplearning4j.nn.api.OptimizationAlgorithm
+import org.deeplearning4j.nn.conf.GradientNormalization
+import org.deeplearning4j.nn.conf.NeuralNetConfiguration
+import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
+import org.deeplearning4j.nn.conf.layers.DenseLayer
+import org.deeplearning4j.nn.conf.layers.OutputLayer
+import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
+import org.deeplearning4j.nn.weights.WeightInit
+import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.Action
 import org.mmarini.scalarl.Agent
 import org.mmarini.scalarl.Feedback
 import org.mmarini.scalarl.Observation
-import org.mmarini.scalarl.nn.NetworkData
-import org.mmarini.scalarl.nn.NetworkProcessor
+import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
+import org.nd4j.linalg.learning.config.Adam
+import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
+
+import com.typesafe.scalalogging.LazyLogging
 import org.nd4j.linalg.factory.Nd4j
 
 /**
@@ -48,9 +62,8 @@ import org.nd4j.linalg.factory.Nd4j
  *  Updates its strategy policy to optimize the return value (discount sum of rewards)
  *  and the observation of resulting environment
  */
-case class TDAAgent(
-  netProc: NetworkProcessor,
-  netData: NetworkData,
+case class TDAAgent2(
+  net:     TraceNetwork,
   random:  Random,
   epsilon: Double,
   gamma:   Double,
@@ -66,8 +79,10 @@ case class TDAAgent(
    *
    * @param observationt the observation
    */
-  override def policy(observation: Observation): INDArray =
-    netProc.forward(netData, observation.signals)
+  override def policy(observation: Observation): INDArray = {
+    val out = net.forward(observation.signals)
+    out.last
+  }
 
   /**
    * Chooses the action for an observation
@@ -110,17 +125,16 @@ case class TDAAgent(
       mask.putScalar(action, 1)
 
       val aStar = greedyAction(obs0)
-      val noClearTrace = if (action == aStar) Nd4j.ones(1) else Nd4j.zeros(1)
-      val newNetData = netProc.fit(netData, obs0.signals, a0, mask, noClearTrace)
-      val loss = newNetData("loss").getDouble(1L)
+      val net1 = if (action == aStar) net else net.clearTraces()
+      val (newNet, error) = net1.backward(obs0.signals, a0, mask)
 
-      (copy(netData = newNetData), loss)
+      (copy(net = newNet), error)
   }
 
-  override def writeModel(file: String): TDAAgent = {
-    //    TraceModelSerializer.writeModel(net, file)
+  override def writeModel(file: String): TDAAgent2 = {
+    TraceModelSerializer.writeModel(net, file)
     this
   }
 
-  override def reset: TDAAgent = this
+  override def reset: TDAAgent2 = copy(net = net.clearTraces())
 }

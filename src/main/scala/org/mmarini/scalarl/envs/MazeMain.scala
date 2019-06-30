@@ -41,16 +41,14 @@ import org.mmarini.scalarl.FileUtils.withFile
 import org.mmarini.scalarl.FileUtils.writeINDArray
 import org.mmarini.scalarl.Session
 import org.mmarini.scalarl.Step
-import org.mmarini.scalarl.agents.AccumulateTraceUpdater
+import org.mmarini.scalarl.agents.AgentBuilder
 import org.mmarini.scalarl.agents.AgentType
 import org.mmarini.scalarl.agents.PolicyFunction
 import org.mmarini.scalarl.agents.TDAgent
-import org.mmarini.scalarl.agents.TraceUpdater
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
 
 import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.agents.AgentBuilder
 
 object MazeMain extends LazyLogging {
   private val ClearScreen = "\033[2J\033[H"
@@ -73,7 +71,7 @@ object MazeMain extends LazyLogging {
     val maxAbsGrads = conf.getConf("agent").getDouble("maxAbsGradients").get
     val maxAbsParams = conf.getConf("agent").getDouble("maxAbsParameters").get
     val loadModel = conf.getConf("agent").getString("loadModel")
-    val traceUpdater = conf.getConf("agent").getString("traceUpdater").map(TraceUpdater.fromString).getOrElse(AccumulateTraceUpdater)
+//    val traceUpdater = conf.getConf("agent").getString("traceUpdater").map(TraceUpdater.fromString).getOrElse(AccumulateTraceUpdater)
     val agentType = conf.getConf("agent").getString("type").map(AgentType.withName).getOrElse(AgentType.QAgent)
 
     val baseBuilder = AgentBuilder().
@@ -88,8 +86,8 @@ object MazeMain extends LazyLogging {
       maxAbsGradient(maxAbsGrads).
       maxAbsParams(maxAbsParams).
       seed(seed).
-      agentType(agentType).
-      traceUpdater(traceUpdater)
+      agentType(agentType)
+//      traceUpdater(traceUpdater)
     loadModel.
       map(baseBuilder.file).
       getOrElse(baseBuilder).

@@ -49,6 +49,13 @@ import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 import com.typesafe.scalalogging.LazyLogging
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
+import org.mmarini.scalarl.nn.NetworkBuilder
+import org.mmarini.scalarl.nn.SGDOptimizer
+import org.mmarini.scalarl.nn.AccumulateTraceMode
+import org.mmarini.scalarl.nn.DenseLayerBuilder
+import org.mmarini.scalarl.nn.ActivationLayerBuilder
+import org.mmarini.scalarl.nn.TanhActivationFunction
+import org.mmarini.scalarl.nn.LayerBuilder
 
 object AgentType extends Enumeration {
   val QAgent, TDAAgent = Value
@@ -85,8 +92,9 @@ case class AgentBuilder(
   _maxAbsParams:   Double          = 0,
   _maxAbsGradient: Double          = 0,
   _agentType:      AgentType.Value = AgentType.QAgent,
-  _file:           Option[String]  = None,
-  _traceUpdater:   TraceUpdater    = AccumulateTraceUpdater) extends LazyLogging {
+  _file:           Option[String]  = None
+//  _traceUpdater:   TraceUpdater    = AccumulateTraceUpdater
+) extends LazyLogging {
 
   /**
    * Returns the builder with a number of input nodes
@@ -130,7 +138,7 @@ case class AgentBuilder(
 
   def agentType(agentType: AgentType.Value): AgentBuilder = copy(_agentType = agentType)
 
-  def traceUpdater(traceUpdater: TraceUpdater): AgentBuilder = copy(_traceUpdater = traceUpdater)
+  //  def traceUpdater(traceUpdater: TraceUpdater): AgentBuilder = copy(_traceUpdater = traceUpdater)
 
   /** Builds and returns the [[QAgent]] */
   def build(): Agent = {
@@ -151,9 +159,13 @@ case class AgentBuilder(
           gamma = _gamma)
       case AgentType.TDAAgent =>
         val file = _file.map(f => new File(f)).filter(_.canRead())
-        val net = file.map(loadTraceNet).getOrElse(buildTraceNet(random))
+        //        val builder = file.map(loadTraceNet).getOrElse(buildTraceNet(random))
+        val builder = buildTraceNet(random)
+        val proc = builder.buildProcessor
+        val data = builder.buildData(random)
         TDAAgent(
-          net = net,
+          netProc = proc,
+          netData = data,
           random = random,
           epsilon = _epsilon,
           gamma = _gamma,
@@ -162,39 +174,25 @@ case class AgentBuilder(
     }
   }
 
-  private def loadTraceNet(file: File): TraceNetwork = {
-    logger.info(s"Loading ${file.toString} ...")
-    TraceModelSerializer.restoreTraceNetwork(file)
-  }
+  //  private def loadTraceNet(file: File): TraceNetwork = {
+  //    logger.info(s"Loading ${file.toString} ...")
+  //    TraceModelSerializer.restoreTraceNetwork(file)
+  //  }
+  //
+  private def buildTraceNet(random: Random): NetworkBuilder = {
 
-  private def buildTraceNet(random: Random): TraceNetwork = {
-    // Computes the number of nodes of initial layers
-    val initialNodes = _numInputs +: _numHiddens
-    // Creates the hidden layers
-    val hiddenLayers = for {
-      (ins, outs) <- initialNodes.init.zip(initialNodes.tail)
-      layer <- Seq(
-        TraceDenseLayer(
-          noInputs = ins,
-          noOutputs = outs,
-          random = random,
-          gamma = _gamma,
-          lambda = _lambda,
-          learningRate = _learningRate,
-          _traceUpdater),
-        TraceTanhLayer())
-    } yield layer
+    val hiddens = for {
+      (nodes, layer) <- _numHiddens.zipWithIndex
+      dense = DenseLayerBuilder(s"${layer}.dense", nodes)
+      act = ActivationLayerBuilder(s"${layer}.activation", TanhActivationFunction)
+      builder <- Array[LayerBuilder](dense, act)
+    } yield builder
 
-    // Creates the output layer
-    val outLayer = TraceDenseLayer(
-      noInputs = initialNodes.last,
-      noOutputs = _numActions,
-      random = random,
-      gamma = _gamma,
-      lambda = _lambda,
-      learningRate = _learningRate,
-      _traceUpdater)
-    new TraceNetwork(layers = hiddenLayers :+ outLayer)
+    NetworkBuilder().
+      setNoInputs(_numInputs).
+      setOptimizer(SGDOptimizer(_learningRate)).
+      setTraceMode(AccumulateTraceMode(_lambda, _gamma)).
+      addLayers(hiddens: _*)
   }
 
   private def loadNet(file: File): MultiLayerNetwork = {
