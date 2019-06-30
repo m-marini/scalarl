@@ -34,9 +34,16 @@ import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
 import org.scalatest.Matchers
 
+import io.circe.yaml.parser
+
 class SGDOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
   val Epsilon = 1e-6
   val Alpha = 0.1
+
+  val yamlDoc = """---
+alpha: 0.1
+mode: SGD
+"""
 
   Nd4j.create()
 
@@ -78,6 +85,40 @@ class SGDOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
 
       Then("should result the feedback")
       newData should be theSameInstanceAs (inputsData)
+    }
+
+    it("should generate json") {
+      Given("a sgd optimizer")
+      val opt = SGDOptimizer(Alpha)
+
+      When("build json")
+      val json = opt.toJson
+
+      Then("json should be on object")
+      json shouldBe 'isObject
+
+      And("should contain mode SGD")
+      json.asObject.flatMap(_("mode")).flatMap(_.asString) should contain("SGD")
+
+      And(s"should contain alpha ${Alpha}")
+      json.asObject.flatMap(_("alpha")).flatMap(_.asNumber).map(_.toDouble) should contain(Alpha)
+    }
+
+    it("should generate from json") {
+      Given("a yaml doc")
+      val doc = yamlDoc
+
+      And("parse it")
+      val json = parser.parse(doc).right.get
+
+      When("build from json")
+      val opt = Optimizer.fromJson(json)
+
+      Then("should be a SGD optimizer")
+      opt shouldBe a[SGDOptimizer]
+
+      And(s"alpha should be ${Alpha}")
+      opt.asInstanceOf[SGDOptimizer].alpha shouldBe Alpha
     }
   }
 }

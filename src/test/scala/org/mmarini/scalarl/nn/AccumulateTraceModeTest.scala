@@ -34,6 +34,8 @@ import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
 import org.scalatest.Matchers
 
+import io.circe.yaml.parser
+
 class AccumulateTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
   val Gamma = 0.9
   val Lambda = 0.8
@@ -41,10 +43,16 @@ class AccumulateTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
 
   Nd4j.create()
 
+  val yamlDoc = """---
+mode: ACCUMULATE
+gamma: 0.9
+lambda: 0.8
+"""
+
   describe("AccumulateTraceMode") {
     it("should generate trace updater with no clear trace") {
       Given("an accumulate trace mode")
-      val traceMode = AccumulateTraceMode(Gamma, Lambda)
+      val traceMode = AccumulateTraceMode(Lambda, Gamma)
 
       And("a layer data with feedback, trace and no clear trace")
       val feedback = Nd4j.create(Array(0.1, 0.2))
@@ -71,7 +79,7 @@ class AccumulateTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
 
     it("should generate trace updater with clear trace") {
       Given("an accumulate trace mode")
-      val traceMode = AccumulateTraceMode(Gamma, Lambda)
+      val traceMode = AccumulateTraceMode(Lambda, Gamma)
 
       And("a layer data with feedback, trace and clear trace")
       val feedback = Nd4j.create(Array(0.1, 0.2))
@@ -98,7 +106,7 @@ class AccumulateTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
 
     it("should generate trace updater for no trace layer") {
       Given("an accumulate trace mode")
-      val traceMode = AccumulateTraceMode(Gamma, Lambda)
+      val traceMode = AccumulateTraceMode(Lambda, Gamma)
 
       And("a layer data without trace")
       val inputsData: NetworkData = Map()
@@ -111,6 +119,45 @@ class AccumulateTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
 
       Then("should result the initial layer")
       newData should be theSameInstanceAs (inputsData)
+    }
+
+    it("should generate an yaml document") {
+      Given("an accumulate trace mode")
+      val traceMode = AccumulateTraceMode(Lambda, Gamma)
+
+      When("convert to json")
+      val json = traceMode.toJson
+
+      Then("json should be object")
+      json.isObject shouldBe true
+
+      And("should contain mode ACCUMULATE")
+      json.asObject.flatMap(_("mode")).flatMap(_.asString) should contain("ACCUMULATE")
+
+      And("should contain gamma Gamma")
+      json.asObject.flatMap(_("gamma")).flatMap(_.asNumber).map(_.toDouble) should contain(Gamma)
+
+      And("should contain lambda Lambda")
+      json.asObject.flatMap(_("lambda")).flatMap(_.asNumber).map(_.toDouble) should contain(Lambda)
+    }
+
+    it("should generate trace mode from yaml") {
+      Given("an yaml doc")
+      val doc = yamlDoc
+      And("parsing it")
+      val json = parser.parse(doc).right.get
+
+      When("convert to trace mode")
+      val mode = TraceMode.fromJson(json)
+
+      Then("mode should be a Accumulate trace")
+      mode shouldBe a[AccumulateTraceMode]
+
+      And("should have gamma Gamma")
+      mode.asInstanceOf[AccumulateTraceMode].gamma shouldBe Gamma
+
+      And("should have lambda Lambda")
+      mode.asInstanceOf[AccumulateTraceMode].lambda shouldBe Lambda
     }
   }
 }

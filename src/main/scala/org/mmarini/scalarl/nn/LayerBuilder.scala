@@ -147,9 +147,12 @@ case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder wi
   def noOutputs(topology: NetworkTopology): Int = noOutputs
 
   def clearTraceBuilder(context: NetworkTopology): OperationBuilder = {
-    val n = noInputs(context)
-    val zeroTrace = Nd4j.zeros((n + 1) * noOutputs)
-    OperationBuilder(_ + (key("trace") -> zeroTrace))
+    OperationBuilder(data => {
+      val trace = data(key("trace"))
+      val noClearTrace = data("noClearTrace")
+      val newTrace = trace.mul(noClearTrace)
+      data + (key("trace") -> newTrace)
+    })
   }
 
   /** Returns the converter og thetas to weights */
@@ -227,4 +230,10 @@ case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder wi
     "id" -> Json.fromString(id),
     "type" -> Json.fromString("DENSE"),
     "noOutputs" -> Json.fromInt(noOutputs))
+}
+
+object LayerBuilder {
+  def fromJson(json: Json): LayerBuilder = {
+    ???
+  }
 }

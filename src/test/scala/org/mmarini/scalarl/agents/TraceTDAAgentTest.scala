@@ -41,7 +41,7 @@ import org.scalatest.GivenWhenThen
 
 class TraceTDAAgentTest extends FunSpec with GivenWhenThen with Matchers {
   val Outputs = 2
-  val Inputs = 3 + Outputs
+  val Inputs = 3
   val Eps = 1e-3
 
   val AvailableActions = Nd4j.create(Array(1.0, 1.0))
@@ -100,7 +100,7 @@ class TraceTDAAgentTest extends FunSpec with GivenWhenThen with Matchers {
       }
     }
 
-    it("should fit ffrom feedback") {
+    it("should fit from feedback") {
       Given("a TDAAgent")
       val agent = createAgent()
 

@@ -34,6 +34,8 @@ import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
 import org.scalatest.Matchers
 
+import io.circe.yaml.parser
+
 class AdamOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
   val Alpha = 0.1
   val Beta1 = 0.9
@@ -42,6 +44,13 @@ class AdamOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
 
   Nd4j.create()
 
+  val yamlDoc = """---
+mode: ADAM
+alpha: 0.1
+beta1: 0.9
+beta2: 0.999
+epsilon: 0.001
+"""
   describe("AdamOptimizer") {
     it("should generate optimizer updater") {
 
@@ -98,6 +107,58 @@ class AdamOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
 
       Then("should result the feedback")
       newData should be theSameInstanceAs (inputsData)
+    }
+
+    it("should generate json") {
+      Given("a adam optimizer")
+      val opt = AdamOptimizer(Alpha, Beta1, Beta2, Epsilon)
+
+      When("build json")
+      val json = opt.toJson
+
+      Then("json should be on object")
+      json shouldBe 'isObject
+
+      And("should contain mode ADAM")
+      json.asObject.flatMap(_("mode")).flatMap(_.asString) should contain("ADAM")
+
+      And(s"should contain alpha ${Alpha}")
+      json.asObject.flatMap(_("alpha")).flatMap(_.asNumber).map(_.toDouble) should contain(Alpha)
+
+      And(s"should contain beta1 ${Beta1}")
+      json.asObject.flatMap(_("beta1")).flatMap(_.asNumber).map(_.toDouble) should contain(Beta1)
+
+      And(s"should contain beta2 ${Beta2}")
+      json.asObject.flatMap(_("beta2")).flatMap(_.asNumber).map(_.toDouble) should contain(Beta2)
+
+      And(s"should contain epsilon ${Epsilon}")
+      json.asObject.flatMap(_("epsilon")).flatMap(_.asNumber).map(_.toDouble) should contain(Epsilon)
+    }
+
+    it("should generate from json") {
+      Given("a yaml doc")
+      val doc = yamlDoc
+
+      And("parse it")
+      val json = parser.parse(doc).right.get
+
+      When("build from json")
+      val opt = Optimizer.fromJson(json)
+
+      Then("should be a SGD optimizer")
+      opt shouldBe a[AdamOptimizer]
+
+      And(s"alpha should be ${Alpha}")
+      opt.asInstanceOf[AdamOptimizer].alpha shouldBe Alpha
+
+      And(s"beta1 should be ${Beta1}")
+      opt.asInstanceOf[AdamOptimizer].beta1 shouldBe Beta1
+
+      And(s"beta2 should be ${Beta2}")
+      opt.asInstanceOf[AdamOptimizer].beta2 shouldBe Beta2
+
+      And(s"epsilon should be ${Epsilon}")
+      opt.asInstanceOf[AdamOptimizer].epsilon shouldBe Epsilon
     }
   }
 }

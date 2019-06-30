@@ -29,41 +29,48 @@
 
 package org.mmarini.scalarl.nn
 
-import io.circe.Json
+import org.nd4j.linalg.factory.Nd4j
+import org.scalatest.FunSpec
+import org.scalatest.GivenWhenThen
+import org.scalatest.Matchers
 
-trait LossFunction {
-  def toJson: Json
+import io.circe.yaml.parser
 
-  def lossBuilder: OperationBuilder
+class NoneTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
+  val Epsilon = 1e-3
 
-  def deltaBuilder: OperationBuilder
-}
+  Nd4j.create()
 
-object MSELossFunction extends LossFunction {
-  lazy val toJson = Json.fromString("MSE")
+  val yamlDoc = """---
+mode: NONE
+"""
 
-  lazy val deltaBuilder = OperationBuilder(data => {
-    val outputs = data("outputs")
-    val labels = data("labels")
-    val mask = data("mask")
-    val delta = labels.sub(outputs).muli(mask)
-    data + ("delta" -> delta)
-  })
+  describe("NoneTraceMode") {
+    it("should generate an yaml document") {
+      Given("a none trace mode")
+      val traceMode = NoneTraceMode
 
-  lazy val lossBuilder = OperationBuilder(data => {
-    val outputs = data("outputs")
-    val labels = data("labels")
-    val mask = data("mask")
-    val diff = outputs.sub(labels).muli(mask)
-    val loss = diff.muli(diff).sum(1)
-    data + ("loss" -> loss)
-  })
-}
+      When("convert to json")
+      val json = traceMode.toJson
 
-object LossFunction {
-  def fromJson(json: Json): LossFunction = json.asString match {
-    case Some("MSE") => MSELossFunction
-    case Some(x)     => throw new IllegalArgumentException(s"""loss function "${x}" illegal""")
-    case _           => throw new IllegalArgumentException("missing loss function")
+      Then("json should be object")
+      json.isObject shouldBe true
+
+      And("should contain mode NONE")
+      json.asObject.flatMap(_("mode")).flatMap(_.asString) should contain("NONE")
+    }
+
+    it("should generate trace mode from yaml") {
+      Given("an yaml doc")
+      val doc = yamlDoc
+      And("parsing it")
+      val json = parser.parse(doc).right.get
+
+      When("convert to trace mode")
+      val mode = TraceMode.fromJson(json)
+
+      Then("mode should be a none trace")
+      mode should be theSameInstanceAs (NoneTraceMode)
+    }
   }
 }

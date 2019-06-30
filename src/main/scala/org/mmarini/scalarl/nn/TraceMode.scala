@@ -65,3 +65,25 @@ case class AccumulateTraceMode(lambda: Double, gamma: Double) extends TraceMode 
     "lambda" -> Json.fromDoubleOrNull(lambda),
     "gamma" -> Json.fromDoubleOrNull(gamma))
 }
+
+object TraceMode {
+  def fromJson(json: Json): TraceMode =
+    json.asObject.flatMap(_("mode")).flatMap(_.asString) match {
+      case Some("NONE")       => NoneTraceMode
+      case Some("ACCUMULATE") => accumulateFromJson(json)
+      case Some(x)            => throw new IllegalArgumentException(s"""trace mode "${x}" invalid""")
+      case _                  => throw new IllegalArgumentException("trace mode not found")
+    }
+
+  private def accumulateFromJson(json: Json) = {
+    val lambda = json.asObject.flatMap(_("lambda")).flatMap(_.asNumber).map(_.toDouble) match {
+      case Some(x) => x
+      case _       => throw new IllegalArgumentException("lambda not found")
+    }
+    val gamma = json.asObject.flatMap(_("gamma")).flatMap(_.asNumber).map(_.toDouble) match {
+      case Some(x) => x
+      case _       => throw new IllegalArgumentException("gamma not found")
+    }
+    AccumulateTraceMode(lambda = lambda, gamma = gamma)
+  }
+}

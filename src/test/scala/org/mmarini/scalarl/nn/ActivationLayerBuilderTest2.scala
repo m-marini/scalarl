@@ -29,41 +29,30 @@
 
 package org.mmarini.scalarl.nn
 
-import io.circe.Json
+import org.scalatest.FunSpec
+import org.scalatest.GivenWhenThen
+import org.scalatest.Matchers
 
-trait LossFunction {
-  def toJson: Json
+class ActivationLayerBuilder2Test extends FunSpec with GivenWhenThen with Matchers {
+  describe("an ActivationLayerBuilder") {
+    it("should create a json doc") {
+      Given("an ActivationLayerBuilder")
+      val l = ActivationLayerBuilder("l", TanhActivationFunction)
 
-  def lossBuilder: OperationBuilder
+      When("create json")
+      val json = l.toJson
 
-  def deltaBuilder: OperationBuilder
-}
+      Then("should be an object")
+      json.isObject shouldBe true
 
-object MSELossFunction extends LossFunction {
-  lazy val toJson = Json.fromString("MSE")
+      And("should have id l")
+      json.asObject.flatMap(_("id")).flatMap(_.asString) should contain("l")
 
-  lazy val deltaBuilder = OperationBuilder(data => {
-    val outputs = data("outputs")
-    val labels = data("labels")
-    val mask = data("mask")
-    val delta = labels.sub(outputs).muli(mask)
-    data + ("delta" -> delta)
-  })
+      And("should have type ACTIVATION")
+      json.asObject.flatMap(_("type")).flatMap(_.asString) should contain("ACTIVATION")
 
-  lazy val lossBuilder = OperationBuilder(data => {
-    val outputs = data("outputs")
-    val labels = data("labels")
-    val mask = data("mask")
-    val diff = outputs.sub(labels).muli(mask)
-    val loss = diff.muli(diff).sum(1)
-    data + ("loss" -> loss)
-  })
-}
-
-object LossFunction {
-  def fromJson(json: Json): LossFunction = json.asString match {
-    case Some("MSE") => MSELossFunction
-    case Some(x)     => throw new IllegalArgumentException(s"""loss function "${x}" illegal""")
-    case _           => throw new IllegalArgumentException("missing loss function")
+      And("should have activation TANH")
+      json.asObject.flatMap(_("activation")).flatMap(_.asString) should contain("TANH")
+    }
   }
 }

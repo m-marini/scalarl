@@ -112,7 +112,7 @@ case class TDAAgent(
       val aStar = greedyAction(obs0)
       val noClearTrace = if (action == aStar) Nd4j.ones(1) else Nd4j.zeros(1)
       val newNetData = netProc.fit(netData, obs0.signals, a0, mask, noClearTrace)
-      val loss = newNetData("loss").getDouble(1L)
+      val loss = newNetData("loss").getDouble(0L)
 
       (copy(netData = newNetData), loss)
   }

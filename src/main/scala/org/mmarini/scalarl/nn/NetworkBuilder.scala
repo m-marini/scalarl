@@ -181,5 +181,32 @@ object NetworkBuilder {
     traceMode = NoneTraceMode,
     layers = Array(InputLayerBuilder("inputs", 0)))
 
-  def fromYaml(yaml: Yaml): NetworkBuilder = ???
+  def fromJson(net: Json): NetworkBuilder = {
+    val noInputs = net.asObject.flatMap(_("noInputs")).flatMap(_.asNumber).flatMap(_.toInt) match {
+      case Some(x) => x
+      case _       => throw new IllegalArgumentException("missing noInput in network definition")
+    }
+    val traceMode = net.asObject.flatMap(_("traceMode")) match {
+      case Some(x) => TraceMode.fromJson(x)
+      case _       => throw new IllegalArgumentException("missing traceMode in network definition")
+    }
+    val optimizer = net.asObject.flatMap(_("optimizer")) match {
+      case Some(x) => Optimizer.fromJson(x)
+      case _       => throw new IllegalArgumentException("missing optimizer in network definition")
+    }
+    val lossFunction = net.asObject.flatMap(_("lossFunction")) match {
+      case Some(x) => LossFunction.fromJson(x)
+      case _       => throw new IllegalArgumentException("missing lossFunction in network definition")
+    }
+    val layers = net.asObject.flatMap(_("layers")).flatMap(_.asArray) match {
+      case Some(x) => x.map(LayerBuilder.fromJson _)
+      case _       => throw new IllegalArgumentException("missing layers in network definition")
+    }
+    NetworkBuilder().
+      setNoInputs(noInputs).
+      setTraceMode(traceMode).
+      setOptimizer(optimizer).
+      setLossFunction(lossFunction).
+      addLayers(layers.toArray: _*)
+  }
 }

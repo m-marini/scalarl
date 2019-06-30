@@ -50,7 +50,8 @@ class DenseLayerBuilderTest extends FunSpec with GivenWhenThen with Matchers {
     val theta = (1 to 8).map(x => x / 10.0).toArray
     Map(
       "l.inputs" -> Nd4j.create(inputs),
-      "l.theta" -> Nd4j.create(theta))
+      "l.theta" -> Nd4j.create(theta),
+      "l.trace" -> Nd4j.zeros(8))
   }
 
   /**
@@ -77,7 +78,7 @@ class DenseLayerBuilderTest extends FunSpec with GivenWhenThen with Matchers {
       val layer = DenseLayerBuilder("l", noOutputs = 2)
 
       And("a inputs layer data with 3 random inputs")
-      val inputsData = initialLayerData
+      val inputsData = initialLayerData + ("noClearTrace" -> Nd4j.ones(1))
 
       When("build a clear trace updater")
       val updater = layer.clearTraceBuilder(mockTopology).build

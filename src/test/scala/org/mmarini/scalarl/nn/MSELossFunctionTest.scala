@@ -34,6 +34,8 @@ import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
 import org.scalatest.Matchers
 
+import io.circe.Json
+
 class MSELossFunctionTest extends FunSpec with GivenWhenThen with Matchers {
   val Epsilon = 1e-6
 
@@ -103,27 +105,52 @@ class MSELossFunctionTest extends FunSpec with GivenWhenThen with Matchers {
       val delta = Nd4j.create(Array(0.5 - 0.1, 0.3 - 0.9))
       result.get("delta") should contain(delta)
     }
-  }
 
-  it("should compute the loss for loss function without mask") {
-    Given("a MSE loss function")
-    val loss = MSELossFunction
-    And("a initial data with 2 random output, mask, label")
-    val outputs = Nd4j.create(Array(0.1, 0.9))
-    val labels = Nd4j.create(Array(0.5, 0.3))
-    val mask = Nd4j.ones(2)
-    val initialData = Map(
-      "outputs" -> outputs,
-      "mask" -> mask,
-      "labels" -> labels)
+    it("should compute the loss for loss function without mask") {
+      Given("a MSE loss function")
+      val loss = MSELossFunction
+      And("a initial data with 2 random output, mask, label")
+      val outputs = Nd4j.create(Array(0.1, 0.9))
+      val labels = Nd4j.create(Array(0.5, 0.3))
+      val mask = Nd4j.ones(2)
+      val initialData = Map(
+        "outputs" -> outputs,
+        "mask" -> mask,
+        "labels" -> labels)
 
-    When("build a loss updater")
-    val updater = loss.lossBuilder.build
-    And("appling to initial data")
-    val result = updater(initialData)
+      When("build a loss updater")
+      val updater = loss.lossBuilder.build
+      And("appling to initial data")
+      val result = updater(initialData)
 
-    Then("should result the delta value")
-    val delta = Nd4j.create(Array(0.4 * 0.4 + 0.6 * 0.6))
-    result.get("loss") should contain(delta)
+      Then("should result the delta value")
+      val delta = Nd4j.create(Array(0.4 * 0.4 + 0.6 * 0.6))
+      result.get("loss") should contain(delta)
+    }
+
+    it("should generate json") {
+      Given("a MSE loss function")
+      val loss = MSELossFunction
+
+      When("create json")
+      val json = loss.toJson
+
+      Then("should be a string")
+      json.isString shouldBe true
+
+      And("should contain MSE")
+      json.asString should contain("MSE")
+    }
+
+    it("should generate from json") {
+      Given("a json string")
+      val json = Json.fromString("MSE")
+
+      When("create loss")
+      val loss = LossFunction.fromJson(json)
+
+      Then("should be a MSELossFunction")
+      loss should be theSameInstanceAs (MSELossFunction)
+    }
   }
 }
