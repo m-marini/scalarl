@@ -27,17 +27,43 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.envs
+package org.mmarini.scalarl.nn
 
-import java.io.FileReader
-import java.io.Reader
+import org.nd4j.linalg.factory.Nd4j
+import org.scalatest.FunSpec
+import org.scalatest.GivenWhenThen
+import org.scalatest.Matchers
 
 import io.circe.Json
-import io.circe.yaml.parser
 
-object Configuration {
+class XavierInitializerTest extends FunSpec with GivenWhenThen with Matchers {
 
-  def jsonFromFile(file: String): Json = jsonFromReader(new FileReader(file))
+  Nd4j.create()
 
-  def jsonFromReader(reader: Reader): Json = parser.parse(reader).right.get
+  describe("Initializer") {
+    it("should generate json") {
+      Given("a xavier initializer")
+      val traceMode = XavierInitializer
+
+      When("convert to json")
+      val json = traceMode.toJson
+
+      Then("json should be a string")
+      json shouldBe 'isString
+
+      And("should contain mode XAVIER")
+      json.asString should contain("XAVIER")
+    }
+
+    it("should generate initializer from yaml") {
+      Given("an json string XAVIER")
+      val json = Json.fromString("XAVIER")
+
+      When("convert to trace mode")
+      val mode = Initializer.fromJson(json)
+
+      Then("mode should be a Accumulate trace")
+      mode shouldBe theSameInstanceAs(XavierInitializer)
+    }
+  }
 }

@@ -27,17 +27,32 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.envs
+package org.mmarini.scalarl.nn
 
-import java.io.FileReader
-import java.io.Reader
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.api.rng.Random
+import org.nd4j.linalg.factory.Nd4j
 
 import io.circe.Json
-import io.circe.yaml.parser
 
-object Configuration {
+trait Initializer {
+  def build(n: Long, m: Long, random: Random): INDArray
+  def toJson: Json
+}
 
-  def jsonFromFile(file: String): Json = jsonFromReader(new FileReader(file))
+object XavierInitializer extends Initializer {
+  def build(n: Long, m: Long, random: Random): INDArray =
+    // Xavier initialization
+    Nd4j.randn(Array(n, m), random).muli(2.0 / (n + m))
 
-  def jsonFromReader(reader: Reader): Json = parser.parse(reader).right.get
+  lazy val toJson = Json.fromString("XAVIER")
+}
+
+object Initializer {
+  def fromJson(json: Json): Initializer =
+    json.hcursor.as[String] match {
+      case Right("XAVIER") => XavierInitializer
+      case Right(x)        => throw new IllegalArgumentException(s"""initializer "${x} invalid""")
+      case _               => throw new IllegalArgumentException("missing initializer")
+    }
 }

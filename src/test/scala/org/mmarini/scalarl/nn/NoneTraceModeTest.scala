@@ -27,17 +27,50 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.envs
+package org.mmarini.scalarl.nn
 
-import java.io.FileReader
-import java.io.Reader
+import org.nd4j.linalg.factory.Nd4j
+import org.scalatest.FunSpec
+import org.scalatest.GivenWhenThen
+import org.scalatest.Matchers
 
-import io.circe.Json
 import io.circe.yaml.parser
 
-object Configuration {
+class NoneTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
+  val Epsilon = 1e-3
 
-  def jsonFromFile(file: String): Json = jsonFromReader(new FileReader(file))
+  Nd4j.create()
 
-  def jsonFromReader(reader: Reader): Json = parser.parse(reader).right.get
+  val yamlDoc = """---
+mode: NONE
+"""
+
+  describe("NoneTraceMode") {
+    it("should generate an yaml document") {
+      Given("a none trace mode")
+      val traceMode = NoneTraceMode
+
+      When("convert to json")
+      val json = traceMode.toJson
+
+      Then("json should be object")
+      json.isObject shouldBe true
+
+      And("should contain mode NONE")
+      json.asObject.flatMap(_("mode")).flatMap(_.asString) should contain("NONE")
+    }
+
+    it("should generate trace mode from yaml") {
+      Given("an yaml doc")
+      val doc = yamlDoc
+      And("parsing it")
+      val json = parser.parse(doc).right.get
+
+      When("convert to trace mode")
+      val mode = TraceMode.fromJson(json)
+
+      Then("mode should be a none trace")
+      mode should be theSameInstanceAs (NoneTraceMode)
+    }
+  }
 }

@@ -27,17 +27,32 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.envs
+package org.mmarini.scalarl.nn
 
-import java.io.FileReader
-import java.io.Reader
+import org.nd4j.linalg.api.ndarray.INDArray
 
-import io.circe.Json
-import io.circe.yaml.parser
+/*
+ * learning phase:
+ * 1. calcolo degli outputs di tutti i layers (forward)
+ * 2. calcolo di tutti i gradienti
+ * 3. calcolo dell'errore nelle uscite (propagazione indietro degli errori)
+ * 4. calcolo aggiorna i gradienti con Adams e limitatori
+ * 5. calcolo nuovi valori di traces con i gradienti e errori
+ * 6. calcolo aggiornamenti dei parametri rete e parametri di learning (algoritmi di aggiornamento, Adams, eligibility traces)
+ */
 
-object Configuration {
+/**
+ * Computes the outputs for the inputs and change data parameter to fit the labels
+ */
+trait Network {
+  /** Returns the data with computed outputs */
+  def forward(data: NetworkData, inputs: INDArray): INDArray
 
-  def jsonFromFile(file: String): Json = jsonFromReader(new FileReader(file))
-
-  def jsonFromReader(reader: Reader): Json = parser.parse(reader).right.get
+  /** Returns the data with changed parameters to fit the labels */
+  def fit(
+    data:         NetworkData,
+    inputs:       INDArray,
+    labels:       INDArray,
+    mask:         INDArray,
+    noClearTrace: INDArray): NetworkData
 }

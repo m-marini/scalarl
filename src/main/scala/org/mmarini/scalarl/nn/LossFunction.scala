@@ -27,17 +27,43 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.envs
-
-import java.io.FileReader
-import java.io.Reader
+package org.mmarini.scalarl.nn
 
 import io.circe.Json
-import io.circe.yaml.parser
 
-object Configuration {
+trait LossFunction {
+  def toJson: Json
 
-  def jsonFromFile(file: String): Json = jsonFromReader(new FileReader(file))
+  def lossBuilder: OperationBuilder
 
-  def jsonFromReader(reader: Reader): Json = parser.parse(reader).right.get
+  def deltaBuilder: OperationBuilder
+}
+
+object MSELossFunction extends LossFunction {
+  lazy val toJson = Json.fromString("MSE")
+
+  lazy val deltaBuilder = OperationBuilder(data => {
+    val outputs = data("outputs")
+    val labels = data("labels")
+    val mask = data("mask")
+    val delta = labels.sub(outputs).muli(mask)
+    data + ("delta" -> delta)
+  })
+
+  lazy val lossBuilder = OperationBuilder(data => {
+    val outputs = data("outputs")
+    val labels = data("labels")
+    val mask = data("mask")
+    val diff = outputs.sub(labels).muli(mask)
+    val loss = diff.muli(diff).sum(1)
+    data + ("loss" -> loss)
+  })
+}
+
+object LossFunction {
+  def fromJson(json: Json): LossFunction = json.hcursor.as[String] match {
+    case Right("MSE") => MSELossFunction
+    case Right(x)     => throw new IllegalArgumentException(s"""loss function "${x}" illegal""")
+    case _            => throw new IllegalArgumentException("missing loss function")
+  }
 }

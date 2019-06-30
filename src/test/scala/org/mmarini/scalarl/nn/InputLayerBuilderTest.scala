@@ -27,17 +27,33 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.envs
+package org.mmarini.scalarl.nn
 
-import java.io.FileReader
-import java.io.Reader
+import org.nd4j.linalg.factory.Nd4j
+import org.scalatest.FunSpec
+import org.scalatest.GivenWhenThen
+import org.scalatest.Matchers
 
-import io.circe.Json
-import io.circe.yaml.parser
+class InputLayerBuilderTest extends FunSpec with Matchers with GivenWhenThen {
+  val Epsilon = 1e-6
 
-object Configuration {
+  val mockTopology = new MockTopology()
 
-  def jsonFromFile(file: String): Json = jsonFromReader(new FileReader(file))
+  describe("InputLayerBuilder") {
+    it("should create a forwaed updater") {
+      Given("an InputLayerBuilder")
+      val layer = InputLayerBuilder("l", 3)
 
-  def jsonFromReader(reader: Reader): Json = parser.parse(reader).right.get
+      And("an initial layer data with 3 inputs")
+      val inputs = Nd4j.create(Array(-1.0, 0.0, 1.0))
+      val data = Map("inputs" -> inputs)
+
+      When("build the updater")
+      And("apply to initial data")
+      val newData = layer.forwardBuilder(mockTopology).build(data)
+
+      Then("should result the layer with activated outputs")
+      newData.get("l.outputs") should contain(inputs)
+    }
+  }
 }

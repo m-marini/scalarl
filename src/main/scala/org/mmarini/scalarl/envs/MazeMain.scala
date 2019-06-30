@@ -41,40 +41,40 @@ import org.mmarini.scalarl.FileUtils.withFile
 import org.mmarini.scalarl.FileUtils.writeINDArray
 import org.mmarini.scalarl.Session
 import org.mmarini.scalarl.Step
-import org.mmarini.scalarl.agents.AccumulateTraceUpdater
+import org.mmarini.scalarl.agents.AgentBuilder
 import org.mmarini.scalarl.agents.AgentType
 import org.mmarini.scalarl.agents.PolicyFunction
 import org.mmarini.scalarl.agents.TDAgent
-import org.mmarini.scalarl.agents.TraceUpdater
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
 
 import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.agents.AgentBuilder
+
+import io.circe.Json
 
 object MazeMain extends LazyLogging {
   private val ClearScreen = "\033[2J\033[H"
 
-  private def buildEnv(conf: Configuration): Env = {
-    val map = conf.getConf("env").getList[String]("map")
+  private def buildEnv(conf: Json): Env = {
+    val map = conf.hcursor.downField("env").get[Seq[String]]("map").right.get
     SimpleMazeEnv.fromStrings(map)
   }
 
-  private def buildAgent(conf: Configuration): Agent = {
-    val numInputs = conf.getConf("agent").getInt("numInputs").get
-    val numActions = conf.getConf("agent").getInt("numActions").get
-    val numHiddens = conf.getConf("agent").getList[Int]("numHiddens")
-    val seed = conf.getConf("agent").getLong("seed").getOrElse(0L)
-    val epsilon = conf.getConf("agent").getDouble("epsilon").get
-    val gamma = conf.getConf("agent").getDouble("gamma").get
-    val lambda = conf.getConf("agent").getDouble("lambda").getOrElse(0.0)
-    val kappa = conf.getConf("agent").getDouble("kappa").getOrElse(1.0)
-    val learningRate = conf.getConf("agent").getDouble("learningRate").get
-    val maxAbsGrads = conf.getConf("agent").getDouble("maxAbsGradients").get
-    val maxAbsParams = conf.getConf("agent").getDouble("maxAbsParameters").get
-    val loadModel = conf.getConf("agent").getString("loadModel")
-    val traceUpdater = conf.getConf("agent").getString("traceUpdater").map(TraceUpdater.fromString).getOrElse(AccumulateTraceUpdater)
-    val agentType = conf.getConf("agent").getString("type").map(AgentType.withName).getOrElse(AgentType.QAgent)
+  private def buildAgent(conf: Json): Agent = {
+    val numInputs = conf.hcursor.downField("agent").get[Int]("numInputs").right.get
+    val numActions = conf.hcursor.downField("agent").get[Int]("numActions").right.get
+    val numHiddens = conf.hcursor.downField("agent").get[List[Int]]("numHiddens").right.get
+    val seed = conf.hcursor.downField("agent").get[Long]("seed").getOrElse(0L)
+    val epsilon = conf.hcursor.downField("agent").get[Double]("epsilon").right.get
+    val gamma = conf.hcursor.downField("agent").get[Double]("gamma").right.get
+    val lambda = conf.hcursor.downField("agent").get[Double]("lambda").getOrElse(0.0)
+    val kappa = conf.hcursor.downField("agent").get[Double]("kappa").getOrElse(1.0)
+    val learningRate = conf.hcursor.downField("agent").get[Double]("learningRate").right.get
+    val maxAbsGrads = conf.hcursor.downField("agent").get[Double]("maxAbsGradients").right.get
+    val maxAbsParams = conf.hcursor.downField("agent").get[Double]("maxAbsParameters").right.get
+    val loadModel = conf.hcursor.downField("agent").get[String]("loadModel").toOption
+    //    val traceUpdater = conf.hcursor.downField("agent").getString("traceUpdater").map(TraceUpdater.fromString).getOrElse(AccumulateTraceUpdater)
+    val agentType = conf.hcursor.downField("agent").get[String]("type").map(AgentType.withName).getOrElse(AgentType.QAgent)
 
     val baseBuilder = AgentBuilder().
       numInputs(numInputs).
@@ -88,8 +88,8 @@ object MazeMain extends LazyLogging {
       maxAbsGradient(maxAbsGrads).
       maxAbsParams(maxAbsParams).
       seed(seed).
-      agentType(agentType).
-      traceUpdater(traceUpdater)
+      agentType(agentType)
+    //      traceUpdater(traceUpdater)
     loadModel.
       map(baseBuilder.file).
       getOrElse(baseBuilder).
@@ -197,21 +197,21 @@ object MazeMain extends LazyLogging {
   }
 
   def main(args: Array[String]) {
-    val conf = Configuration.fromFile(if (args.isEmpty) "maze.yaml" else args(0))
-    val numSteps = conf.getConf("session").getInt("numSteps").get
-    val sync = conf.getConf("session").getLong("sync").get
-    val mode = conf.getConf("session").getString("mode").get
-    val dump = conf.getConf("session").getString("dump")
-    val trace = conf.getConf("session").getString("trace")
-    val saveModel = conf.getConf("agent").getString("saveModel")
-    val maxEpisodeLength = conf.getConf("session").getLong("maxEpisodeLength").getOrElse(Long.MaxValue)
+    val jsonConf = Configuration.jsonFromFile(if (args.isEmpty) "maze.yaml" else args(0))
+    val numSteps = jsonConf.hcursor.downField("session").get[Int]("numSteps").right.get
+    val sync = jsonConf.hcursor.downField("session").get[Long]("sync").right.get
+    val mode = jsonConf.hcursor.downField("session").get[String]("mode").right.get
+    val dump = jsonConf.hcursor.downField("session").get[String]("dump").toOption
+    val trace = jsonConf.hcursor.downField("session").get[String]("trace").toOption
+    val saveModel = jsonConf.hcursor.downField("agent").get[String]("saveModel").toOption
+    val maxEpisodeLength = jsonConf.hcursor.downField("session").get[Long]("maxEpisodeLength").getOrElse(Long.MaxValue)
 
     (dump.toSeq ++ trace).foreach(new File(_).delete())
 
     val session = Session(
       noSteps = numSteps,
-      env0 = buildEnv(conf),
-      agent0 = buildAgent(conf),
+      env0 = buildEnv(jsonConf),
+      agent0 = buildAgent(jsonConf),
       maxEpisodeLength = maxEpisodeLength)
 
     session.episodeObs.subscribe(

@@ -27,17 +27,44 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.envs
+package org.mmarini.scalarl.nn
 
-import java.io.FileReader
-import java.io.Reader
+/**
+ * Computes the outputs for the inputs and change data parameter to fit the labels
+ */
+trait OperationBuilder {
+  def build: Operation
+  def then(f1: Operation): OperationBuilder
+  def then(u: OperationBuilder): OperationBuilder
+}
 
-import io.circe.Json
-import io.circe.yaml.parser
+object OperationBuilder {
+  def apply(f: Operation): OperationBuilder = new MonoOperationBuilder(f)
+  def apply(): OperationBuilder = IdentityBuilder
 
-object Configuration {
+  def thetaBuilder(key: String): OperationBuilder = new MonoOperationBuilder(data =>
+    data.get(s"${key}.feedback").map(feedback => {
+      val theta = data(s"${key}.theta")
+      val newTheta = theta.add(feedback)
+      data + (s"${key}.theta" -> newTheta)
+    }).getOrElse(data))
+}
 
-  def jsonFromFile(file: String): Json = jsonFromReader(new FileReader(file))
+class MonoOperationBuilder(f: Operation) extends OperationBuilder {
+  def build = f
 
-  def jsonFromReader(reader: Reader): Json = parser.parse(reader).right.get
+  def then(f1: Operation): OperationBuilder =
+    new MonoOperationBuilder(data => f1(f(data)))
+
+  def then(u: OperationBuilder): OperationBuilder =
+    if (u == IdentityBuilder) this else then(u.build)
+}
+
+object IdentityBuilder extends OperationBuilder {
+  val build = data => data
+
+  def then(f1: NetworkData => NetworkData): OperationBuilder = new MonoOperationBuilder(f1)
+
+  def then(u: OperationBuilder): OperationBuilder = 
+    if (u == IdentityBuilder) this else then(u.build)
 }

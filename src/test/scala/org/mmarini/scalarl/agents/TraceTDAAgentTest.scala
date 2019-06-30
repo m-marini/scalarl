@@ -37,10 +37,11 @@ import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import scala.math.abs
 import org.mmarini.scalarl.INDArrayObservation
+import org.scalatest.GivenWhenThen
 
-class TraceTDAAgentTest extends FunSpec with Matchers {
+class TraceTDAAgentTest extends FunSpec with GivenWhenThen with Matchers {
   val Outputs = 2
-  val Inputs = 3 + Outputs
+  val Inputs = 3
   val Eps = 1e-3
 
   val AvailableActions = Nd4j.create(Array(1.0, 1.0))
@@ -81,38 +82,45 @@ class TraceTDAAgentTest extends FunSpec with Matchers {
       .build().asInstanceOf[TDAAgent]
   }
 
-  describe(s"""Given a TDQAgent and an observation""") {
-    val agent = createAgent()
-    val obs = Feedbacks(0).s0
-    describe(s"""When gets for greedyAction""") {
+  describe(s"a TDQAgent") {
+    it("should return highet q for greedy action") {
+      Given("a TDQAgent")
+      val agent = createAgent()
+
+      And("an observation")
+      val obs = Feedbacks(0).s0
+
+      When("gets for greedyAction")
       val action = agent.greedyAction(obs)
-      it(s"""Then it should return the action with the highest q""") {
-        val q = agent.policy(obs)
-        for {
-          i <- 0L until q.length()
-          if i != action
-        } {
-          q.getDouble(i) should be <= (q.getDouble(action.toLong))
-        }
+
+      Then("t should return the action with the highest q")
+      val q = agent.policy(obs)
+      for { i <- 0L until q.length() if i != action } {
+        q.getDouble(i) should be <= (q.getDouble(action.toLong))
       }
     }
-  }
 
-  describe(s"""Given a TDAAgent and a feedback""") {
-    val agent = createAgent()
-    val feedback = Feedbacks(0)
-    val Feedback(s0, action, reward, s1, _) = feedback
-    describe(s"""When fits for the feedback and gets the q of the fitted agent""") {
-      it(s"""Then should results a TDQAgent with value of action nearer the expected value""") {
-        val beforeQ0 = agent.actionPolicy(s0, action)
-        val expectedQ0 = reward + agent.gamma * agent.v(s1)
+    it("should fit from feedback") {
+      Given("a TDAAgent")
+      val agent = createAgent()
 
-        val (agent1, error) = agent.fit(feedback)
-        val agent2 = agent1.asInstanceOf[TDAAgent]
+      And("a feedback")
+      val feedback = Feedbacks(0)
+      val Feedback(s0, action, reward, s1, _) = feedback
 
-        val afterQ0 = agent2.actionPolicy(s0, action)
-        abs(expectedQ0 - afterQ0) should be <= (abs(expectedQ0 - beforeQ0))
-      }
+      When("get action value for (s0, action)")
+      val beforeQ0 = agent.actionPolicy(s0, action)
+
+      And("fits for the feedback")
+      val (agent1, error) = agent.fit(feedback)
+
+      And("gets the q of the fitted agent")
+      val agent2 = agent1.asInstanceOf[TDAAgent]
+      val afterQ0 = agent2.actionPolicy(s0, action)
+
+      Then("value of action is nearer the expected value")
+      val expectedQ0 = reward + agent.gamma * agent.v(s1)
+      abs(expectedQ0 - afterQ0) should be <= (abs(expectedQ0 - beforeQ0))
     }
   }
 }

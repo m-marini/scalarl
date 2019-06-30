@@ -27,41 +27,19 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.agents
+package org.mmarini.scalarl.nn
 
-import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.indexing.NDArrayIndex
-import org.nd4j.linalg.indexing.INDArrayIndex
-import org.nd4j.linalg.api.ops.impl.transforms.Tanh
-import org.nd4j.linalg.ops.transforms.Transforms
+import org.nd4j.linalg.api.rng.Random
 
-/**
- */
-class TraceTanhLayer extends TraceLayer {
+import io.circe.Json
 
-  /** Returns the output of layer given an input */
-  override def forward(input: INDArray): INDArray = {
-    //    val y = Nd4j.getExecutioner().execAndReturn(new Tanh(input.dup()))
-    //    y
-    Transforms.tanh(input)
-  }
-
-  /**
-   * Returns the backward errors and mask after updating the layer parameters given the input, output, output, errors
-   * and output mask
-   */
-  override def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): (TraceLayer, INDArray, INDArray) = {
-    val inpError = output.mul(output).subi(1.0).negi().muli(errors).muli(mask)
-    //    val inpError = output.sub(1.0).muli(output.add(1.0)).negi().muli(errors).muli(mask)
-    (this, inpError, mask)
-  }
-
-  override def clearTraces(): TraceLayer = this
-}
-
-object TraceTanhLayer {
-  private val layer = new TraceTanhLayer()
-
-  def apply(): TraceTanhLayer = layer
+abstract class MockLayerBuilder extends LayerBuilder {
+  def id: String = ???
+  def noOutputs(topology: NetworkTopology): Int = ???
+  def clearTraceBuilder(topology: NetworkTopology): OperationBuilder = ???
+  def forwardBuilder(topology: NetworkTopology): OperationBuilder = ???
+  def gradientBuilder(topology: NetworkTopology): OperationBuilder = ???
+  def deltaBuilder(topology: NetworkTopology): OperationBuilder = ???
+  def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): NetworkData = ???
+  def toJson: Json = ???
 }

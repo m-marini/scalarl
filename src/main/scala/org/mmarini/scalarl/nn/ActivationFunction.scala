@@ -27,31 +27,41 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.agents
+package org.mmarini.scalarl.nn
 
+import org.yaml.snakeyaml.Yaml
+import io.circe.Json
+import org.nd4j.linalg.ops.transforms.Transforms
 import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.indexing.NDArrayIndex
-import org.nd4j.linalg.indexing.INDArrayIndex
 
 /**
+ * Defines the activation function used in activation layer
+ *
+ *  - [[TanhActivationFunction]] defines the activation function that apply tanh to all inputs
  */
-trait TraceLossFunction {
-  def name: String
+trait ActivationFunction {
 
-  def apply(labels: INDArray, output: INDArray, mask: INDArray): Double
+  /** Returns the updater that creates the outputs */
+  def activate(inputs: INDArray): INDArray
 
-  def gradient(labels: INDArray, output: INDArray, mask: INDArray): INDArray
+  /** Returns the updater that backwards the delta values to inputs */
+  def inputDelta(inputs: INDArray, outputs: INDArray, delta: INDArray): INDArray
+
+  def toJson: Json
 }
 
-object LossFunctions {
-  val MSE: TraceLossFunction = new TraceLossFunction() {
-    val name = "MSE"
+object TanhActivationFunction extends ActivationFunction {
 
-    override def apply(labels: INDArray, output: INDArray, mask: INDArray): Double =
-      labels.mul(mask).squaredDistance(output.mul(mask)) / 2
+  def activate(inputs: INDArray): INDArray =
+    Transforms.tanh(inputs)
 
-    override def gradient(labels: INDArray, output: INDArray, mask: INDArray): INDArray =
-      labels.sub(output).muli(mask)
+  def inputDelta(inputs: INDArray, outputs: INDArray, delta: INDArray): INDArray = {
+    val grad = outputs.mul(outputs).subi(1.0).negi()
+    grad.muli(delta)
   }
+
+  lazy val toJson = Json.fromString("TANH")
 }
+//object HardTanhActivationFunctionBuilder extends ActivationFunctionBuilder
+//object SigmoidActivationFunctionBuilder extends ActivationFunctionBuilder
+//object ReluActivationFunctionBuilder extends ActivationFunctionBuilder
