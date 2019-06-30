@@ -27,41 +27,43 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.agents
+package org.mmarini.scalarl.nn
 
-import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.indexing.NDArrayIndex
-import org.nd4j.linalg.indexing.INDArrayIndex
-import org.nd4j.linalg.api.ops.impl.transforms.Tanh
-import org.nd4j.linalg.ops.transforms.Transforms
+import org.scalatest.FunSpec
+import org.scalatest.GivenWhenThen
+import org.scalatest.Matchers
 
-/**
- */
-class TraceTanhLayer extends TraceLayer {
+import io.circe.Json
 
-  /** Returns the output of layer given an input */
-  override def forward(input: INDArray): INDArray = {
-    //    val y = Nd4j.getExecutioner().execAndReturn(new Tanh(input.dup()))
-    //    y
-    Transforms.tanh(input)
+class XavierInitializerTest extends FunSpec with GivenWhenThen with Matchers {
+
+  Nd4j.create()
+
+  describe("Initializer") {
+    it("should generate json") {
+      Given("a xavier initializer")
+      val traceMode = XavierInitializer
+
+      When("convert to json")
+      val json = traceMode.toJson
+
+      Then("json should be a string")
+      json shouldBe 'isString
+
+      And("should contain mode XAVIER")
+      json.asString should contain("XAVIER")
+    }
+
+    it("should generate initializer from yaml") {
+      Given("an json string XAVIER")
+      val json = Json.fromString("XAVIER")
+
+      When("convert to trace mode")
+      val mode = Initializer.fromJson(json)
+
+      Then("mode should be a Accumulate trace")
+      mode shouldBe theSameInstanceAs(XavierInitializer)
+    }
   }
-
-  /**
-   * Returns the backward errors and mask after updating the layer parameters given the input, output, output, errors
-   * and output mask
-   */
-  override def backward(input: INDArray, output: INDArray, errors: INDArray, mask: INDArray): (TraceLayer, INDArray, INDArray) = {
-    val inpError = output.mul(output).subi(1.0).negi().muli(errors).muli(mask)
-    //    val inpError = output.sub(1.0).muli(output.add(1.0)).negi().muli(errors).muli(mask)
-    (this, inpError, mask)
-  }
-
-  override def clearTraces(): TraceLayer = this
-}
-
-object TraceTanhLayer {
-  private val layer = new TraceTanhLayer()
-
-  def apply(): TraceTanhLayer = layer
 }

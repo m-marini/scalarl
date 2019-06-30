@@ -135,6 +135,27 @@ class NetworkBuilderTest extends FunSpec with GivenWhenThen with Matchers {
       err2 should be < (err1)
     }
 
+    it("should write and read json") {
+      Given("a NetworkBuilder with 2 input")
+      val builder = NetworkBuilder().
+        setNoInputs(2).
+        setOptimizer(SGDOptimizer(0.1)).
+        setTraceMode(AccumulateTraceMode(0, 0)).
+        addLayers(
+          DenseLayerBuilder("0", 2),
+          ActivationLayerBuilder("1", TanhActivationFunction))
+
+      When("create json")
+      val json = builder.toJson
+      println(json)
+
+      And("create back the builder")
+      val builder2 = NetworkBuilder.fromJson(json)
+
+      Then("should be the same builder")
+      builder2 shouldBe builder
+    }
+
     //    val builder = NetworkBuilder().
     //      setNoInputs(10).
     //      addLayer(DenseLayerBuilder(2)).

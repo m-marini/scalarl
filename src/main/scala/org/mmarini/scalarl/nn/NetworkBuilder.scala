@@ -31,7 +31,6 @@ package org.mmarini.scalarl.nn
 
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
-import org.yaml.snakeyaml.Yaml
 
 import io.circe.Json
 
@@ -76,7 +75,7 @@ case class NetworkBuilder(
     "initializer" -> initializer.toJson,
     "optimizer" -> optimizer.toJson,
     "traceMode" -> traceMode.toJson,
-    "layers" -> Json.arr(layers.map(_.toJson).toArray: _*))
+    "layers" -> Json.arr(layers.tail.map(_.toJson).toArray: _*))
 
   private def internalForwardBuilder = {
     // Forwards updater of each layer
@@ -182,31 +181,36 @@ object NetworkBuilder {
     layers = Array(InputLayerBuilder("inputs", 0)))
 
   def fromJson(net: Json): NetworkBuilder = {
-    val noInputs = net.asObject.flatMap(_("noInputs")).flatMap(_.asNumber).flatMap(_.toInt) match {
-      case Some(x) => x
-      case _       => throw new IllegalArgumentException("missing noInput in network definition")
+    val noInputs = net.hcursor.get[Int]("noInputs") match {
+      case Right(x) => x
+      case _        => throw new IllegalArgumentException("missing noInput in network definition")
     }
-    val traceMode = net.asObject.flatMap(_("traceMode")) match {
-      case Some(x) => TraceMode.fromJson(x)
-      case _       => throw new IllegalArgumentException("missing traceMode in network definition")
+    val traceMode = net.hcursor.get[Json]("traceMode") match {
+      case Right(x) => TraceMode.fromJson(x)
+      case _        => throw new IllegalArgumentException("missing traceMode in network definition")
     }
-    val optimizer = net.asObject.flatMap(_("optimizer")) match {
-      case Some(x) => Optimizer.fromJson(x)
-      case _       => throw new IllegalArgumentException("missing optimizer in network definition")
+    val optimizer = net.hcursor.get[Json]("optimizer") match {
+      case Right(x) => Optimizer.fromJson(x)
+      case _        => throw new IllegalArgumentException("missing optimizer in network definition")
     }
-    val lossFunction = net.asObject.flatMap(_("lossFunction")) match {
-      case Some(x) => LossFunction.fromJson(x)
-      case _       => throw new IllegalArgumentException("missing lossFunction in network definition")
+    val initializer = net.hcursor.get[Json]("initializer") match {
+      case Right(x) => Initializer.fromJson(x)
+      case _        => throw new IllegalArgumentException("missing initializer in network definition")
     }
-    val layers = net.asObject.flatMap(_("layers")).flatMap(_.asArray) match {
-      case Some(x) => x.map(LayerBuilder.fromJson _)
-      case _       => throw new IllegalArgumentException("missing layers in network definition")
+    val lossFunction = net.hcursor.get[Json]("lossFunction") match {
+      case Right(x) => LossFunction.fromJson(x)
+      case _        => throw new IllegalArgumentException("missing lossFunction in network definition")
+    }
+    val layers = net.hcursor.get[Seq[Json]]("layers") match {
+      case Right(x) => x.map(LayerBuilder.fromJson _)
+      case _        => throw new IllegalArgumentException("missing layers in network definition")
     }
     NetworkBuilder().
       setNoInputs(noInputs).
       setTraceMode(traceMode).
       setOptimizer(optimizer).
       setLossFunction(lossFunction).
+      setInitializer(initializer).
       addLayers(layers.toArray: _*)
   }
 }

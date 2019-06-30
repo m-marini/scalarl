@@ -33,7 +33,14 @@ import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
 import org.scalatest.Matchers
 
+import io.circe.yaml.parser
+
 class ActivationLayerBuilder2Test extends FunSpec with GivenWhenThen with Matchers {
+  val yamlDoc = """---
+id: l
+type: ACTIVATION
+activation: TANH
+"""
   describe("an ActivationLayerBuilder") {
     it("should create a json doc") {
       Given("an ActivationLayerBuilder")
@@ -53,6 +60,26 @@ class ActivationLayerBuilder2Test extends FunSpec with GivenWhenThen with Matche
 
       And("should have activation TANH")
       json.asObject.flatMap(_("activation")).flatMap(_.asString) should contain("TANH")
+    }
+
+    it("should generate from json") {
+      Given("a yaml doc")
+      val doc = yamlDoc
+
+      And("parsing it")
+      val json = parser.parse(doc).right.get
+
+      When("generate from json")
+      val layer = LayerBuilder.fromJson(json)
+
+      Then("should be activation layer")
+      layer shouldBe a[ActivationLayerBuilder]
+
+      And("id should be l")
+      layer.asInstanceOf[ActivationLayerBuilder].id shouldBe "l"
+
+      And("activation should be TanhActivationFunction")
+      layer.asInstanceOf[ActivationLayerBuilder].activation shouldBe theSameInstanceAs(TanhActivationFunction)
     }
   }
 }

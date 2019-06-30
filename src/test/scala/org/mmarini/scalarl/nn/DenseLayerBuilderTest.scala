@@ -34,10 +34,18 @@ import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
 import org.scalatest.Matchers
 
+import io.circe.yaml.parser
+
 class DenseLayerBuilderTest extends FunSpec with GivenWhenThen with Matchers {
   val Epsilon = 1e-6
 
   Nd4j.create()
+
+  val yamlDoc = """---
+id: l
+type: DENSE
+noOutputs: 2
+"""
 
   def mockTopology = new MockTopology() {
     override def prevLayer(layer: LayerBuilder): Option[LayerBuilder] = Some(new MockLayerBuilder() {
@@ -206,6 +214,46 @@ class DenseLayerBuilderTest extends FunSpec with GivenWhenThen with Matchers {
 
       And("should result theta data")
       data.get("l.theta").map(_.shape()) should contain(Array(1, 8))
+    }
+
+    it("should generate json") {
+      Given("a dense layer builder with 2 outputs")
+      val layer = DenseLayerBuilder("l", noOutputs = 2)
+
+      When("generate json")
+      val json = layer.toJson
+
+      Then("should be object")
+      json shouldBe 'isObject
+
+      Then("id should be l")
+      json.hcursor.get[String]("id").toOption should contain("l")
+
+      Then("type should be DENSE")
+      json.hcursor.get[String]("type").toOption should contain("DENSE")
+
+      Then("noOutputs should be 2")
+      json.hcursor.get[Int]("noOutputs").toOption should contain(2)
+    }
+
+    it("should generate from json") {
+      Given("a yaml doc")
+      val doc = yamlDoc
+
+      And("parsing it")
+      val json = parser.parse(doc).right.get
+
+      When("generate from json")
+      val layer = LayerBuilder.fromJson(json)
+
+      Then("should be Dense layer")
+      layer shouldBe a[DenseLayerBuilder]
+
+      And("id should be l")
+      layer.asInstanceOf[DenseLayerBuilder].id shouldBe "l"
+
+      And("noOutputs should be 2")
+      layer.asInstanceOf[DenseLayerBuilder].noOutputs shouldBe 2
     }
   }
 }

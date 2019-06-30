@@ -61,9 +61,9 @@ object MSELossFunction extends LossFunction {
 }
 
 object LossFunction {
-  def fromJson(json: Json): LossFunction = json.asString match {
-    case Some("MSE") => MSELossFunction
-    case Some(x)     => throw new IllegalArgumentException(s"""loss function "${x}" illegal""")
-    case _           => throw new IllegalArgumentException("missing loss function")
+  def fromJson(json: Json): LossFunction = json.hcursor.as[String] match {
+    case Right("MSE") => MSELossFunction
+    case Right(x)     => throw new IllegalArgumentException(s"""loss function "${x}" illegal""")
+    case _            => throw new IllegalArgumentException("missing loss function")
   }
 }

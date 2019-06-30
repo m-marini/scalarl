@@ -233,7 +233,36 @@ case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder wi
 }
 
 object LayerBuilder {
-  def fromJson(json: Json): LayerBuilder = {
-    ???
+  def fromJson(json: Json): LayerBuilder =
+    json.hcursor.get[String]("type") match {
+      case Right("DENSE")      => denseFromJson(json)
+      case Right("ACTIVATION") => activationFromJson(json)
+      case Right(x)            => throw new IllegalArgumentException(s"""layer type "${x}" illegal""")
+      case Left(x)             => throw new IllegalArgumentException("missing layer type")
+    }
+
+  private def denseFromJson(json: Json) = {
+    val id = json.hcursor.get[String]("id") match {
+      case Right(x) => x
+      case Left(x)  => throw new IllegalArgumentException("missing layer id")
+    }
+    val noOutputs = json.hcursor.get[Int]("noOutputs") match {
+      case Right(x) => x
+      case Left(x)  => throw new IllegalArgumentException("missing noOutputs")
+    }
+    DenseLayerBuilder(id, noOutputs)
+  }
+
+  private def activationFromJson(json: Json) = {
+    val id = json.hcursor.get[String]("id") match {
+      case Right(x) => x
+      case Left(x)  => throw new IllegalArgumentException("missing layer id")
+    }
+    val activation = json.hcursor.get[String]("activation") match {
+      case Right("TANH") => TanhActivationFunction
+      case Right(x)      => throw new IllegalArgumentException(s"""activation "${x}" illegal""")
+      case _             => throw new IllegalArgumentException("missing activation")
+    }
+    ActivationLayerBuilder(id, activation)
   }
 }

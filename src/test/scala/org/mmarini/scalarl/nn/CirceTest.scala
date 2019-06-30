@@ -90,8 +90,8 @@ s: aaaa
       And("first element should be 1")
       val e = v(0).asNumber
       e should not be empty
-      e.flatMap(_.toInt) should contain (1)
-      
+      e.flatMap(_.toInt) should contain(1)
+
       And("number should contain 1")
       i should not be empty
       val iAsInt = i.flatMap(_.asNumber)
@@ -104,6 +104,37 @@ s: aaaa
       val sAsString = s.flatMap(_.asString)
       sAsString should not be empty
       sAsString should contain("aaaa")
+    }
+
+    it("should traverse yaml with cursor") {
+      Given("a yaml document")
+      val doc = document
+
+      And("parse it")
+      val jsonOpt = parser.parse(doc).toOption
+      jsonOpt should not be empty
+      val json = jsonOpt.get
+
+      When("traversing for array")
+      val a = json.hcursor.downField("a")
+
+      And("traversing for integer")
+      val i = json.hcursor.get[Int]("i")
+
+      And("traversing for String")
+      val s = json.hcursor.get[String]("s")
+
+      Then("array should contain 2 element")
+       a.as[Seq[Json]].right.get should have size(2)
+
+      And("first element should be 1")
+      a.downN(0).as[Double].toOption should contain(1)
+
+      And("number should contain 1")
+      i.toOption should contain(1)
+
+      And("string should contain aaaa")
+      s.toOption should contain("aaaa")
     }
   }
 }

@@ -89,35 +89,35 @@ case class AdamOptimizer(alpha: Double, beta1: Double, beta2: Double, epsilon: D
 }
 
 object Optimizer {
-  def fromJson(json: Json): Optimizer = json.asObject.flatMap(_("mode")).flatMap(_.asString) match {
-    case Some("SGD")  => sgdFromJson(json)
-    case Some("ADAM") => adamFromJson(json)
-    case Some(x)      => throw new IllegalArgumentException(s"""optimizer mode "${x}" invalid""")
-    case _            => throw new IllegalArgumentException("missing optimizer mode")
+  def fromJson(json: Json): Optimizer = json.hcursor.get[String]("mode") match {
+    case Right("SGD")  => sgdFromJson(json)
+    case Right("ADAM") => adamFromJson(json)
+    case Right(x)      => throw new IllegalArgumentException(s"""optimizer mode "${x}" invalid""")
+    case _             => throw new IllegalArgumentException("missing optimizer mode")
   }
 
   private def sgdFromJson(json: Json) =
-    json.asObject.flatMap(_("alpha")).flatMap(_.asNumber).map(_.toDouble) match {
-      case Some(x) => SGDOptimizer(x)
-      case _       => throw new IllegalArgumentException("missing alpha")
+    json.hcursor.get[Double]("alpha") match {
+      case Right(x) => SGDOptimizer(x)
+      case _        => throw new IllegalArgumentException("missing alpha")
     }
 
   private def adamFromJson(json: Json) = {
-    val alpha = json.asObject.flatMap(_("alpha")).flatMap(_.asNumber).map(_.toDouble) match {
-      case Some(x) => x
-      case _       => throw new IllegalArgumentException("missing alpha")
+    val alpha = json.hcursor.get[Double]("alpha") match {
+      case Right(x) => x
+      case _        => throw new IllegalArgumentException("missing alpha")
     }
-    val beta1 = json.asObject.flatMap(_("beta1")).flatMap(_.asNumber).map(_.toDouble) match {
-      case Some(x) => x
-      case _       => throw new IllegalArgumentException("missing beta1")
+    val beta1 = json.hcursor.get[Double]("beta1") match {
+      case Right(x) => x
+      case _        => throw new IllegalArgumentException("missing beta1")
     }
-    val beta2 = json.asObject.flatMap(_("beta2")).flatMap(_.asNumber).map(_.toDouble) match {
-      case Some(x) => x
-      case _       => throw new IllegalArgumentException("missing beta2")
+    val beta2 = json.hcursor.get[Double]("beta2") match {
+      case Right(x) => x
+      case _        => throw new IllegalArgumentException("missing beta2")
     }
-    val epsilon = json.asObject.flatMap(_("epsilon")).flatMap(_.asNumber).map(_.toDouble) match {
-      case Some(x) => x
-      case _       => throw new IllegalArgumentException("missing epsilon")
+    val epsilon = json.hcursor.get[Double]("epsilon") match {
+      case Right(x) => x
+      case _        => throw new IllegalArgumentException("missing epsilon")
     }
     AdamOptimizer(alpha = alpha, beta1 = beta1, beta2 = beta2, epsilon = epsilon)
   }
