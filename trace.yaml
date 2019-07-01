@@ -27,8 +27,8 @@ agent:
   #loadModel: maze.zip
   #saveModel: maze.zip
 session:
-  numSteps: 100000
-  maxEpisodeLength: 10000
+  numSteps: 30000
+  maxEpisodeLength: 30000
   sync: 0
   mode: stats
   trace: trace.csv

@@ -42,12 +42,19 @@ object OperationBuilder {
   def apply(f: Operation): OperationBuilder = new MonoOperationBuilder(f)
   def apply(): OperationBuilder = IdentityBuilder
 
-  def thetaBuilder(key: String): OperationBuilder = new MonoOperationBuilder(data =>
-    data.get(s"${key}.feedback").map(feedback => {
-      val theta = data(s"${key}.theta")
-      val newTheta = theta.add(feedback)
-      data + (s"${key}.theta" -> newTheta)
-    }).getOrElse(data))
+  def thetaBuilder(key: String): OperationBuilder = {
+    val feedbackKey = s"${key}.feedback"
+    val thetaKey = s"${key}.theta"
+    val thetaDeltaKey = s"${key}.thetaDelta"
+
+    new MonoOperationBuilder(data =>
+      data.get(feedbackKey).map(feedback => {
+        val theta = data(thetaKey)
+        val thetaDelta = data(thetaDeltaKey)
+        val newTheta = theta.add(feedback.mul(thetaDelta))
+        data + (thetaKey -> newTheta)
+      }).getOrElse(data))
+  }
 }
 
 class MonoOperationBuilder(f: Operation) extends OperationBuilder {
@@ -65,6 +72,6 @@ object IdentityBuilder extends OperationBuilder {
 
   def then(f1: NetworkData => NetworkData): OperationBuilder = new MonoOperationBuilder(f1)
 
-  def then(u: OperationBuilder): OperationBuilder = 
+  def then(u: OperationBuilder): OperationBuilder =
     if (u == IdentityBuilder) this else then(u.build)
 }

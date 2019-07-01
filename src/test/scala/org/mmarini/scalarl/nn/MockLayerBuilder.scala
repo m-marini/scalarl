@@ -40,6 +40,7 @@ abstract class MockLayerBuilder extends LayerBuilder {
   def forwardBuilder(topology: NetworkTopology): OperationBuilder = ???
   def gradientBuilder(topology: NetworkTopology): OperationBuilder = ???
   def deltaBuilder(topology: NetworkTopology): OperationBuilder = ???
+  def broadcastDeltaBuilder(topology: NetworkTopology): OperationBuilder = ???
   def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): NetworkData = ???
   def toJson: Json = ???
 }
