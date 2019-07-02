@@ -18,3 +18,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
     Run a QAgent without hidden layer (linear regretion) with 300 episodes limited to max 300 steps.
     Results in `analysis/Analysis.pdf`
 - Issue #23: Adams algorithm implementation
+- Issue #27: Verify Adam alghorithm
