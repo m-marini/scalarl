@@ -31,7 +31,6 @@ package org.mmarini.scalarl.envs
 
 import java.io.File
 
-import scala.collection.JavaConversions.`deprecated mapAsScalaMap`
 import scala.collection.JavaConversions.`deprecated seqAsJavaList`
 
 import org.mmarini.scalarl.Agent
@@ -42,7 +41,6 @@ import org.mmarini.scalarl.FileUtils.writeINDArray
 import org.mmarini.scalarl.Session
 import org.mmarini.scalarl.Step
 import org.mmarini.scalarl.agents.AgentBuilder
-import org.mmarini.scalarl.agents.AgentType
 import org.mmarini.scalarl.agents.PolicyFunction
 import org.mmarini.scalarl.agents.TDAgent
 import org.nd4j.linalg.api.ndarray.INDArray
@@ -50,6 +48,7 @@ import org.nd4j.linalg.factory.Nd4j
 
 import com.typesafe.scalalogging.LazyLogging
 
+import io.circe.ACursor
 import io.circe.Json
 
 object MazeMain extends LazyLogging {
@@ -60,44 +59,65 @@ object MazeMain extends LazyLogging {
     SimpleMazeEnv.fromStrings(map)
   }
 
-  private def buildAgent(conf: Json): Agent = {
-    val numInputs = conf.hcursor.downField("agent").get[Int]("numInputs").right.get
-    val numActions = conf.hcursor.downField("agent").get[Int]("numActions").right.get
-    val numHiddens = conf.hcursor.downField("agent").get[List[Int]]("numHiddens").right.get
-    val seed = conf.hcursor.downField("agent").get[Long]("seed").getOrElse(0L)
-    val epsilon = conf.hcursor.downField("agent").get[Double]("epsilon").right.get
-    val gamma = conf.hcursor.downField("agent").get[Double]("gamma").right.get
-    val lambda = conf.hcursor.downField("agent").get[Double]("lambda").getOrElse(0.0)
-    val kappa = conf.hcursor.downField("agent").get[Double]("kappa").getOrElse(1.0)
-    val learningRate = conf.hcursor.downField("agent").get[Double]("learningRate").right.get
-    val maxAbsGrads = conf.hcursor.downField("agent").get[Double]("maxAbsGradients").right.get
-    val maxAbsParams = conf.hcursor.downField("agent").get[Double]("maxAbsParameters").right.get
-    val loadModel = conf.hcursor.downField("agent").get[String]("loadModel").toOption
-    //    val traceUpdater = conf.hcursor.downField("agent").getString("traceUpdater").map(TraceUpdater.fromString).getOrElse(AccumulateTraceUpdater)
-    val agentType = conf.hcursor.downField("agent").get[String]("type").map(AgentType.withName).getOrElse(AgentType.QAgent)
+  private def loadAgentConf(builder: AgentBuilder, agentCursor: ACursor) = {
+    val builder1 = builder.
+      numInputs(agentCursor.get[Int]("numInputs").right.get).
+      numActions(agentCursor.get[Int]("numActions").right.get)
 
-    val baseBuilder = AgentBuilder().
-      numInputs(numInputs).
-      numActions(numActions).
-      numHiddens(numHiddens: _*).
-      epsilon(epsilon).
-      gamma(gamma).
-      lambda(lambda).
-      kappa(kappa).
-      learningRate(learningRate).
-      maxAbsGradient(maxAbsGrads).
-      maxAbsParams(maxAbsParams).
-      seed(seed).
-      agentType(agentType)
-    //      traceUpdater(traceUpdater)
-    loadModel.
-      map(baseBuilder.file).
-      getOrElse(baseBuilder).
-      build()
+    val seed = agentCursor.get[Long]("seed").toOption
+    val numHiddens = agentCursor.get[List[Int]]("numHiddens").toOption
+    val epsilon = agentCursor.get[Double]("epsilon").toOption
+    val gamma = agentCursor.get[Double]("gamma").toOption
+    val kappa = agentCursor.get[Double]("kappa").toOption
+
+    val trace = agentCursor.get[String]("trace").toOption
+    val lambda = agentCursor.get[Double]("lambda").toOption
+
+    val optimizer = agentCursor.get[String]("optimizer").toOption
+    val learningRate = agentCursor.get[Double]("learningRate").toOption
+    val beta1 = agentCursor.get[Double]("beta1").toOption
+    val beta2 = agentCursor.get[Double]("beta2").toOption
+    val epsilonAdam = agentCursor.get[Double]("epsilonAdam").toOption
+
+    val maxAbsGrads = agentCursor.get[Double]("maxAbsGradients").toOption
+    val maxAbsParams = agentCursor.get[Double]("maxAbsParameters").toOption
+
+    val builder2 = seed.map(builder1.seed).getOrElse(builder1)
+    val builder3 = numHiddens.map(builder2.numHiddens).getOrElse(builder2)
+    val builder4 = epsilon.map(builder3.epsilon).getOrElse(builder3)
+    val builder5 = gamma.map(builder4.gamma).getOrElse(builder4)
+    val builder6 = kappa.map(builder5.kappa).getOrElse(builder5)
+
+    val builder7 = trace.map(builder6.trace).getOrElse(builder6)
+    val builder8 = lambda.map(builder7.lambda).getOrElse(builder7)
+
+    val builder9 = optimizer.map(builder8.optimizer).getOrElse(builder8)
+    val builder10 = learningRate.map(builder9.learningRate).getOrElse(builder9)
+    val builder11 = beta1.map(builder10.beta1).getOrElse(builder10)
+    val builder12 = beta2.map(builder11.beta2).getOrElse(builder11)
+    val builder13 = epsilonAdam.map(builder12.epsilonAdam).getOrElse(builder12)
+
+    val builder14 = maxAbsGrads.map(builder13.maxAbsGradient).getOrElse(builder13)
+    val builder15 = maxAbsParams.map(builder14.maxAbsParams).getOrElse(builder14)
+
+    builder15
   }
 
-  private def agentConf(conf: Map[String, Any]) = conf("agent").asInstanceOf[java.util.Map[String, Any]].toMap
-  private def sessionConf(conf: Map[String, Any]) = conf("session").asInstanceOf[java.util.Map[String, Any]].toMap
+  private def buildAgent(conf: Json): Agent = {
+    val agentCursor = conf.hcursor.downField("agent")
+
+    val baseBuilder = AgentBuilder().
+      agentType(agentCursor.
+        get[String]("type").
+        getOrElse("QAgent"))
+
+    val builder = agentCursor.
+      get[String]("loadModel").
+      toOption.
+      map(baseBuilder.file).
+      getOrElse(loadAgentConf(baseBuilder, agentCursor))
+    builder.build()
+  }
 
   /**
    * Returns the dump data array of the episode

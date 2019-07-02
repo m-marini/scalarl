@@ -12,18 +12,23 @@ env:
   - "|          |"
   - "|         *|"
 agent:
+  type: TDAAgent
   numInputs: 100
   numActions: 8
   numHiddens: []
   seed: 1234
-  learningRate: 100e-3
   epsilon: 0.01
   gamma: 0.999
-  lambda: 0.8
   kappa: 1
+  trace: ACCUMULATE
+  lambda: 0.8
+  optimizer: ADAM
+  learningRate: 0.1
+  beta1: 0.9
+  beta2: 0.999
+  epsilonAdam: 0.1
   maxAbsGradients: 1
   maxAbsParameters: 1e3
-  type: TDAAgent
   #loadModel: maze.zip
   #saveModel: maze.zip
 session:
