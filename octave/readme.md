@@ -231,15 +231,40 @@ It plots the errors of session:
   plotErrorsFromDump(X);
 ```
 
-## stats
+### stats
 
 Computes the statistics on data dump folder.
 Creates the steps, returns and errors files containing statistics
 
-## plotFile
+### plotFile
 
 Plot the data on a file in y linear scale
 
-## logyPlotFile
+### logyPlotFile
 
 Plot the data on a file in y logaritmic scale
+
+## Hyperparameters statistics
+
+To create the statistics of hyper parameters run the simulation that creates the statistics folders
+
+```bash
+./runhypers.sh
+```
+
+Then run the aggregation of samples running in Octave
+
+```octave
+stats("../dump-base")
+stats("../dump-alpha-x")
+...
+stats("../dump-adams")
+```
+
+Than create charts by running 
+```octave
+plotAdam
+plotLambda
+plotAlpha
+....
+```

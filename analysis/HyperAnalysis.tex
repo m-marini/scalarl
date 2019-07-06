@@ -65,4 +65,23 @@ Each test consist of 1000 episodes with a limit of 300 steps per episode.
 	\label{fig:hyper}
 \end{figure}
 
+\section{Adam optimizer}
+
+The figure \ref{fig:adam} show the comparison between the SGD and ADAM alghoritm.
+
+\begin{figure}[h!]
+	\centering
+	\begin{subfigure}[b]{0.4\linewidth}
+		\includegraphics[width=\linewidth]{Adam-returns.png}
+		\caption{$\alpha$ Returns.}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.4\linewidth}
+		\includegraphics[width=\linewidth]{Adam-errors.png}
+		\caption{$\alpha$ Errors.}
+	\end{subfigure}
+	
+	\caption{Adam optimizer}
+	\label{fig:adam}
+\end{figure}
+
 \end{document}
