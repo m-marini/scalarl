@@ -145,6 +145,8 @@ case class NetworkBuilder(
     val trace = layers.map(layer =>
       layer.clearTraceBuilder(this))
 
+    val brodcastDelta = layers.map(_.broadcastDeltaBuilder(this))
+
     val updated = layers.map(layer =>
       OperationBuilder.thetaBuilder(layer.id))
 
@@ -155,6 +157,7 @@ case class NetworkBuilder(
       backwardBuilder ++
       optim ++
       trace ++
+      brodcastDelta ++
       updated
 
     all.foldLeft(OperationBuilder())((acc, builder) =>

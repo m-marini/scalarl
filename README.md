@@ -23,7 +23,7 @@ The configuration is defined in `maze.yaml` file and consists of a maze map with
 The analysis of data can be done using octave script in `octave` folders.
 See `octave/readme.md`
 
-## Current Goal 19
+## Hyper parameters measuring
 
 Analyze the learning state values step by step.
 Run the lerning session by

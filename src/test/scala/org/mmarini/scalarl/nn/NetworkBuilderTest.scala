@@ -147,7 +147,6 @@ class NetworkBuilderTest extends FunSpec with GivenWhenThen with Matchers {
 
       When("create json")
       val json = builder.toJson
-      println(json)
 
       And("create back the builder")
       val builder2 = NetworkBuilder.fromJson(json)
@@ -156,71 +155,88 @@ class NetworkBuilderTest extends FunSpec with GivenWhenThen with Matchers {
       builder2 shouldBe builder
     }
 
-    //    val builder = NetworkBuilder().
-    //      setNoInputs(10).
-    //      addLayer(DenseLayerBuilder(2)).
-    //      addLayer(ActivationLayerBuilder(TanhActivationFunction)).
-    //      setTraceMode(AccumulateTraceMode(0.8, 0.9)).
-    //      setOptimizer(AdamOptimizer(0.1, 0.8, 0.9, 0.5))
-    //
-    //    describe("When toJson") {
-    //      val json = builder.toJson
-    //      val txt = json.asYaml.spaces2
-    //      it("Then should create a json object") {
-    //        txt shouldBe """optimizer:
-    //  beta2: 0.9
-    //  mode: ADAM
-    //  beta1: 0.8
-    //  epsilon: 0.5
-    //  alpha: 0.1
-    //lossFunction: MSE
-    //noInputs: 10
-    //layers:
-    //- type: DENSE
-    //  noOutputs: 2
-    //- type: ACTIVATION
-    //  activation: TANH
-    //traceMode:
-    //  mode: ACCUMULATE
-    //  lambda: 0.8
-    //  gamma: 0.9
-    //initializer: XAVIER
-    //"""
-    //      }
-    //    }
-    //  }
-    //
-    //  describe("Given circe") {
-    //    val json = yaml.parser.parse("""
-    //foo: Hello, World
-    //bar:
-    //    one: One Third
-    //    two: 33.333333
-    //baz:
-    //    - Hello
-    //    - World
-    //""")
-    //    val v = json.right.get
-    //    it("") {
-    //      "" shouldBe ""
-    //    }
-    //  }
-    //
-    //  describe("gen  yaml") {
-    //    val x = (1 to 3).map(Json.fromInt).toArray
-    //    val doc = Json.obj(
-    //      "a" -> Json.fromInt(69),
-    //      "b" -> Json.fromString("aa"),
-    //      "c" -> Json.arr(x: _*))
-    //    val txt = doc.asYaml.spaces2 // 2 spaces for each indent level
-    //    it("") {
-    //      txt shouldBe """a: 69
-    //b: aa
-    //c:
-    //- 1
-    //- 2
-    //- 3
-    //"""
-    //    }
+    it("should fit a linear regressio") {
+      Given("a NetworkBuilder with 3 input and 2 output")
+      val builder = NetworkBuilder().
+        setNoInputs(3).
+        setOptimizer(SGDOptimizer(0.1)).
+        setTraceMode(NoneTraceMode).
+        addLayers(
+          DenseLayerBuilder("0", 2))
+
+      And("inputs")
+      val inputs = Nd4j.create(Array(1.0, 0.0, 0.0))
+
+      And("labels")
+      val labels = Nd4j.create(Array(1.0, -1.0))
+
+      And("mask")
+      val mask = Nd4j.create(Array(1.0, 0.0))
+
+      And("no clear trace")
+      val noClearTrace = Nd4j.zeros(1)
+
+      And("theta")
+      val theta = Nd4j.create(Array(
+        0.2, -0.03,
+        -1.0, -0.45,
+        0.03, -0.02,
+        0.0, 0.0))
+
+      And("a random generator")
+      val random = Nd4j.getRandomFactory().getNewRandomInstance(1234)
+
+      And("initial data with theta")
+      val data = builder.buildData(random) + ("0.theta" -> theta)
+
+      When("fit")
+      val fit = builder.buildProcessor.fit(data, inputs, labels, mask, noClearTrace);
+
+      Then("should result output")
+      val outputs = Nd4j.create(Array(0.2, -0.03))
+      fit.get("outputs") should contain(outputs)
+
+      And("should result delta and 0.delta")
+      val delta = Nd4j.create(Array(0.8, 0.0))
+      fit.get("delta") should contain(delta)
+      fit.get("0.delta") should contain(delta)
+
+      And("should result 0.inputDelta")
+      val inputDelta = Nd4j.create(Array(0.2 * 0.8, -1.0 * 0.8, 0.03 * 0.8))
+      fit.get("delta") should contain(delta)
+      fit.get("0.delta") should contain(delta)
+
+      And("should result gradient")
+      val gradient = Nd4j.create(Array(
+        1.0, 1.0,
+        0.0, 0.0,
+        0.0, 0.0,
+        1.0, 1.0))
+      fit.get("0.gradient") should contain(gradient)
+
+      And("should result feedback")
+      val feedback = Nd4j.create(Array(
+        0.1, 0.1,
+        0.0, 0.0,
+        0.0, 0.0,
+        0.1, 0.1))
+      fit.get("0.feedback") should contain(feedback)
+
+      And("should result thetaDelta")
+      val thetaDelta = Nd4j.create(Array(
+        0.8, 0.0,
+        0.8, 0.0,
+        0.8, 0.0,
+        0.8, 0.0))
+      fit.get("0.thetaDelta") should contain(thetaDelta)
+
+      And("should result new theta")
+      val newTheta = Nd4j.create(Array(
+        0.2 + 0.8 * 0.1, -0.03,
+        -1.0, -0.45,
+        0.03, -0.02,
+        0.8 * 0.1, 0.0))
+      fit.get("0.theta") should contain(newTheta)
+    }
   }
 }

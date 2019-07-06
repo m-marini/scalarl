@@ -29,15 +29,15 @@
 
 package org.mmarini.scalarl.agents
 
+import scala.math.abs
+
 import org.mmarini.scalarl.Feedback
 import org.mmarini.scalarl.INDArrayObservation
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.FunSpec
-import org.scalatest.Matchers
-import scala.math.abs
-import org.mmarini.scalarl.INDArrayObservation
 import org.scalatest.GivenWhenThen
+import org.scalatest.Matchers
 
 class TraceTDAAgentTest extends FunSpec with GivenWhenThen with Matchers {
   val Outputs = 2
@@ -78,12 +78,12 @@ class TraceTDAAgentTest extends FunSpec with GivenWhenThen with Matchers {
       .numInputs(Inputs)
       .numActions(Outputs)
       .numHiddens(Outputs)
-      .agentType(AgentType.TDAAgent)
+      .agentType("TDAAgent")
       .build().asInstanceOf[TDAAgent]
   }
 
   describe(s"a TDQAgent") {
-    it("should return highet q for greedy action") {
+    it("should return highest q for greedy action") {
       Given("a TDQAgent")
       val agent = createAgent()
 

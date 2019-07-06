@@ -56,6 +56,8 @@ import org.mmarini.scalarl.nn.DenseLayerBuilder
 import org.mmarini.scalarl.nn.ActivationLayerBuilder
 import org.mmarini.scalarl.nn.TanhActivationFunction
 import org.mmarini.scalarl.nn.LayerBuilder
+import org.mmarini.scalarl.nn.AdamOptimizer
+import org.mmarini.scalarl.nn.NoneTraceMode
 
 object AgentType extends Enumeration {
   val QAgent, TDAAgent = Value
@@ -80,19 +82,24 @@ object AgentType extends Enumeration {
  *  @param _file the filename of model to load
  */
 case class AgentBuilder(
-  _numInputs:      Int             = 0,
-  _numActions:     Int             = 0,
-  _numHiddens:     Array[Int]      = Array(),
-  _learningRate:   Double          = 0,
-  _epsilon:        Double          = 0.01,
-  _gamma:          Double          = 0.99,
-  _lambda:         Double          = 0,
-  _kappa:          Double          = 1,
-  _seed:           Long            = 0,
-  _maxAbsParams:   Double          = 0,
-  _maxAbsGradient: Double          = 0,
-  _agentType:      AgentType.Value = AgentType.QAgent,
-  _file:           Option[String]  = None
+  _agentType:      String         = "QAgent",
+  _numInputs:      Int            = 0,
+  _numActions:     Int            = 0,
+  _numHiddens:     Array[Int]     = Array(),
+  _epsilon:        Double         = 0.01,
+  _gamma:          Double         = 0.99,
+  _seed:           Long           = 0,
+  _kappa:          Double         = 1,
+  _optimizer:      String         = "SGD",
+  _learningRate:   Double         = 0.1,
+  _beta1:          Double         = 0.9,
+  _beta2:          Double         = 0.999,
+  _epsilonAdam:    Double         = 0.001,
+  _trace:          String         = "ACCUMULATE",
+  _lambda:         Double         = 0,
+  _maxAbsParams:   Double         = 0,
+  _maxAbsGradient: Double         = 0,
+  _file:           Option[String] = None
 //  _traceUpdater:   TraceUpdater    = AccumulateTraceUpdater
 ) extends LazyLogging {
 
@@ -136,9 +143,23 @@ case class AgentBuilder(
   /** Returns the builder with filename model to load */
   def file(file: String): AgentBuilder = copy(_file = Some(file))
 
-  def agentType(agentType: AgentType.Value): AgentBuilder = copy(_agentType = agentType)
+  /** Returns the builder for agent type */
+  def agentType(agentType: String): AgentBuilder = copy(_agentType = agentType)
 
-  //  def traceUpdater(traceUpdater: TraceUpdater): AgentBuilder = copy(_traceUpdater = traceUpdater)
+  /** Returns the builder for trace mode */
+  def trace(trace: String): AgentBuilder = copy(_trace = trace)
+
+  /** Returns the builder for the optimizer */
+  def optimizer(optimizer: String): AgentBuilder = copy(_optimizer = optimizer)
+
+  /** Returns the builder for beta1 adam parameter */
+  def beta1(beta1: Double): AgentBuilder = copy(_beta1 = beta1)
+
+  /** Returns the builder for beta2 adam parameter */
+  def beta2(beta2: Double): AgentBuilder = copy(_beta2 = beta2)
+
+  /** Returns the builder for epsilonAdam adam parameter */
+  def epsilonAdam(epsilonAdam: Double): AgentBuilder = copy(_epsilonAdam = epsilonAdam)
 
   /** Builds and returns the [[QAgent]] */
   def build(): Agent = {
@@ -148,7 +169,7 @@ case class AgentBuilder(
       Nd4j.getRandom()
     }
     _agentType match {
-      case AgentType.QAgent =>
+      case "QAgent" =>
         val file = _file.map(f => new File(f)).filter(_.canRead())
         val net = file.map(loadNet).getOrElse(buildNet(random))
         net.init()
@@ -157,10 +178,10 @@ case class AgentBuilder(
           random = random,
           epsilon = _epsilon,
           gamma = _gamma)
-      case AgentType.TDAAgent =>
+      case "TDAAgent" =>
         val file = _file.map(f => new File(f)).filter(_.canRead())
         //        val builder = file.map(loadTraceNet).getOrElse(buildTraceNet(random))
-        val builder = buildTraceNet(random)
+        val builder = buildTraceNet()
         val proc = builder.buildProcessor
         val data = builder.buildData(random)
         TDAAgent(
@@ -171,6 +192,7 @@ case class AgentBuilder(
           gamma = _gamma,
           lambda = _lambda,
           kappa = _kappa)
+      case s => throw new IllegalArgumentException(s"""agent type "${s}" invalid""")
     }
   }
 
@@ -179,7 +201,7 @@ case class AgentBuilder(
   //    TraceModelSerializer.restoreTraceNetwork(file)
   //  }
   //
-  private def buildTraceNet(random: Random): NetworkBuilder = {
+  private def buildTraceNet(): NetworkBuilder = {
 
     val hiddens = for {
       (nodes, layer) <- _numHiddens.zipWithIndex
@@ -191,10 +213,22 @@ case class AgentBuilder(
     val withOutputs = hiddens :+
       DenseLayerBuilder("outputs.dense", _numActions)
 
+    val optimizer = _optimizer match {
+      case "SGD"  => SGDOptimizer(alpha = _learningRate)
+      case "ADAM" => AdamOptimizer(alpha = _learningRate, beta1 = _beta1, beta2 = _beta2, epsilon = _epsilonAdam)
+      case s      => throw new IllegalArgumentException(s"""optimizer "${s}" invalid""")
+    }
+
+    val trace = _trace match {
+      case "ACCUMULATE" => AccumulateTraceMode(gamma = _gamma, lambda = _lambda)
+      case "NONE"       => NoneTraceMode
+      case s            => throw new IllegalArgumentException(s"""trace "${s}" invalid""")
+    }
+
     NetworkBuilder().
       setNoInputs(_numInputs).
-      setOptimizer(SGDOptimizer(_learningRate)).
-      setTraceMode(AccumulateTraceMode(_lambda, _gamma)).
+      setOptimizer(optimizer).
+      setTraceMode(trace).
       addLayers(withOutputs: _*)
   }
 
