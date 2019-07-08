@@ -15,7 +15,7 @@ agent:
   type: TDAAgent
   numInputs: 100
   numActions: 8
-  numHiddens: []
+  numHiddens: [8]
   seed: 1234
   epsilon: 0.01
   gamma: 0.999

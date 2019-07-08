@@ -44,6 +44,7 @@ case class NetworkBuilder(
   initializer:  Initializer,
   optimizer:    Optimizer,
   traceMode:    TraceMode,
+  normalizer:   Option[Normalizer],
   layers:       Seq[LayerBuilder]) extends NetworkTopology {
 
   def nextLayer(layer: LayerBuilder): Option[LayerBuilder] = {
@@ -60,6 +61,8 @@ case class NetworkBuilder(
     val newLayers = InputLayerBuilder("inputs", noInputs) +: layers.tail
     copy(layers = newLayers)
   }
+
+  def setNormalizer(norm: Normalizer): NetworkBuilder = copy(normalizer = Some(norm))
 
   def noInputs: Int = layers.head.asInstanceOf[InputLayerBuilder].noInputs
 
@@ -78,6 +81,11 @@ case class NetworkBuilder(
     "layers" -> Json.arr(layers.tail.map(_.toJson).toArray: _*))
 
   private def internalForwardBuilder = {
+    val normalized = normalizer.map(n =>
+      OperationBuilder(data =>
+        data + ("normalized" -> n.normalize(data("inputs"))))).getOrElse(
+      OperationBuilder(data =>
+        data + ("normalized" -> data("inputs"))))
     // Forwards updater of each layer
     val layerForwards = layers.map(layer =>
       layer.forwardBuilder(this))
@@ -100,7 +108,7 @@ case class NetworkBuilder(
     val outputExractor = OperationBuilder(data =>
       data + ("outputs" -> data(key)))
 
-    seq :+ layerForwards.last :+ outputExractor
+    normalized +: seq :+ layerForwards.last :+ outputExractor
   }
 
   private def forwardBuilder =
@@ -181,6 +189,7 @@ object NetworkBuilder {
     initializer = XavierInitializer,
     optimizer = SGDOptimizer(alpha = DefaultAlpha),
     traceMode = NoneTraceMode,
+    normalizer = None,
     layers = Array(InputLayerBuilder("inputs", 0)))
 
   def fromJson(net: Json): NetworkBuilder = {

@@ -58,6 +58,7 @@ import org.mmarini.scalarl.nn.TanhActivationFunction
 import org.mmarini.scalarl.nn.LayerBuilder
 import org.mmarini.scalarl.nn.AdamOptimizer
 import org.mmarini.scalarl.nn.NoneTraceMode
+import org.mmarini.scalarl.nn.Normalizer
 
 object AgentType extends Enumeration {
   val QAgent, TDAAgent = Value
@@ -229,6 +230,7 @@ case class AgentBuilder(
       setNoInputs(_numInputs).
       setOptimizer(optimizer).
       setTraceMode(trace).
+      setNormalizer(Normalizer.minMax(_numInputs, 0, 1)).
       addLayers(withOutputs: _*)
   }
 

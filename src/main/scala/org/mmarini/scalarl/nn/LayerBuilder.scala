@@ -90,7 +90,7 @@ case class InputLayerBuilder(id: String, noInputs: Int) extends LayerBuilder wit
   override def clearTraceBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder()
 
   override def forwardBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder(data =>
-    data + (key("outputs") -> data("inputs")))
+    data + (key("outputs") -> data("normalized")))
 
   override def gradientBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder()
 
