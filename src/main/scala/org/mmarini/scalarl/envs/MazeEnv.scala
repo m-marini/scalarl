@@ -130,6 +130,7 @@ case class MazeEnv(
     // array of 2 x widht x height
     val shape = 2L +: maze.map.shape()
     val observation = Nd4j.zeros(shape: _*)
+//    val observation = Nd4j.ones(shape: _*).negi()
 
     // Fills with wall map
     val ind1 = NDArrayIndex.point(1)

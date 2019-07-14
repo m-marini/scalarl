@@ -138,7 +138,7 @@ It extracts the statistics of session related to the states of maze
 It plots the frequence the subject layed in a cell
 
 ```octave
-  plotCoverage("../trace.csv");
+  plotCoverage(X);
 ```
 
 ### plotMu
@@ -146,7 +146,7 @@ It plots the frequence the subject layed in a cell
 It plots the ratio of maximum frequence per action of agent policy related to the random policy.
 
 ```octave
-  plotMu("../trace.csv");
+  plotMu(X);
 ```
 
 ### plotGMu
@@ -154,7 +154,7 @@ It plots the ratio of maximum frequence per action of agent policy related to th
 It plots the ratio of maximum frequence per action of greedy policy related to the random policy.
 
 ```octave
-  plotGMu("../trace.csv");
+  plotGMu(X);
 ```
 
 ### plotVFromTrace
@@ -170,7 +170,7 @@ H = plotVTraceFromFile(filename, pos)
 Example:
 
 ```octave
-H = plotVTraceFromFile("../trace.cvs", [9,9]])
+H = plotVTraceFromFile(X, [9,9]])
 ```
 
 ## plotQFromTrace
@@ -180,13 +180,13 @@ Plot the policy values from trace file for a given cell position
 Syntax
 
 ```octave
-H = plotQTraceFromFile(filename, pos)
+H = plotQTraceFromFile(X, pos)
 ```
 
 Example
 
 ```octave
-H = plotQTraceFromFile("../trace.cvs", [9,9]])
+H = plotQTraceFromFile(X, [9,9]])
 ```
 
 ## Dump analysis

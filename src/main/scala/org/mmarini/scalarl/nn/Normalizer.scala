@@ -54,7 +54,8 @@ trait Normalizer {
 }
 
 case class LinearNormalizer(offset: INDArray, scale: INDArray) extends Normalizer {
-  def normalize(x: INDArray): INDArray = x.sub(offset).muli(scale)
+  def normalize(x: INDArray): INDArray =
+    x.add(offset).muli(scale)
 
   def toJson: Json = {
     val o = offset.toDoubleVector().map(x => Json.fromDouble(x).get)
@@ -80,13 +81,13 @@ object Normalizer {
     }
 
   def minMax(min: INDArray, max: INDArray) = {
-    val offset = max.add(min).div(2)
+    val offset = max.add(min).div(-2.0)
     val scale = Nd4j.ones(min.shape(): _*).mul(2.0).divi(max.sub(min))
     LinearNormalizer(offset, scale)
   }
 
   def minMax(nodes: Int, min: Double, max: Double): LinearNormalizer = {
-    val offset = Nd4j.ones(nodes).mul((min + max) / 2)
+    val offset = Nd4j.ones(nodes).mul((min + max) / -2.0)
     val scale = Nd4j.ones(nodes).mul(2.0 / (max - min))
     LinearNormalizer(offset, scale)
   }
