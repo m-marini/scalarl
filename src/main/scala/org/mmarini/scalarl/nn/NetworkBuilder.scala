@@ -34,11 +34,17 @@ import org.nd4j.linalg.api.rng.Random
 
 import io.circe.Json
 
+/** Allows to navigate throw the topology of network */
 trait NetworkTopology {
+
+  /** Returns the next layer of a given layer */
   def nextLayer(layer: LayerBuilder): Option[LayerBuilder]
+
+  /** Returns the previous layer of a given layer */
   def prevLayer(layer: LayerBuilder): Option[LayerBuilder]
 }
 
+/** Builders of network */
 case class NetworkBuilder(
   lossFunction: LossFunction,
   initializer:  Initializer,
@@ -47,16 +53,17 @@ case class NetworkBuilder(
   normalizer:   Option[Normalizer],
   layers:       Seq[LayerBuilder]) extends NetworkTopology {
 
-  def nextLayer(layer: LayerBuilder): Option[LayerBuilder] = {
+  override def nextLayer(layer: LayerBuilder): Option[LayerBuilder] = {
     val idx = layers.indexOf(layer)
     if (idx >= 0 && idx + 1 < layers.length) Some(layers(idx + 1)) else None
   }
 
-  def prevLayer(layer: LayerBuilder): Option[LayerBuilder] = {
+  override def prevLayer(layer: LayerBuilder): Option[LayerBuilder] = {
     val idx = layers.indexOf(layer)
     if (idx >= 1) Some(layers(idx - 1)) else None
   }
 
+  /** Returns the network builder with a given number of inputs */
   def setNoInputs(noInputs: Int): NetworkBuilder = {
     val newLayers = InputLayerBuilder("inputs", noInputs) +: layers.tail
     copy(layers = newLayers)
@@ -80,6 +87,12 @@ case class NetworkBuilder(
     "traceMode" -> traceMode.toJson,
     "layers" -> Json.arr(layers.tail.map(_.toJson).toArray: _*))
 
+  /**
+   * Returns the sequence of operation builder to perform the forward process.
+   *   - First operation creates the "normalized" input from "inputs"
+   *   - Then applies the forward process for each layer copying the outputs to the next inputs of each layer
+   *   - Finally copie the output of last layer to the "output" container
+   */
   private def internalForwardBuilder = {
     val normalized = normalizer.map(n =>
       OperationBuilder(data =>
@@ -116,6 +129,12 @@ case class NetworkBuilder(
       foldLeft(OperationBuilder())((acc, builder) =>
         acc.then(builder))
 
+  /**
+   * Returns the sequence of backward process operations
+   *   - Copies the "delta" into the "*.delta" of last layer
+   *   - Computes the inputDelta from "*.inputs", "*.outputs", "*.delta" for each layer
+   *     from last to first backwarding the resulting "*.inputDelta" as "*.delta" of previous layer
+   */
   private def backwardBuilder = {
     val reverseLayer = layers.reverse
     val layerBackward = reverseLayer.map(layer =>
@@ -144,14 +163,27 @@ case class NetworkBuilder(
     deltaFeed +: seq :+ layerBackward.last
   }
 
+  /**
+   * Returns the fit process operations builder.
+   *   - Performs a forward process generating "normalized", "outputs", "*.inputs", "*.outputs", "outputs"
+   *     for each layer
+   *   - Computes the "*.gradient" for each layer
+   *   - Computes the "delta" by loss function
+   *   - Computes the "loss" value
+   *   - Performs a backward process generating "*.delta", "*.inputDelta" for each layer
+   *   - Computes the "*.feedback" for each layer and the updated optimizer parms "*.m1 and "*.m2" if ADAM optimizer
+   *   - Broadcasts the "*.delta" to "*.thetaDelta" for each layer
+   *   - Update the "*.trace", "*.feedback" for each layer by "noClearTrace", "*.thetaDelta", "*.feedb
+   *   - Update all "*.theta" parameters by "*.delta" and "*.updateTheta"
+   */
   private def fitBuilder = {
     val gradient = layers.map(_.gradientBuilder(this))
 
     val optim = layers.map(layer =>
       optimizer.optimizeBuilder(layer.id))
 
-    val trace = layers.map(layer =>
-      layer.clearTraceBuilder(this))
+    val updateTrace = layers.map(layer =>
+      traceMode.traceBuilder(layer.id))
 
     val brodcastDelta = layers.map(_.broadcastDeltaBuilder(this))
 
@@ -164,8 +196,8 @@ case class NetworkBuilder(
       lossFunction.lossBuilder) ++
       backwardBuilder ++
       optim ++
-      trace ++
       brodcastDelta ++
+      updateTrace ++
       updated
 
     all.foldLeft(OperationBuilder())((acc, builder) =>

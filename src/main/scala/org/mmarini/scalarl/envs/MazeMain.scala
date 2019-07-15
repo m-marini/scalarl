@@ -217,7 +217,9 @@ object MazeMain extends LazyLogging {
   }
 
   def main(args: Array[String]) {
-    val jsonConf = Configuration.jsonFromFile(if (args.isEmpty) "maze.yaml" else args(0))
+    val file = if (args.isEmpty) "maze.yaml" else args(0)
+    logger.info("File {}", file)
+    val jsonConf = Configuration.jsonFromFile(file)
     val numSteps = jsonConf.hcursor.downField("session").get[Int]("numSteps").right.get
     val sync = jsonConf.hcursor.downField("session").get[Long]("sync").right.get
     val mode = jsonConf.hcursor.downField("session").get[String]("mode").right.get

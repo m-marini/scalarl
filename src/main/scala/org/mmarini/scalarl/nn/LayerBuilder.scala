@@ -53,9 +53,6 @@ trait LayerBuilder {
   /** Returns the number of outputs */
   def noOutputs(topology: NetworkTopology): Int
 
-  /** Returns the updater that clears the eligibility traces of the layer */
-  def clearTraceBuilder(topology: NetworkTopology): OperationBuilder
-
   /** Returns the updater that forwards the inputs */
   def forwardBuilder(topology: NetworkTopology): OperationBuilder
 
@@ -87,8 +84,6 @@ case class InputLayerBuilder(id: String, noInputs: Int) extends LayerBuilder wit
 
   override def noOutputs(topology: NetworkTopology): Int = noInputs
 
-  override def clearTraceBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder()
-
   override def forwardBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder(data =>
     data + (key("outputs") -> data("normalized")))
 
@@ -110,8 +105,6 @@ case class InputLayerBuilder(id: String, noInputs: Int) extends LayerBuilder wit
  */
 case class ActivationLayerBuilder(id: String, activation: ActivationFunction) extends LayerBuilder with KeyBuilder {
   def noOutputs(topology: NetworkTopology): Int = noInputs(topology)
-
-  def clearTraceBuilder(context: NetworkTopology): OperationBuilder = OperationBuilder()
 
   def gradientBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder()
 
@@ -144,15 +137,6 @@ case class ActivationLayerBuilder(id: String, activation: ActivationFunction) ex
  */
 case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder with KeyBuilder {
   def noOutputs(topology: NetworkTopology): Int = noOutputs
-
-  def clearTraceBuilder(context: NetworkTopology): OperationBuilder = {
-    OperationBuilder(data => {
-      val trace = data(key("trace"))
-      val noClearTrace = data("noClearTrace")
-      val newTrace = trace.mul(noClearTrace)
-      data + (key("trace") -> newTrace)
-    })
-  }
 
   /** Returns the converter og thetas to weights */
   def weights(topology: NetworkTopology): INDArray => INDArray = {

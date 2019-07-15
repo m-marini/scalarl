@@ -59,7 +59,7 @@ scale:
     it("should normalize") {
       Given("an Normalizer")
       val normalizer = LinearNormalizer(
-        offset = Nd4j.create(Array(0.5, 0.5, 0.5)),
+        offset = Nd4j.create(Array(-0.5, -0.5, -0.5)),
         scale = Nd4j.create(Array(2.0, 2.0, 2.0)))
 
       And("an input vector")
@@ -80,7 +80,7 @@ scale:
         max = Nd4j.create(Array(1.0, 1.0, 1.0)))
 
       Then("should result the offset")
-      val offset = Nd4j.create(Array(0.5, 0.5, 0.5))
+      val offset = Nd4j.create(Array(-0.5, -0.5, -0.5))
       normalizer.offset shouldBe offset
 
       Then("should result the scala")
@@ -93,7 +93,7 @@ scale:
       val normalizer = Normalizer.minMax(3, 0.0, 1.0)
 
       Then("should result the offset")
-      val offset = Nd4j.create(Array(0.5, 0.5, 0.5))
+      val offset = Nd4j.create(Array(-0.5, -0.5, -0.5))
       normalizer.offset shouldBe offset
 
       Then("should result the scala")
@@ -117,7 +117,7 @@ scale:
       json.hcursor.get[String]("type").toOption should contain("LINEAR")
 
       And("should have offset")
-      json.hcursor.get[Array[Double]]("offset").toOption should contain(Array(0.5, 0.5, 0.5))
+      json.hcursor.get[Array[Double]]("offset").toOption should contain(Array(-0.5, -0.5, -0.5))
 
       And("should have scale")
       json.hcursor.get[Array[Double]]("scale").toOption should contain(Array(2.0, 2.0, 2.0))

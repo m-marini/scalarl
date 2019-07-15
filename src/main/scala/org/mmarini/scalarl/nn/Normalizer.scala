@@ -81,13 +81,13 @@ object Normalizer {
     }
 
   def minMax(min: INDArray, max: INDArray) = {
-    val offset = max.add(min).div(-2.0)
+    val offset = max.add(min).negi().divi(2.0)
     val scale = Nd4j.ones(min.shape(): _*).mul(2.0).divi(max.sub(min))
     LinearNormalizer(offset, scale)
   }
 
   def minMax(nodes: Int, min: Double, max: Double): LinearNormalizer = {
-    val offset = Nd4j.ones(nodes).mul((min + max) / -2.0)
+    val offset = Nd4j.ones(nodes).mul(-(min + max) / 2.0)
     val scale = Nd4j.ones(nodes).mul(2.0 / (max - min))
     LinearNormalizer(offset, scale)
   }

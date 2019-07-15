@@ -173,7 +173,7 @@ Example:
 H = plotVTraceFromFile(X, [9,9]])
 ```
 
-## plotQFromTrace
+### plotQFromTrace
 
 Plot the policy values from trace file for a given cell position
 
@@ -187,6 +187,26 @@ Example
 
 ```octave
 H = plotQTraceFromFile(X, [9,9]])
+```
+
+### qFromTrace
+
+Extracts Q value from trace data
+
+Syntax
+
+```octave
+[Q MASK] = qFromTrace(X);
+```
+
+### afterQFromTrace
+
+Extracts Q value after fitting from trace data
+
+Syntax
+
+```octave
+[Q MASK] = afterQFromTrace(X);
 ```
 
 ## Dump analysis

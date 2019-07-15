@@ -45,15 +45,15 @@ class InputLayerBuilderTest extends FunSpec with Matchers with GivenWhenThen {
       val layer = InputLayerBuilder("l", 3)
 
       And("an initial layer data with 3 inputs")
-      val inputs = Nd4j.create(Array(-1.0, 0.0, 1.0))
-      val data = Map("inputs" -> inputs)
+      val normalized = Nd4j.create(Array(-1.0, 0.0, 1.0))
+      val data = Map("normalized" -> normalized)
 
       When("build the updater")
       And("apply to initial data")
       val newData = layer.forwardBuilder(mockTopology).build(data)
 
       Then("should result the layer with activated outputs")
-      newData.get("l.outputs") should contain(inputs)
+      newData.get("l.outputs") should contain(normalized)
     }
   }
 }

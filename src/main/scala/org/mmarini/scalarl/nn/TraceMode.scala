@@ -47,13 +47,13 @@ object NoneTraceMode extends TraceMode {
 case class AccumulateTraceMode(lambda: Double, gamma: Double) extends TraceMode {
 
   def traceBuilder(key: String): OperationBuilder = {
-    val mul = lambda * gamma
+    val decay = lambda * gamma
 
     OperationBuilder(data =>
       data.get(s"${key}.trace").map(trace => {
         val feedback = data(s"${key}.feedback")
         val noClearTrace = data("noClearTrace")
-        val newTrace = trace.mul(mul).muli(noClearTrace).addi(feedback)
+        val newTrace = trace.mul(decay).muli(noClearTrace).addi(feedback)
         data +
           (s"${key}.trace" -> newTrace) +
           (s"${key}.feedback" -> newTrace)
