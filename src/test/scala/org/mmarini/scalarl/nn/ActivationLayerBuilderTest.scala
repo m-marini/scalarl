@@ -53,23 +53,6 @@ class ActivationLayerBuilderTest extends PropSpec with PropertyChecks with Match
   property("""
 Given an Activation layer builder
   and a initial layer data with 2 random input
-  when build a clear trace updater
-  and apply to initial layer
-  then should result the same input layer""") {
-    forAll(
-      (valueGen, "value")) {
-        value =>
-          val (inputs, inputsData) = buildInputs(value)
-          val updater = tanhLayer.clearTraceBuilder(None.orNull).build
-          val newData = updater(inputsData)
-
-          newData should be theSameInstanceAs inputsData
-      }
-  }
-
-  property("""
-Given an Activation layer builder
-  and a initial layer data with 2 random input
   when build a forward updater
   and apply to initial layer
   then should result the layer with activated outputs""") {

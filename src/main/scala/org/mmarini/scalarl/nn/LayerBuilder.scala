@@ -79,6 +79,7 @@ trait KeyBuilder {
 }
 
 case class InputLayerBuilder(id: String, noInputs: Int) extends LayerBuilder with KeyBuilder {
+  require(noInputs >= 0, s"noInputs ${noInputs} >= 0")
 
   override def noInputs(topology: NetworkTopology): Int = noInputs
 
@@ -118,7 +119,14 @@ case class ActivationLayerBuilder(id: String, activation: ActivationFunction) ex
     val inputs = data(key("inputs"))
     val outputs = data(key("outputs"))
     val delta = data(key("delta"))
+    Sentinel(inputs, key("inputs"))
+    Sentinel(outputs, key("outputs"))
+    Sentinel(delta, key("delta"))
     val inputDelta = activation.inputDelta(inputs, outputs, delta)
+    // Sentinel
+    if (!inputDelta.ravel().toDoubleVector().forall(!_.isNaN())) {
+      Sentinel(inputDelta, key("inputDelta"))
+    }
     data + (key("inputDelta") -> inputDelta)
   })
 
@@ -136,6 +144,8 @@ case class ActivationLayerBuilder(id: String, activation: ActivationFunction) ex
  * Defines the activation layer architecture and build the layer functional updater such that for clear trace.
  */
 case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder with KeyBuilder {
+  require(noOutputs > 0)
+
   def noOutputs(topology: NetworkTopology): Int = noOutputs
 
   /** Returns the converter og thetas to weights */
@@ -163,6 +173,9 @@ case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder wi
       val w = fw(theta)
       val b = fb(theta)
       val y = inputs.mmul(w).addi(b)
+
+      Sentinel(y, "outputs")
+
       data + (key("outputs") -> y)
     })
   }
@@ -203,6 +216,9 @@ case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder wi
       val wDelta = delta.broadcast(n, m)
       val bDelta = delta
       val thetaDelta = Nd4j.hstack(wDelta.ravel(), bDelta)
+
+      Sentinel(thetaDelta, key("thetaDelta"))
+
       data + (key("thetaDelta") -> thetaDelta)
     })
   }

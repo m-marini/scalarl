@@ -30,9 +30,7 @@
 package org.mmarini.scalarl.nn
 
 import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.indexing.NDArrayIndex
 
 import io.circe.Json
 
@@ -54,6 +52,9 @@ trait Normalizer {
 }
 
 case class LinearNormalizer(offset: INDArray, scale: INDArray) extends Normalizer {
+  Sentinel(offset, "offset")
+  Sentinel(scale, "scale")
+
   def normalize(x: INDArray): INDArray =
     x.add(offset).muli(scale)
 

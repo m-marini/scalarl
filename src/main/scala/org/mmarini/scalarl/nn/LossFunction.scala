@@ -47,6 +47,7 @@ object MSELossFunction extends LossFunction {
     val labels = data("labels")
     val mask = data("mask")
     val delta = labels.sub(outputs).muli(mask)
+    Sentinel(delta, "delta")
     data + ("delta" -> delta)
   })
 
@@ -55,7 +56,8 @@ object MSELossFunction extends LossFunction {
     val labels = data("labels")
     val mask = data("mask")
     val diff = outputs.sub(labels).muli(mask)
-    val loss = diff.muli(diff).sum(1)
+    val loss = diff.mul(diff).sum(1)
+    Sentinel(loss, "loss")
     data + ("loss" -> loss)
   })
 }

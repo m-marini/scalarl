@@ -46,12 +46,13 @@ trait NetworkTopology {
 
 /** Builders of network */
 case class NetworkBuilder(
-  lossFunction: LossFunction,
-  initializer:  Initializer,
-  optimizer:    Optimizer,
-  traceMode:    TraceMode,
-  normalizer:   Option[Normalizer],
-  layers:       Seq[LayerBuilder]) extends NetworkTopology {
+  lossFunction:      LossFunction,
+  initializer:       Initializer,
+  optimizer:         Optimizer,
+  traceMode:         TraceMode,
+  normalizer:        Option[Normalizer],
+  constrainAllParms: Option[Double],
+  layers:            Seq[LayerBuilder]) extends NetworkTopology {
 
   override def nextLayer(layer: LayerBuilder): Option[LayerBuilder] = {
     val idx = layers.indexOf(layer)
@@ -77,6 +78,7 @@ case class NetworkBuilder(
   def setInitializer(initializer: Initializer): NetworkBuilder = copy(initializer = initializer)
   def setOptimizer(optimizer: Optimizer): NetworkBuilder = copy(optimizer = optimizer)
   def setTraceMode(traceMode: TraceMode): NetworkBuilder = copy(traceMode = traceMode)
+  def setConstrainAllParms(constrainAllParms: Double) = copy(constrainAllParms = Some(constrainAllParms))
   def addLayers(layers: LayerBuilder*): NetworkBuilder = copy(layers = this.layers ++ layers)
 
   lazy val toJson: Json = Json.obj(
@@ -91,7 +93,7 @@ case class NetworkBuilder(
    * Returns the sequence of operation builder to perform the forward process.
    *   - First operation creates the "normalized" input from "inputs"
    *   - Then applies the forward process for each layer copying the outputs to the next inputs of each layer
-   *   - Finally copie the output of last layer to the "output" container
+   *   - Finally copies the output of last layer to the "output" container
    */
   private def internalForwardBuilder = {
     val normalized = normalizer.map(n =>
@@ -157,8 +159,11 @@ case class NetworkBuilder(
 
     // deltaFeed
     val key = s"${reverseLayer.head.id}.delta"
-    val deltaFeed = OperationBuilder(data =>
-      data + (key -> data("delta")))
+    val deltaFeed = OperationBuilder(data => {
+      val delta = data("delta")
+      Sentinel(delta, key)
+      data + (key -> delta)
+    })
 
     deltaFeed +: seq :+ layerBackward.last
   }
@@ -173,8 +178,8 @@ case class NetworkBuilder(
    *   - Performs a backward process generating "*.delta", "*.inputDelta" for each layer
    *   - Computes the "*.feedback" for each layer and the updated optimizer parms "*.m1 and "*.m2" if ADAM optimizer
    *   - Broadcasts the "*.delta" to "*.thetaDelta" for each layer
-   *   - Update the "*.trace", "*.feedback" for each layer by "noClearTrace", "*.thetaDelta", "*.feedb
-   *   - Update all "*.theta" parameters by "*.delta" and "*.updateTheta"
+   *   - Update the "*.trace", "*.feedback" for each layer by "noClearTrace", "*.thetaDelta", "*.feedback"
+   *   - Update all "*.theta" parameters by "*.delta" and "*.thetaDelta"
    */
   private def fitBuilder = {
     val gradient = layers.map(_.gradientBuilder(this))
@@ -188,7 +193,7 @@ case class NetworkBuilder(
     val brodcastDelta = layers.map(_.broadcastDeltaBuilder(this))
 
     val updated = layers.map(layer =>
-      OperationBuilder.thetaBuilder(layer.id))
+      OperationBuilder.thetaBuilder(layer.id, constrainAllParms))
 
     val all = (internalForwardBuilder ++
       gradient :+
@@ -222,6 +227,7 @@ object NetworkBuilder {
     optimizer = SGDOptimizer(alpha = DefaultAlpha),
     traceMode = NoneTraceMode,
     normalizer = None,
+    constrainAllParms = None,
     layers = Array(InputLayerBuilder("inputs", 0)))
 
   def fromJson(net: Json): NetworkBuilder = {
@@ -245,6 +251,10 @@ object NetworkBuilder {
       case Right(x) => LossFunction.fromJson(x)
       case _        => throw new IllegalArgumentException("missing lossFunction in network definition")
     }
+    val constrainAllParms = net.hcursor.get[Double]("constrainAllParms") match {
+      case Right(x) => x
+      case _        => throw new IllegalArgumentException("missing constrainAllParms in network definition")
+    }
     val layers = net.hcursor.get[Seq[Json]]("layers") match {
       case Right(x) => x.map(LayerBuilder.fromJson _)
       case _        => throw new IllegalArgumentException("missing layers in network definition")
@@ -255,6 +265,7 @@ object NetworkBuilder {
       setOptimizer(optimizer).
       setLossFunction(lossFunction).
       setInitializer(initializer).
+      setConstrainAllParms(constrainAllParms).
       addLayers(layers.toArray: _*)
   }
 }

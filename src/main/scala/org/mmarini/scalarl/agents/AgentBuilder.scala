@@ -41,24 +41,23 @@ import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
 import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.Agent
+import org.mmarini.scalarl.nn.AccumulateTraceMode
+import org.mmarini.scalarl.nn.ActivationLayerBuilder
+import org.mmarini.scalarl.nn.AdamOptimizer
+import org.mmarini.scalarl.nn.DenseLayerBuilder
+import org.mmarini.scalarl.nn.LayerBuilder
+import org.mmarini.scalarl.nn.NetworkBuilder
+import org.mmarini.scalarl.nn.NoneTraceMode
+import org.mmarini.scalarl.nn.Normalizer
+import org.mmarini.scalarl.nn.SGDOptimizer
+import org.mmarini.scalarl.nn.TanhActivationFunction
 import org.nd4j.linalg.activations.Activation
-import org.nd4j.linalg.api.rng.DefaultRandom
+import org.nd4j.linalg.api.rng.Random
+import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.learning.config.Adam
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 
 import com.typesafe.scalalogging.LazyLogging
-import org.nd4j.linalg.api.rng.Random
-import org.nd4j.linalg.factory.Nd4j
-import org.mmarini.scalarl.nn.NetworkBuilder
-import org.mmarini.scalarl.nn.SGDOptimizer
-import org.mmarini.scalarl.nn.AccumulateTraceMode
-import org.mmarini.scalarl.nn.DenseLayerBuilder
-import org.mmarini.scalarl.nn.ActivationLayerBuilder
-import org.mmarini.scalarl.nn.TanhActivationFunction
-import org.mmarini.scalarl.nn.LayerBuilder
-import org.mmarini.scalarl.nn.AdamOptimizer
-import org.mmarini.scalarl.nn.NoneTraceMode
-import org.mmarini.scalarl.nn.Normalizer
 
 object AgentType extends Enumeration {
   val QAgent, TDAAgent = Value
@@ -225,12 +224,13 @@ case class AgentBuilder(
       case "NONE"       => NoneTraceMode
       case s            => throw new IllegalArgumentException(s"""trace "${s}" invalid""")
     }
-
+    
     NetworkBuilder().
       setNoInputs(_numInputs).
       setOptimizer(optimizer).
       setTraceMode(trace).
       setNormalizer(Normalizer.minMax(_numInputs, 0, 1)).
+      setConstrainAllParms(_maxAbsParams).
       addLayers(withOutputs: _*)
   }
 

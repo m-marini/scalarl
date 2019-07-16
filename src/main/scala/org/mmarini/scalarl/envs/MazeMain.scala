@@ -43,6 +43,7 @@ import org.mmarini.scalarl.Step
 import org.mmarini.scalarl.agents.AgentBuilder
 import org.mmarini.scalarl.agents.PolicyFunction
 import org.mmarini.scalarl.agents.TDAgent
+import org.mmarini.scalarl.nn.Sentinel
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
 
@@ -217,6 +218,7 @@ object MazeMain extends LazyLogging {
   }
 
   def main(args: Array[String]) {
+    Sentinel.activate(true)
     val file = if (args.isEmpty) "maze.yaml" else args(0)
     logger.info("File {}", file)
     val jsonConf = Configuration.jsonFromFile(file)

@@ -57,7 +57,8 @@ object TanhActivationFunction extends ActivationFunction {
 
   def inputDelta(inputs: INDArray, outputs: INDArray, delta: INDArray): INDArray = {
     val grad = outputs.mul(outputs).subi(1.0).negi()
-    grad.muli(delta)
+    val inputDelta = grad.muli(delta)
+    inputDelta
   }
 
   lazy val toJson = Json.fromString("TANH")
