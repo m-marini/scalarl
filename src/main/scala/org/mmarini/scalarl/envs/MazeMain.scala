@@ -218,7 +218,6 @@ object MazeMain extends LazyLogging {
   }
 
   def main(args: Array[String]) {
-    Sentinel.activate(true)
     val file = if (args.isEmpty) "maze.yaml" else args(0)
     logger.info("File {}", file)
     val jsonConf = Configuration.jsonFromFile(file)
@@ -229,6 +228,8 @@ object MazeMain extends LazyLogging {
     val trace = jsonConf.hcursor.downField("session").get[String]("trace").toOption
     val saveModel = jsonConf.hcursor.downField("agent").get[String]("saveModel").toOption
     val maxEpisodeLength = jsonConf.hcursor.downField("session").get[Long]("maxEpisodeLength").getOrElse(Long.MaxValue)
+    val sentinel = jsonConf.hcursor.downField("session").get[Boolean]("sentinel").getOrElse(false)
+    Sentinel.activate(sentinel)
 
     (dump.toSeq ++ trace).foreach(new File(_).delete())
 

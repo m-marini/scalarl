@@ -224,7 +224,7 @@ case class AgentBuilder(
       case "NONE"       => NoneTraceMode
       case s            => throw new IllegalArgumentException(s"""trace "${s}" invalid""")
     }
-    
+
     NetworkBuilder().
       setNoInputs(_numInputs).
       setOptimizer(optimizer).
