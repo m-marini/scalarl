@@ -79,27 +79,31 @@ object AgentType extends Enumeration {
  *  @param _seed the seed of random generators
  *  @param _maxAbsParams max absolute value of parameters
  *  @param _maxAbsGradient max absolute value of gradients
+ *  @param _maxHistory batch history length
+ *  @param _numBatchIteration number of iteration batch
  *  @param _file the filename of model to load
  */
 case class AgentBuilder(
-  _agentType:      String         = "QAgent",
-  _numInputs:      Int            = 0,
-  _numActions:     Int            = 0,
-  _numHiddens:     Array[Int]     = Array(),
-  _epsilon:        Double         = 0.01,
-  _gamma:          Double         = 0.99,
-  _seed:           Long           = 0,
-  _kappa:          Double         = 1,
-  _optimizer:      String         = "SGD",
-  _learningRate:   Double         = 0.1,
-  _beta1:          Double         = 0.9,
-  _beta2:          Double         = 0.999,
-  _epsilonAdam:    Double         = 0.001,
-  _trace:          String         = "ACCUMULATE",
-  _lambda:         Double         = 0,
-  _maxAbsParams:   Double         = 0,
-  _maxAbsGradient: Double         = 0,
-  _file:           Option[String] = None
+  _agentType:         String         = "QAgent",
+  _numInputs:         Int            = 0,
+  _numActions:        Int            = 0,
+  _numHiddens:        Array[Int]     = Array(),
+  _epsilon:           Double         = 0.01,
+  _gamma:             Double         = 0.99,
+  _seed:              Long           = 0,
+  _kappa:             Double         = 1,
+  _optimizer:         String         = "SGD",
+  _learningRate:      Double         = 0.1,
+  _beta1:             Double         = 0.9,
+  _beta2:             Double         = 0.999,
+  _epsilonAdam:       Double         = 0.001,
+  _trace:             String         = "ACCUMULATE",
+  _lambda:            Double         = 0,
+  _maxAbsParams:      Double         = 0,
+  _maxAbsGradient:    Double         = 0,
+  _maxHistory:        Int            = 1,
+  _numBatchIteration: Int            = 1,
+  _file:              Option[String] = None
 //  _traceUpdater:   TraceUpdater    = AccumulateTraceUpdater
 ) extends LazyLogging {
 
@@ -115,6 +119,9 @@ case class AgentBuilder(
 
   /** Returns the builder with a number of hidden nodes in the third layer */
   def numHiddens(numHiddens: Int*): AgentBuilder = copy(_numHiddens = numHiddens.toArray)
+
+  /** Returns the builder with a number of hidden nodes in the third layer */
+  def numBatchIteration(numBatchIteration: Int): AgentBuilder = copy(_numBatchIteration = numBatchIteration)
 
   /** Returns the builder with epsilon value */
   def epsilon(epsilon: Double): AgentBuilder = copy(_epsilon = epsilon)
@@ -139,6 +146,9 @@ case class AgentBuilder(
 
   /** Returns the builder with a maximum absolute gradient value */
   def maxAbsParams(value: Double): AgentBuilder = copy(_maxAbsParams = value)
+
+  /** Returns the builder with a maximum history  */
+  def maxHistory(value: Int): AgentBuilder = copy(_maxHistory = value)
 
   /** Returns the builder with filename model to load */
   def file(file: String): AgentBuilder = copy(_file = Some(file))
@@ -192,6 +202,22 @@ case class AgentBuilder(
           gamma = _gamma,
           lambda = _lambda,
           kappa = _kappa)
+      case "TDABatchAgent" =>
+        val file = _file.map(f => new File(f)).filter(_.canRead())
+        //        val builder = file.map(loadTraceNet).getOrElse(buildTraceNet(random))
+        val builder = buildTraceNet()
+        val proc = builder.buildProcessor
+        val data = builder.buildData(random)
+        TDABatchAgent(
+          netProc = proc,
+          netData = data,
+          history = new AgentHistory(_maxHistory, Seq()),
+          random = random,
+          epsilon = _epsilon,
+          gamma = _gamma,
+          lambda = _lambda,
+          kappa = _kappa,
+          noBatchIter = _numBatchIteration)
       case s => throw new IllegalArgumentException(s"""agent type "${s}" invalid""")
     }
   }

@@ -83,6 +83,9 @@ object MazeMain extends LazyLogging {
     val maxAbsGrads = agentCursor.get[Double]("maxAbsGradients").toOption
     val maxAbsParams = agentCursor.get[Double]("maxAbsParameters").toOption
 
+    val maxHistory = agentCursor.get[Int]("maxHistory").toOption
+    val numBatchIteration = agentCursor.get[Int]("numBatchIteration").toOption
+
     val builder2 = seed.map(builder1.seed).getOrElse(builder1)
     val builder3 = numHiddens.map(builder2.numHiddens).getOrElse(builder2)
     val builder4 = epsilon.map(builder3.epsilon).getOrElse(builder3)
@@ -101,7 +104,10 @@ object MazeMain extends LazyLogging {
     val builder14 = maxAbsGrads.map(builder13.maxAbsGradient).getOrElse(builder13)
     val builder15 = maxAbsParams.map(builder14.maxAbsParams).getOrElse(builder14)
 
-    builder15
+    val builder16 = maxHistory.map(builder15.maxHistory).getOrElse(builder15)
+    val builder17 = numBatchIteration.map(builder16.numBatchIteration).getOrElse(builder16)
+
+    builder17
   }
 
   private def buildAgent(conf: Json): Agent = {
