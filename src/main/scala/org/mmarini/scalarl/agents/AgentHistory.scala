@@ -27,42 +27,31 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.nn
+package org.mmarini.scalarl.agents
 
-import org.yaml.snakeyaml.Yaml
-import io.circe.Json
-import org.nd4j.linalg.ops.transforms.Transforms
+import org.mmarini.scalarl.Action
+import org.mmarini.scalarl.Agent
+import org.mmarini.scalarl.Feedback
+import org.mmarini.scalarl.Observation
+import org.mmarini.scalarl.nn.NetworkData
+import org.mmarini.scalarl.nn.NetworkProcessor
 import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.api.rng.Random
+import org.nd4j.linalg.factory.Nd4j
+import org.mmarini.scalarl.nn.NetDataMaterializer
+import java.io.File
 
 /**
- * Defines the activation function used in activation layer
- *
- *  - [[TanhActivationFunction]] defines the activation function that apply tanh to all inputs
+ * The agent history stores the data collected during environment interaction
  */
-trait ActivationFunction {
+case class AgentHistory(
+  maxLength: Int,
+  data:      Seq[Feedback]) {
 
-  /** Returns the updater that creates the outputs */
-  def activate(inputs: INDArray): INDArray
-
-  /** Returns the updater that backwards the delta values to inputs */
-  def inputDelta(inputs: INDArray, outputs: INDArray, delta: INDArray): INDArray
-
-  def toJson: Json
-}
-
-object TanhActivationFunction extends ActivationFunction {
-
-  def activate(inputs: INDArray): INDArray =
-    Transforms.tanh(inputs)
-
-  def inputDelta(inputs: INDArray, outputs: INDArray, delta: INDArray): INDArray = {
-    val grad = outputs.mul(outputs).subi(1.0).negi()
-    val inputDelta = grad.muli(delta)
-    inputDelta
+  /** Append a feedback to history */
+  def :+(feedback: Feedback): AgentHistory = {
+    val newData = (if (data.length >= maxLength) data.tail else data) :+ feedback
+    copy(data = newData)
   }
 
-  lazy val toJson = Json.fromString("TANH")
 }
-//object HardTanhActivationFunctionBuilder extends ActivationFunctionBuilder
-//object SigmoidActivationFunctionBuilder extends ActivationFunctionBuilder
-//object ReluActivationFunctionBuilder extends ActivationFunctionBuilder

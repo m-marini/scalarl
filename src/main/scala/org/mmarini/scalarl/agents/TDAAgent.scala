@@ -38,6 +38,8 @@ import org.mmarini.scalarl.nn.NetworkProcessor
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
+import org.mmarini.scalarl.nn.NetDataMaterializer
+import java.io.File
 
 /**
  * The agent acting in the environment by QLearning T(0) algorithm.
@@ -114,6 +116,11 @@ case class TDAAgent(
       val newNetData = netProc.fit(netData, obs0.signals, a0, mask, noClearTrace)
       val loss = newNetData("loss").getDouble(0L)
 
+//      if (!new File("data.yaml").exists()) {
+//        NetDataMaterializer.write("data.yaml", newNetData)
+//        println("Dumped")
+//      }
+      
       (copy(netData = newNetData), loss)
   }
 

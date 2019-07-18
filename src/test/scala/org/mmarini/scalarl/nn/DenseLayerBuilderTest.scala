@@ -80,24 +80,6 @@ noOutputs: 2
     1.0, 1.0))
 
   describe("DenseLayer") {
-    it("should generate trace updater") {
-
-      Given("a dense layer builder with 2 outputs")
-      val layer = DenseLayerBuilder("l", noOutputs = 2)
-
-      And("a inputs layer data with 3 random inputs")
-      val inputsData = initialLayerData + ("noClearTrace" -> Nd4j.ones(1))
-
-      When("build a clear trace updater")
-      val updater = layer.clearTraceBuilder(mockTopology).build
-
-      And("apply to initial layer")
-      val newData = updater(inputsData)
-
-      Then("should result the trace parameter with 8 zeros")
-      newData.get("l.trace") should contain(Nd4j.zeros(8L))
-    }
-
     it("should generate forward updater") {
 
       Given("a dense layer builder with 2 outputs")

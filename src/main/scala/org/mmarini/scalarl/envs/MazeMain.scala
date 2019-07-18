@@ -43,6 +43,7 @@ import org.mmarini.scalarl.Step
 import org.mmarini.scalarl.agents.AgentBuilder
 import org.mmarini.scalarl.agents.PolicyFunction
 import org.mmarini.scalarl.agents.TDAgent
+import org.mmarini.scalarl.nn.Sentinel
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
 
@@ -82,6 +83,9 @@ object MazeMain extends LazyLogging {
     val maxAbsGrads = agentCursor.get[Double]("maxAbsGradients").toOption
     val maxAbsParams = agentCursor.get[Double]("maxAbsParameters").toOption
 
+    val maxHistory = agentCursor.get[Int]("maxHistory").toOption
+    val numBatchIteration = agentCursor.get[Int]("numBatchIteration").toOption
+
     val builder2 = seed.map(builder1.seed).getOrElse(builder1)
     val builder3 = numHiddens.map(builder2.numHiddens).getOrElse(builder2)
     val builder4 = epsilon.map(builder3.epsilon).getOrElse(builder3)
@@ -100,7 +104,10 @@ object MazeMain extends LazyLogging {
     val builder14 = maxAbsGrads.map(builder13.maxAbsGradient).getOrElse(builder13)
     val builder15 = maxAbsParams.map(builder14.maxAbsParams).getOrElse(builder14)
 
-    builder15
+    val builder16 = maxHistory.map(builder15.maxHistory).getOrElse(builder15)
+    val builder17 = numBatchIteration.map(builder16.numBatchIteration).getOrElse(builder16)
+
+    builder17
   }
 
   private def buildAgent(conf: Json): Agent = {
@@ -217,7 +224,9 @@ object MazeMain extends LazyLogging {
   }
 
   def main(args: Array[String]) {
-    val jsonConf = Configuration.jsonFromFile(if (args.isEmpty) "maze.yaml" else args(0))
+    val file = if (args.isEmpty) "maze.yaml" else args(0)
+    logger.info("File {}", file)
+    val jsonConf = Configuration.jsonFromFile(file)
     val numSteps = jsonConf.hcursor.downField("session").get[Int]("numSteps").right.get
     val sync = jsonConf.hcursor.downField("session").get[Long]("sync").right.get
     val mode = jsonConf.hcursor.downField("session").get[String]("mode").right.get
@@ -225,6 +234,8 @@ object MazeMain extends LazyLogging {
     val trace = jsonConf.hcursor.downField("session").get[String]("trace").toOption
     val saveModel = jsonConf.hcursor.downField("agent").get[String]("saveModel").toOption
     val maxEpisodeLength = jsonConf.hcursor.downField("session").get[Long]("maxEpisodeLength").getOrElse(Long.MaxValue)
+    val sentinel = jsonConf.hcursor.downField("session").get[Boolean]("sentinel").getOrElse(false)
+    Sentinel.activate(sentinel)
 
     (dump.toSeq ++ trace).foreach(new File(_).delete())
 

@@ -34,6 +34,7 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
 import org.scalatest.Matchers
+import scala.math.tanh
 
 class NetworkBuilderTest extends FunSpec with GivenWhenThen with Matchers {
 
@@ -155,7 +156,7 @@ class NetworkBuilderTest extends FunSpec with GivenWhenThen with Matchers {
       builder2 shouldBe builder
     }
 
-    it("should fit a linear regressio") {
+    it("should fit a linear regression") {
       Given("a NetworkBuilder with 3 input and 2 output")
       val builder = NetworkBuilder().
         setNoInputs(3).
@@ -237,6 +238,166 @@ class NetworkBuilderTest extends FunSpec with GivenWhenThen with Matchers {
         0.03, -0.02,
         0.8 * 0.1, 0.0))
       fit.get("0.theta") should contain(newTheta)
+    }
+
+    it("should fit a non linear regression") {
+      Given("a NetworkBuilder with 3 input and 2 output")
+      val builder = NetworkBuilder().
+        setNoInputs(3).
+        setOptimizer(SGDOptimizer(0.1)).
+        setTraceMode(NoneTraceMode).
+        addLayers(
+          DenseLayerBuilder("0", 2),
+          ActivationLayerBuilder("1", TanhActivationFunction),
+          DenseLayerBuilder("2", 2))
+
+      And("inputs")
+      val inputs = Nd4j.create(Array(1.0, -1.0, -1.0))
+
+      And("labels")
+      val labels = Nd4j.create(Array(1.0, -1.0))
+
+      And("mask")
+      val mask = Nd4j.create(Array(1.0, 0.0))
+
+      And("no clear trace")
+      val noClearTrace = Nd4j.zeros(1)
+
+      And("theta0")
+      val theta0 = Nd4j.create(Array(
+        0.2, -0.03,
+        -1.0, -0.45,
+        0.03, -0.02,
+        0.0, 0.0))
+
+      And("theta2")
+      val theta2 = Nd4j.create(Array(
+        0.1, -0.13,
+        -0.8, 0.5,
+        0.0, 0.0))
+
+      And("a random generator")
+      val random = Nd4j.getRandomFactory().getNewRandomInstance(1234)
+
+      And("initial data with theta")
+      val data = builder.buildData(random) +
+        ("0.theta" -> theta0) +
+        ("2.theta" -> theta2)
+
+      When("fit")
+      val fit = builder.buildProcessor.fit(data, inputs, labels, mask, noClearTrace);
+
+      Then("should result output0")
+      val outputs0 = Nd4j.create(Array(1.17, 0.44))
+      fit.get("0.outputs") should contain(outputs0)
+
+      And("should result output1")
+      //      val outputs1 = Nd4j.create(Array(tanh(1.17), tanh(0.44)))
+      val outputs1 = Nd4j.create(Array(0.82427, 0.41364))
+      fit.get("1.outputs") should contain(outputs1)
+
+      And("should result output2")
+      val outputs2 = Nd4j.create(Array(-0.248488, 0.099667))
+      fit.get("2.outputs") should contain(outputs2)
+
+      And("should result delta and 2.delta")
+      val delta = Nd4j.create(Array(1.2485, 0.0))
+      fit.get("delta") should contain(delta)
+      fit.get("2.delta") should contain(delta)
+
+      And("should result 1.delta")
+      val delta1 = Nd4j.create(Array(0.12485, -0.99879))
+      fit.get("1.delta") should contain(delta1)
+
+      And("should result 0.delta")
+      val delta0 = Nd4j.create(Array(0.040023, -0.827896))
+      fit.get("0.delta") should contain(delta0)
+
+      And("should result gradient.2")
+      val gradient2 = Nd4j.create(Array(
+        0.82427, 0.82427,
+        0.41364, 0.41364,
+        1.0, 1.0))
+      fit.get("2.gradient") should contain(gradient2)
+
+      And("should result gradient.0")
+      val gradient0 = Nd4j.create(Array(
+        1.0, 1.0,
+        -1.0, -1.0,
+        -1.0, -1.0,
+        1.0, 1.0))
+      fit.get("0.gradient") should contain(gradient0)
+
+      And("should result feedback2")
+      val feedback2 = Nd4j.create(Array(
+        0.082427, 0.082427,
+        0.041364, 0.041364,
+        0.1, 0.1))
+      fit.get("2.feedback") should contain(feedback2)
+
+      And("should result feedback0")
+      val feedback0 = Nd4j.create(Array(
+        0.1, 0.1,
+        -0.1, -0.1,
+        -0.1, -0.1,
+        0.1, 0.1))
+      fit.get("0.feedback") should contain(feedback0)
+    }
+
+    it("should fit better a non linear regression") {
+      Given("a NetworkBuilder with 3 input and 2 output")
+      val builder = NetworkBuilder().
+        setNoInputs(3).
+        setOptimizer(SGDOptimizer(0.1)).
+        setTraceMode(NoneTraceMode).
+        addLayers(
+          DenseLayerBuilder("0", 2),
+          ActivationLayerBuilder("1", TanhActivationFunction),
+          DenseLayerBuilder("2", 2))
+
+      And("inputs")
+      val inputs = Nd4j.create(Array(1.0, -1.0, -1.0))
+
+      And("labels")
+      val labels = Nd4j.create(Array(1.0, -1.0))
+
+      And("mask")
+      val mask = Nd4j.create(Array(1.0, 0.0))
+
+      And("no clear trace")
+      val noClearTrace = Nd4j.zeros(1)
+
+      And("theta0")
+      val theta0 = Nd4j.create(Array(
+        0.2, -0.03,
+        -1.0, -0.45,
+        0.03, -0.02,
+        0.0, 0.0))
+
+      And("theta2")
+      val theta2 = Nd4j.create(Array(
+        0.1, -0.13,
+        -0.8, 0.5,
+        0.0, 0.0))
+
+      And("a random generator")
+      val random = Nd4j.getRandomFactory().getNewRandomInstance(1234)
+
+      And("initial data with theta")
+      val data = builder.buildData(random) +
+        ("0.theta" -> theta0) +
+        ("2.theta" -> theta2)
+
+      When("fit")
+      val fit = builder.buildProcessor.fit(data, inputs, labels, mask, noClearTrace);
+
+      And("fit again")
+      val fit2 = builder.buildProcessor.fit(fit, inputs, labels, mask, noClearTrace);
+
+      Then("should result a loss function less then previous")
+      val loss0 = fit("loss").getDouble(0L)
+      val loss1 = fit2("loss").getDouble(0L)
+      loss1 should be < loss0
     }
   }
 }

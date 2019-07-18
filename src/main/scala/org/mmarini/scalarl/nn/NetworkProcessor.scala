@@ -38,8 +38,12 @@ class NetworkProcessor(
   extends Network {
 
   /** Returns the data with computed outputs */
-  def forward(data: NetworkData, inputs: INDArray): INDArray = _forward(data +
-    ("inputs" -> inputs))("outputs")
+  def forward(data: NetworkData, inputs: INDArray): INDArray = {
+    Sentinel(inputs, "inputs are numbers")
+
+    _forward(data +
+      ("inputs" -> inputs))("outputs")
+  }
 
   /** Returns the data with changed parameters to fit the labels */
   def fit(
@@ -47,9 +51,15 @@ class NetworkProcessor(
     inputs:       INDArray,
     labels:       INDArray,
     mask:         INDArray,
-    noClearTrace: INDArray): NetworkData = _fit(data +
-    ("inputs" -> inputs) +
-    ("labels" -> labels) +
-    ("mask" -> mask) +
-    ("noClearTrace" -> noClearTrace))
+    noClearTrace: INDArray): NetworkData = {
+    Sentinel(inputs, "inputs")
+    Sentinel(labels, "labels")
+    Sentinel(mask, "mask")
+
+    _fit(data +
+      ("inputs" -> inputs) +
+      ("labels" -> labels) +
+      ("mask" -> mask) +
+      ("noClearTrace" -> noClearTrace))
+  }
 }

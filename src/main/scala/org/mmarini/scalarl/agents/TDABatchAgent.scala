@@ -29,29 +29,17 @@
 
 package org.mmarini.scalarl.agents
 
-import java.io.File
-
-import org.deeplearning4j.nn.api.OptimizationAlgorithm
-import org.deeplearning4j.nn.conf.GradientNormalization
-import org.deeplearning4j.nn.conf.NeuralNetConfiguration
-import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
-import org.deeplearning4j.nn.conf.layers.DenseLayer
-import org.deeplearning4j.nn.conf.layers.OutputLayer
-import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
-import org.deeplearning4j.nn.weights.WeightInit
-import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.Action
 import org.mmarini.scalarl.Agent
 import org.mmarini.scalarl.Feedback
 import org.mmarini.scalarl.Observation
-import org.nd4j.linalg.activations.Activation
+import org.mmarini.scalarl.nn.NetworkData
+import org.mmarini.scalarl.nn.NetworkProcessor
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
-import org.nd4j.linalg.learning.config.Adam
-import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
-
-import com.typesafe.scalalogging.LazyLogging
 import org.nd4j.linalg.factory.Nd4j
+import org.mmarini.scalarl.nn.NetDataMaterializer
+import java.io.File
 
 /**
  * The agent acting in the environment by QLearning T(0) algorithm.
@@ -62,13 +50,16 @@ import org.nd4j.linalg.factory.Nd4j
  *  Updates its strategy policy to optimize the return value (discount sum of rewards)
  *  and the observation of resulting environment
  */
-case class TDAAgent2(
-  net:     TraceNetwork,
-  random:  Random,
-  epsilon: Double,
-  gamma:   Double,
-  lambda:  Double,
-  kappa:   Double) extends TDAgent {
+case class TDABatchAgent(
+  netProc:     NetworkProcessor,
+  netData:     NetworkData,
+  history:     AgentHistory,
+  random:      Random,
+  epsilon:     Double,
+  gamma:       Double,
+  lambda:      Double,
+  kappa:       Double,
+  noBatchIter: Int) extends TDAgent {
 
   /** Returns the estimated state value for an observation */
   def v(observation: Observation): Double =
@@ -79,10 +70,8 @@ case class TDAAgent2(
    *
    * @param observationt the observation
    */
-  override def policy(observation: Observation): INDArray = {
-    val out = net.forward(observation.signals)
-    out.last
-  }
+  override def policy(observation: Observation): INDArray =
+    netProc.forward(netData, observation.signals)
 
   /**
    * Chooses the action for an observation
@@ -113,28 +102,70 @@ case class TDAAgent2(
    *
    *  @param feedback the [[Feedback]] from environment after a state transition
    */
-  override def fit(feedback: Feedback): (Agent, Double) = feedback match {
-    case Feedback(obs0, action, reward, obs1, endUp) =>
-      val v0 = v(obs0)
-      val v1 = if (endUp) 0 else v(obs1)
+  override def fit(feedback: Feedback): (Agent, Double) = {
+    val newHistory = history :+ feedback
 
-      val a0 = policy(obs0)
-      a0.putScalar(action, v0 + (reward + gamma * v1 - v0) / kappa)
-
-      val mask = Nd4j.zeros(a0.shape(): _*)
-      mask.putScalar(action, 1)
-
-      val aStar = greedyAction(obs0)
-      val net1 = if (action == aStar) net else net.clearTraces()
-      val (newNet, error) = net1.backward(obs0.signals, a0, mask)
-
-      (copy(net = newNet), error)
+    val (inputs, labels, mask, noClearTrace) = prepareData(newHistory)
+    val n = inputs.shape()(0)
+    val newNetData = (0 until noBatchIter).foldLeft(netData)((data, _) =>
+      (0L until n).foldLeft(netData)((data, i) =>
+        netProc.fit(data, inputs.getRow(i), labels.getRow(i), mask.getRow(i), noClearTrace.getRow(i))))
+    val loss = newNetData("loss").getDouble(0L)
+    (
+      copy(
+        netData = newNetData,
+        history = newHistory),
+      loss)
   }
 
-  override def writeModel(file: String): TDAAgent2 = {
-    TraceModelSerializer.writeModel(net, file)
-    this
+  /**
+   * Returns inputs, labels, mask, noClearTrace data to fit the network from history
+   */
+  def prepareData(history: AgentHistory): (INDArray, INDArray, INDArray, INDArray) = {
+    val historyData = history.data
+    val inputsAry = historyData.map(_.s0.signals).toArray
+    val inputs = Nd4j.vstack(inputsAry: _*)
+
+    val noClearTraceSeq = if (historyData.length > 1) {
+      0.0 +: historyData.tail.map {
+        case Feedback(obs0, action, _, _, _) =>
+          val aStar = greedyAction(obs0)
+          val noClearTrace = if (action == aStar) 1.0 else 0.0
+          noClearTrace
+      }
+    } else {
+      historyData.map {
+        case Feedback(obs0, action, _, _, _) =>
+          val aStar = greedyAction(obs0)
+          val noClearTrace = if (action == aStar) 1.0 else 0.0
+          noClearTrace
+      }
+    }
+    val noClearTrace = Nd4j.create(noClearTraceSeq.toArray).transpose()
+
+    val (labelsSeq, maskSeq) = (historyData.map {
+      case Feedback(obs0, action, reward, obs1, endUp) =>
+        val v0 = v(obs0)
+        val v1 = if (endUp) 0 else v(obs1)
+
+        val a0 = policy(obs0)
+        a0.putScalar(action, v0 + (reward + gamma * v1 - v0) / kappa)
+
+        val mask = Nd4j.zeros(a0.shape(): _*)
+        mask.putScalar(action, 1)
+        (a0, mask)
+    }).unzip
+
+    val labels = Nd4j.vstack(labelsSeq.toArray: _*)
+    val mask = Nd4j.vstack(maskSeq.toArray: _*)
+    (inputs, labels, mask, noClearTrace)
   }
 
-  override def reset: TDAAgent2 = copy(net = net.clearTraces())
+  override def writeModel(file: String): TDABatchAgent = {
+    //    TraceModelSerializer.writeModel(net, file)
+    //    this
+    ???
+  }
+
+  override def reset: TDABatchAgent = this
 }

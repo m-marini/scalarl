@@ -1,9 +1,9 @@
-function [N, M, AF, GF] = plotCoverage(FNAME, H=10, W=10)
+function [N, M, AF, GF] = plotCoverage(X, H=10, W=10)
 ## -*- texinfo -*-
 ## @deftypefn  {Function File} [ @var{N} @var{M} @var{AF} @var{GF} ] = plotCoverage (@var{FNAME}, @var(H), @var(W))
 ## Plot the number of step in the maze
 ## 
-## @var{FNAME} is the trace filename
+## @var{X} is the trace data
 ##
 ## @var{H} is the maze height
 ##
@@ -18,6 +18,6 @@ function [N, M, AF, GF] = plotCoverage(FNAME, H=10, W=10)
 ## @var{GF} is a matrix with the max frequency of greedy action,
 ## @end deftypefn
 
- [N, M, AF, GF] = policyStats(csvread(FNAME), H, W);
+ [N, M, AF, GF] = policyStats(X, H, W);
  surface(N);
 endfunction

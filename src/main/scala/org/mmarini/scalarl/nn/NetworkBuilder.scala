@@ -34,32 +34,43 @@ import org.nd4j.linalg.api.rng.Random
 
 import io.circe.Json
 
+/** Allows to navigate throw the topology of network */
 trait NetworkTopology {
+
+  /** Returns the next layer of a given layer */
   def nextLayer(layer: LayerBuilder): Option[LayerBuilder]
+
+  /** Returns the previous layer of a given layer */
   def prevLayer(layer: LayerBuilder): Option[LayerBuilder]
 }
 
+/** Builders of network */
 case class NetworkBuilder(
-  lossFunction: LossFunction,
-  initializer:  Initializer,
-  optimizer:    Optimizer,
-  traceMode:    TraceMode,
-  layers:       Seq[LayerBuilder]) extends NetworkTopology {
+  lossFunction:      LossFunction,
+  initializer:       Initializer,
+  optimizer:         Optimizer,
+  traceMode:         TraceMode,
+  normalizer:        Option[Normalizer],
+  constrainAllParms: Option[Double],
+  layers:            Seq[LayerBuilder]) extends NetworkTopology {
 
-  def nextLayer(layer: LayerBuilder): Option[LayerBuilder] = {
+  override def nextLayer(layer: LayerBuilder): Option[LayerBuilder] = {
     val idx = layers.indexOf(layer)
     if (idx >= 0 && idx + 1 < layers.length) Some(layers(idx + 1)) else None
   }
 
-  def prevLayer(layer: LayerBuilder): Option[LayerBuilder] = {
+  override def prevLayer(layer: LayerBuilder): Option[LayerBuilder] = {
     val idx = layers.indexOf(layer)
     if (idx >= 1) Some(layers(idx - 1)) else None
   }
 
+  /** Returns the network builder with a given number of inputs */
   def setNoInputs(noInputs: Int): NetworkBuilder = {
     val newLayers = InputLayerBuilder("inputs", noInputs) +: layers.tail
     copy(layers = newLayers)
   }
+
+  def setNormalizer(norm: Normalizer): NetworkBuilder = copy(normalizer = Some(norm))
 
   def noInputs: Int = layers.head.asInstanceOf[InputLayerBuilder].noInputs
 
@@ -67,6 +78,7 @@ case class NetworkBuilder(
   def setInitializer(initializer: Initializer): NetworkBuilder = copy(initializer = initializer)
   def setOptimizer(optimizer: Optimizer): NetworkBuilder = copy(optimizer = optimizer)
   def setTraceMode(traceMode: TraceMode): NetworkBuilder = copy(traceMode = traceMode)
+  def setConstrainAllParms(constrainAllParms: Double) = copy(constrainAllParms = Some(constrainAllParms))
   def addLayers(layers: LayerBuilder*): NetworkBuilder = copy(layers = this.layers ++ layers)
 
   lazy val toJson: Json = Json.obj(
@@ -77,7 +89,18 @@ case class NetworkBuilder(
     "traceMode" -> traceMode.toJson,
     "layers" -> Json.arr(layers.tail.map(_.toJson).toArray: _*))
 
+  /**
+   * Returns the sequence of operation builder to perform the forward process.
+   *   - First operation creates the "normalized" input from "inputs"
+   *   - Then applies the forward process for each layer copying the outputs to the next inputs of each layer
+   *   - Finally copies the output of last layer to the "output" container
+   */
   private def internalForwardBuilder = {
+    val normalized = normalizer.map(n =>
+      OperationBuilder(data =>
+        data + ("normalized" -> n.normalize(data("inputs"))))).getOrElse(
+      OperationBuilder(data =>
+        data + ("normalized" -> data("inputs"))))
     // Forwards updater of each layer
     val layerForwards = layers.map(layer =>
       layer.forwardBuilder(this))
@@ -100,7 +123,7 @@ case class NetworkBuilder(
     val outputExractor = OperationBuilder(data =>
       data + ("outputs" -> data(key)))
 
-    seq :+ layerForwards.last :+ outputExractor
+    normalized +: seq :+ layerForwards.last :+ outputExractor
   }
 
   private def forwardBuilder =
@@ -108,6 +131,12 @@ case class NetworkBuilder(
       foldLeft(OperationBuilder())((acc, builder) =>
         acc.then(builder))
 
+  /**
+   * Returns the sequence of backward process operations
+   *   - Copies the "delta" into the "*.delta" of last layer
+   *   - Computes the inputDelta from "*.inputs", "*.outputs", "*.delta" for each layer
+   *     from last to first backwarding the resulting "*.inputDelta" as "*.delta" of previous layer
+   */
   private def backwardBuilder = {
     val reverseLayer = layers.reverse
     val layerBackward = reverseLayer.map(layer =>
@@ -130,25 +159,41 @@ case class NetworkBuilder(
 
     // deltaFeed
     val key = s"${reverseLayer.head.id}.delta"
-    val deltaFeed = OperationBuilder(data =>
-      data + (key -> data("delta")))
+    val deltaFeed = OperationBuilder(data => {
+      val delta = data("delta")
+      Sentinel(delta, key)
+      data + (key -> delta)
+    })
 
     deltaFeed +: seq :+ layerBackward.last
   }
 
+  /**
+   * Returns the fit process operations builder.
+   *   - Performs a forward process generating "normalized", "outputs", "*.inputs", "*.outputs", "outputs"
+   *     for each layer
+   *   - Computes the "*.gradient" for each layer
+   *   - Computes the "delta" by loss function
+   *   - Computes the "loss" value
+   *   - Performs a backward process generating "*.delta", "*.inputDelta" for each layer
+   *   - Computes the "*.feedback" for each layer and the updated optimizer parms "*.m1 and "*.m2" if ADAM optimizer
+   *   - Broadcasts the "*.delta" to "*.thetaDelta" for each layer
+   *   - Update the "*.trace", "*.feedback" for each layer by "noClearTrace", "*.thetaDelta", "*.feedback"
+   *   - Update all "*.theta" parameters by "*.delta" and "*.thetaDelta"
+   */
   private def fitBuilder = {
     val gradient = layers.map(_.gradientBuilder(this))
 
     val optim = layers.map(layer =>
       optimizer.optimizeBuilder(layer.id))
 
-    val trace = layers.map(layer =>
-      layer.clearTraceBuilder(this))
+    val updateTrace = layers.map(layer =>
+      traceMode.traceBuilder(layer.id))
 
     val brodcastDelta = layers.map(_.broadcastDeltaBuilder(this))
 
     val updated = layers.map(layer =>
-      OperationBuilder.thetaBuilder(layer.id))
+      OperationBuilder.thetaBuilder(layer.id, constrainAllParms))
 
     val all = (internalForwardBuilder ++
       gradient :+
@@ -156,8 +201,8 @@ case class NetworkBuilder(
       lossFunction.lossBuilder) ++
       backwardBuilder ++
       optim ++
-      trace ++
       brodcastDelta ++
+      updateTrace ++
       updated
 
     all.foldLeft(OperationBuilder())((acc, builder) =>
@@ -181,6 +226,8 @@ object NetworkBuilder {
     initializer = XavierInitializer,
     optimizer = SGDOptimizer(alpha = DefaultAlpha),
     traceMode = NoneTraceMode,
+    normalizer = None,
+    constrainAllParms = None,
     layers = Array(InputLayerBuilder("inputs", 0)))
 
   def fromJson(net: Json): NetworkBuilder = {
@@ -204,6 +251,10 @@ object NetworkBuilder {
       case Right(x) => LossFunction.fromJson(x)
       case _        => throw new IllegalArgumentException("missing lossFunction in network definition")
     }
+    val constrainAllParms = net.hcursor.get[Double]("constrainAllParms") match {
+      case Right(x) => x
+      case _        => throw new IllegalArgumentException("missing constrainAllParms in network definition")
+    }
     val layers = net.hcursor.get[Seq[Json]]("layers") match {
       case Right(x) => x.map(LayerBuilder.fromJson _)
       case _        => throw new IllegalArgumentException("missing layers in network definition")
@@ -214,6 +265,7 @@ object NetworkBuilder {
       setOptimizer(optimizer).
       setLossFunction(lossFunction).
       setInitializer(initializer).
+      setConstrainAllParms(constrainAllParms).
       addLayers(layers.toArray: _*)
   }
 }

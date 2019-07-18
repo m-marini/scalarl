@@ -29,6 +29,9 @@
 
 package org.mmarini.scalarl.nn
 
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.ops.transforms.Transforms
+
 /**
  * Computes the outputs for the inputs and change data parameter to fit the labels
  */
@@ -42,17 +45,25 @@ object OperationBuilder {
   def apply(f: Operation): OperationBuilder = new MonoOperationBuilder(f)
   def apply(): OperationBuilder = IdentityBuilder
 
-  def thetaBuilder(key: String): OperationBuilder = {
+  def thetaBuilder(key: String, constrainAllParms: Option[Double]): OperationBuilder = {
     val feedbackKey = s"${key}.feedback"
     val thetaKey = s"${key}.theta"
     val thetaDeltaKey = s"${key}.thetaDelta"
+    val constrain = constrainAllParms.map(max =>
+      (data: INDArray) =>
+        Transforms.hardTanh(data.div(max)).mul(max)).
+      getOrElse((data: INDArray) => data)
 
     new MonoOperationBuilder(data =>
       data.get(feedbackKey).map(feedback => {
         val theta = data(thetaKey)
         val thetaDelta = data(thetaDeltaKey)
-        val newTheta = theta.add(feedback.mul(thetaDelta))
-        data + (thetaKey -> newTheta)
+        val newTheta = constrain(theta.add(feedback.mul(thetaDelta)))
+        val constraint = constrain(newTheta)
+
+        Sentinel(constraint, thetaKey)
+
+        data + (thetaKey -> constraint)
       }).getOrElse(data))
   }
 }

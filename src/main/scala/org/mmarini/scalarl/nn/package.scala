@@ -37,4 +37,25 @@ import org.nd4j.linalg.api.ndarray.INDArray
 package object nn {
   type NetworkData = Map[String, INDArray]
   type Operation = NetworkData => NetworkData
+
+  object Sentinel {
+    private var active: Boolean = false
+
+    def apply(data: => INDArray, id: => String) {
+      if (active) {
+        val areNumbers = data.ravel().toDoubleVector().forall(!_.isNaN)
+        if (!areNumbers) {
+          require(areNumbers, s"${id} are numbers ${data}")
+        }
+        val areFinite = data.ravel().toDoubleVector().forall(!_.isInfinity)
+        if (!areFinite) {
+          require(areFinite, s"${id} are finite ${data}")
+        }
+      }
+    }
+
+    def activate(activate: Boolean) {
+      active = activate
+    }
+  }
 }

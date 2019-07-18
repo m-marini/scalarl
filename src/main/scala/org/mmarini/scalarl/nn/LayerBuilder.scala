@@ -53,9 +53,6 @@ trait LayerBuilder {
   /** Returns the number of outputs */
   def noOutputs(topology: NetworkTopology): Int
 
-  /** Returns the updater that clears the eligibility traces of the layer */
-  def clearTraceBuilder(topology: NetworkTopology): OperationBuilder
-
   /** Returns the updater that forwards the inputs */
   def forwardBuilder(topology: NetworkTopology): OperationBuilder
 
@@ -82,15 +79,14 @@ trait KeyBuilder {
 }
 
 case class InputLayerBuilder(id: String, noInputs: Int) extends LayerBuilder with KeyBuilder {
+  require(noInputs >= 0, s"noInputs ${noInputs} >= 0")
 
   override def noInputs(topology: NetworkTopology): Int = noInputs
 
   override def noOutputs(topology: NetworkTopology): Int = noInputs
 
-  override def clearTraceBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder()
-
   override def forwardBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder(data =>
-    data + (key("outputs") -> data("inputs")))
+    data + (key("outputs") -> data("normalized")))
 
   override def gradientBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder()
 
@@ -111,8 +107,6 @@ case class InputLayerBuilder(id: String, noInputs: Int) extends LayerBuilder wit
 case class ActivationLayerBuilder(id: String, activation: ActivationFunction) extends LayerBuilder with KeyBuilder {
   def noOutputs(topology: NetworkTopology): Int = noInputs(topology)
 
-  def clearTraceBuilder(context: NetworkTopology): OperationBuilder = OperationBuilder()
-
   def gradientBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder()
 
   override def forwardBuilder(context: NetworkTopology): OperationBuilder = OperationBuilder(data => {
@@ -125,7 +119,14 @@ case class ActivationLayerBuilder(id: String, activation: ActivationFunction) ex
     val inputs = data(key("inputs"))
     val outputs = data(key("outputs"))
     val delta = data(key("delta"))
+    Sentinel(inputs, key("inputs"))
+    Sentinel(outputs, key("outputs"))
+    Sentinel(delta, key("delta"))
     val inputDelta = activation.inputDelta(inputs, outputs, delta)
+    // Sentinel
+    if (!inputDelta.ravel().toDoubleVector().forall(!_.isNaN())) {
+      Sentinel(inputDelta, key("inputDelta"))
+    }
     data + (key("inputDelta") -> inputDelta)
   })
 
@@ -143,16 +144,9 @@ case class ActivationLayerBuilder(id: String, activation: ActivationFunction) ex
  * Defines the activation layer architecture and build the layer functional updater such that for clear trace.
  */
 case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder with KeyBuilder {
-  def noOutputs(topology: NetworkTopology): Int = noOutputs
+  require(noOutputs > 0)
 
-  def clearTraceBuilder(context: NetworkTopology): OperationBuilder = {
-    OperationBuilder(data => {
-      val trace = data(key("trace"))
-      val noClearTrace = data("noClearTrace")
-      val newTrace = trace.mul(noClearTrace)
-      data + (key("trace") -> newTrace)
-    })
-  }
+  def noOutputs(topology: NetworkTopology): Int = noOutputs
 
   /** Returns the converter og thetas to weights */
   def weights(topology: NetworkTopology): INDArray => INDArray = {
@@ -179,6 +173,9 @@ case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder wi
       val w = fw(theta)
       val b = fb(theta)
       val y = inputs.mmul(w).addi(b)
+
+      Sentinel(y, "outputs")
+
       data + (key("outputs") -> y)
     })
   }
@@ -219,6 +216,9 @@ case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder wi
       val wDelta = delta.broadcast(n, m)
       val bDelta = delta
       val thetaDelta = Nd4j.hstack(wDelta.ravel(), bDelta)
+
+      Sentinel(thetaDelta, key("thetaDelta"))
+
       data + (key("thetaDelta") -> thetaDelta)
     })
   }
