@@ -1,2 +1,3 @@
 #/bin/bash
-sbt stageexit
+sbt stage
+exit

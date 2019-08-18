@@ -33,16 +33,16 @@ import org.nd4j.linalg.api.ndarray.INDArray
 
 /** The observation of the environment status. */
 trait Observation {
+  
+  /** Returns true if the observation is a final state */
+  def endUp: Boolean
 
   /** Returns the tensor of status of environment */
-  def observation: INDArray
+  def signals: INDArray
 
   /**
    * Returns the valid actions vector.
    * The vector contains the value 1 at valid action indices
    */
-  def actions: INDArray
-
-  /** Returns the signal vector. */
-  def signals: INDArray
+  def actions: ActionMask
 }

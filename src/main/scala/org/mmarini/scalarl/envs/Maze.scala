@@ -31,6 +31,7 @@ package org.mmarini.scalarl.envs
 
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
+import org.mmarini.scalarl.ActionChannelConfig
 
 /**
  * The Maze with walls, initial subject position and target position
@@ -82,6 +83,8 @@ case class Maze(
 
 /** Factory for [[Maze]] instances */
 object Maze {
+
+  val MazeActionChannelCanfig: ActionChannelConfig = Array(8)
 
   /** Creates a [[Maze]] by parsing a list of lines representing the environment */
   def fromStrings(lines: Seq[String]): Maze = {

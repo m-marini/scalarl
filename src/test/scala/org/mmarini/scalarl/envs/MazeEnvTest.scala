@@ -33,8 +33,15 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import org.scalatest.prop.PropertyChecks
+import org.mmarini.scalarl.ChannelAction
 
 class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
+
+  def action(idx: Int): ChannelAction = {
+    val action = Nd4j.zeros(8)
+    action.putScalar(idx, 1)
+    action
+  }
 
   describe("Given an initial maze environment") {
     val data = List(
@@ -49,15 +56,9 @@ class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
       val (env0, obs) = env.reset()
 
       describe("Then observation") {
-        val observation = obs.observation
+        val observation = obs.signals
         it("should be 1 at subject position=0,4,5, index=40+5=45") {
           observation.getInt(45) should equal(1)
-        }
-        it("should be 1 at wall position=1,1,6, index=50+10+6=66") {
-          observation.getInt(66) should equal(1)
-        }
-        it("should be 1 at wall position=1,3,2, index=50+30+2=82") {
-          observation.getInt(82) should equal(1)
         }
       }
       describe("And valid actions") {
@@ -70,21 +71,15 @@ class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
     }
 
     describe("When MazeEnv.step north west") {
-      val (env1, obs, reward, endUp) = env.step(7)
+      val (env1, obs, reward) = env.step(action(7))
 
       describe("Then observation") {
-        val observation = obs.observation
+        val observation = obs.signals
         it("should be 0 at subject position=0,4,5, index=40+5=45") {
           observation.getInt(44) should equal(0)
         }
         it("should be 1 at subject position=0,3,4, index=30+4=34") {
           observation.getInt(34) should equal(1)
-        }
-        it("should be 1 at wall position=1,1,6, index=50+10+6=66") {
-          observation.getInt(66) should equal(1)
-        }
-        it("should be 1 at wall position=1,3,2, index=50+30+2=82") {
-          observation.getInt(82) should equal(1)
         }
       }
       describe("And actions") {
@@ -95,12 +90,12 @@ class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
       }
       describe("And reward") {
         it("should be -1") {
-          reward should equal(-2.414 +- 0.001)
+          reward should equal(-3.414 +- 0.001)
         }
       }
       describe("And endUp") {
         it("should be false") {
-          endUp should equal(false)
+          obs.endUp should equal(false)
         }
       }
     }
@@ -119,15 +114,9 @@ class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
       val (_, obs) = env.reset()
 
       describe("Then observation") {
-        val observation = obs.observation
+        val observation = obs.signals
         it("should be 1 at subject position=0,3,3, index=30+3=3") {
           observation.getInt(33) should equal(1)
-        }
-        it("should be 1 at wall position=1,1,6, index=50+10+6=66") {
-          observation.getInt(66) should equal(1)
-        }
-        it("should be 1 at wall position=1,3,2, index=50+30+2=82") {
-          observation.getInt(82) should equal(1)
         }
       }
       describe("And actions") {
@@ -152,15 +141,9 @@ class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
       val (_, obs) = env.reset()
 
       describe("Then observation") {
-        val observation = obs.observation
+        val observation = obs.signals
         it("should be 1 at subject position=0,3,3, index=30+3=3") {
           observation.getInt(33) should equal(1)
-        }
-        it("should be 1 at wall position=1,1,6, index=50+10+6=66") {
-          observation.getInt(66) should equal(1)
-        }
-        it("should be 1 at wall position=1,3,2, index=50+30+2=82") {
-          observation.getInt(82) should equal(1)
         }
       }
       describe("And actions") {
@@ -172,31 +155,25 @@ class MazeEnvTest extends FunSpec with PropertyChecks with Matchers {
     }
 
     describe("When MazeEnv.step east") {
-      val (env1, obs, reward, endUp) = env.step(2)
+      val (env1, obs, reward) = env.step(action(2))
 
       describe("Then observation") {
-        val observation = obs.observation
+        val observation = obs.signals
         it("should be 0 at subject position=0,3,3, index=30+3=33") {
           observation.getInt(33) should equal(0)
         }
         it("should be 1 at subject position=0,3,4, index=30+4=34") {
           observation.getInt(34) should equal(1)
         }
-        it("should be 1 at wall position=1,1,6, index=50+10+6=66") {
-          observation.getInt(66) should equal(1)
-        }
-        it("should be 1 at wall position=1,3,2, index=50+30+2=82") {
-          observation.getInt(82) should equal(1)
-        }
       }
       describe("And reward") {
-        it("should be 1") {
-          reward should equal(8.0)
+        it("should be 7") {
+          reward should equal(7.0)
         }
       }
       describe("And endUp") {
         it("should be true") {
-          endUp should equal(true)
+          obs.endUp should equal(true)
         }
       }
     }

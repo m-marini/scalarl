@@ -33,28 +33,16 @@ import org.mmarini.scalarl.Action
 import org.mmarini.scalarl.Agent
 import org.mmarini.scalarl.Observation
 import org.nd4j.linalg.api.ndarray.INDArray
-
-/**
- *
- */
-trait StateValueFunction {
-  /** Returns the estimated state value for an observation */
-  def v(observation: Observation): Double
-}
+import org.mmarini.scalarl.Policy
+import org.mmarini.scalarl.StatusValues
+import org.mmarini.scalarl.ChannelAction
 
 /**
  *
  */
 trait PolicyFunction {
   /** Returns the estimated action values for an observation */
-  def policy(observation: Observation): INDArray
-
-  /** Returns the estimated action value for an observation and an action */
-  def actionPolicy(observation: Observation, action: Action): Double = {
-    require(observation.actions.getDouble(action.toLong) > 0.0)
-    policy(observation).getDouble(action.toLong)
-  }
-
+  def policy(observation: Observation): Policy
 }
 
 /**
@@ -62,7 +50,7 @@ trait PolicyFunction {
  */
 trait GreedyActionFunction {
   /** Returns the estimated greedy action */
-  def greedyAction(observation: Observation): Action
+  def greedyAction(observation: Observation): ChannelAction
 }
 
 /**
@@ -74,38 +62,5 @@ trait GreedyActionFunction {
  *  Updates its strategy policy to optimize the return value (discount sum of rewards)
  *  and the observation of resulting environment
  */
-trait TDAgent extends Agent with StateValueFunction with GreedyActionFunction with PolicyFunction {
-
-  /** Returns the estimated greedy action */
-  def greedyAction(observation: Observation): Action =
-    TDAgentUtils.maxIdxWithMask(policy(observation), observation.actions)
-}
-
-object TDAgentUtils {
-  /**
-   * Returns the index containing the max value of a by masking mask
-   *
-   * @param a the vector of values
-   * @param mask the vector mask with valid value
-   */
-  def maxIdxWithMask(a: INDArray, mask: INDArray): Int = {
-    var idx = -1
-
-    for {
-      i <- 0 until a.size(1).toInt
-      if (mask.getInt(i) > 0)
-      if (idx < 0 || a.getDouble(0L, i.toLong) > a.getDouble(0L, idx.toLong))
-    } {
-      idx = i
-    }
-    idx
-  }
-
-  /**
-   * Returns the the max value of a by masking mask
-   *
-   * @param a the vector of values
-   * @param mask the vector mask with valid value
-   */
-  def maxWithMask(a: INDArray, mask: INDArray): Double = a.getDouble(maxIdxWithMask(a, mask).toLong)
+trait TDAgent extends Agent with GreedyActionFunction with PolicyFunction {
 }

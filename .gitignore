@@ -17,3 +17,8 @@
 /analysis/*.synctex.gz
 /analysis/*.toc
 /analysis/*.log
+/analysis-01/*.aux
+/analysis-01/*.log
+/analysis-01/*.synctex.gz
+/analysis-01/*.toc
+/analysis-01/*.zip
