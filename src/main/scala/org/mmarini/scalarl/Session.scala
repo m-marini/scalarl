@@ -61,12 +61,23 @@ class Session(
     // Agent chooses the action
     val (agent_1, action) = agent0.chooseAction(obs0)
     // Updates environment
-    val (env1, obs1, reward, endUp) = env0.step(action)
+    val (env1, obs1, reward) = env0.step(action)
 
     // Updates agent
-    val (agent1, error) = agent_1.fit(Feedback(obs0, action, reward, obs1, endUp))
-    val stepInfo = Step(step = sessionStep, episode = context.episode, episodeStep = context.step, reward = reward,
-      endUp = endUp, action = action, beforeEnv = env0, beforeAgent = agent0, afterEnv = env1, afterAgent = agent1,
+    val feedback = Feedback(obs0, action, reward, obs1)
+    val agent1 = agent_1.fit(feedback)
+    val error = agent1.score(feedback)
+    val stepInfo = Step(
+      step = sessionStep,
+      episode = context.episode,
+      episodeStep = context.step,
+      reward = reward,
+      endUp = obs1.endUp,
+      action = action,
+      beforeEnv = env0,
+      beforeAgent = agent0,
+      afterEnv = env1,
+      afterAgent = agent1,
       session = this)
     stepSubj.onNext(stepInfo)
 
@@ -75,7 +86,7 @@ class Session(
     val totalLoss1 = totalLoss + error * error
     val discount1 = discount * agent.gamma
 
-    if (endUp || step1 >= maxEpisodeLength) {
+    if (obs1.endUp || step1 >= maxEpisodeLength) {
       // Episode completed
 
       // Emits episode event

@@ -36,10 +36,10 @@ import org.deeplearning4j.nn.conf.GradientNormalization
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
 import org.deeplearning4j.nn.conf.layers.DenseLayer
-import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
 import org.deeplearning4j.util.ModelSerializer
+import org.mmarini.scalarl.ActionChannelConfig
 import org.mmarini.scalarl.Agent
 import org.mmarini.scalarl.nn.AccumulateTraceMode
 import org.mmarini.scalarl.nn.ActivationLayerBuilder
@@ -55,9 +55,11 @@ import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.learning.config.Adam
-import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 
 import com.typesafe.scalalogging.LazyLogging
+import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
+import org.deeplearning4j.nn.conf.layers.OutputLayer
+import org.mmarini.scalarl.ActionChannelConfig
 
 object AgentType extends Enumeration {
   val QAgent, TDAAgent = Value
@@ -79,31 +81,39 @@ object AgentType extends Enumeration {
  *  @param _seed the seed of random generators
  *  @param _maxAbsParams max absolute value of parameters
  *  @param _maxAbsGradient max absolute value of gradients
+ *  @param _minHistory batch history minimal length to learn
  *  @param _maxHistory batch history length
+ *  @param _stepInterval number of step interval between learning
+ *  @param _numBootsrapIteration number of iteration to bootsrap the model
  *  @param _numBatchIteration number of iteration batch
  *  @param _file the filename of model to load
+ *  @param _config channel action configuration
  */
 case class AgentBuilder(
-  _agentType:         String         = "QAgent",
-  _numInputs:         Int            = 0,
-  _numActions:        Int            = 0,
-  _numHiddens:        Array[Int]     = Array(),
-  _epsilon:           Double         = 0.01,
-  _gamma:             Double         = 0.99,
-  _seed:              Long           = 0,
-  _kappa:             Double         = 1,
-  _optimizer:         String         = "SGD",
-  _learningRate:      Double         = 0.1,
-  _beta1:             Double         = 0.9,
-  _beta2:             Double         = 0.999,
-  _epsilonAdam:       Double         = 0.001,
-  _trace:             String         = "ACCUMULATE",
-  _lambda:            Double         = 0,
-  _maxAbsParams:      Double         = 0,
-  _maxAbsGradient:    Double         = 0,
-  _maxHistory:        Int            = 1,
-  _numBatchIteration: Int            = 1,
-  _file:              Option[String] = None
+  _agentType:             String              = "QAgent",
+  _numInputs:             Int                 = 0,
+  _numHiddens:            Array[Int]          = Array(),
+  _config:                ActionChannelConfig = Array(),
+  _epsilon:               Double              = 0.01,
+  _gamma:                 Double              = 0.99,
+  _seed:                  Long                = 0,
+  _kappa:                 Double              = 1,
+  _optimizer:             String              = "SGD",
+  _learningRate:          Double              = 0.1,
+  _beta1:                 Double              = 0.9,
+  _beta2:                 Double              = 0.999,
+  _epsilonAdam:           Double              = 0.001,
+  _trace:                 String              = "ACCUMULATE",
+  _lambda:                Double              = 0,
+  _maxAbsParams:          Double              = 0,
+  _maxAbsGradient:        Double              = 0,
+  _minHistory:            Int                 = 1,
+  _maxHistory:            Int                 = 1,
+  _stepInterval:          Int                 = 1,
+  _numBootstrapIteration: Int                 = 1,
+  _numBatchIteration:     Int                 = 1,
+  _file:                  Option[String]      = None
+
 //  _traceUpdater:   TraceUpdater    = AccumulateTraceUpdater
 ) extends LazyLogging {
 
@@ -114,14 +124,17 @@ case class AgentBuilder(
    */
   def numInputs(numInput: Int): AgentBuilder = copy(_numInputs = numInput)
 
-  /** Returns the builder with a number of actions */
-  def numActions(numActions: Int): AgentBuilder = copy(_numActions = numActions)
-
   /** Returns the builder with a number of hidden nodes in the third layer */
   def numHiddens(numHiddens: Int*): AgentBuilder = copy(_numHiddens = numHiddens.toArray)
 
+  /** Returns the builder with for a given action configuration */
+  def config(config: ActionChannelConfig): AgentBuilder = copy(_config = config)
+
   /** Returns the builder with a number of hidden nodes in the third layer */
-  def numBatchIteration(numBatchIteration: Int): AgentBuilder = copy(_numBatchIteration = numBatchIteration)
+  def numBatchIteration(value: Int): AgentBuilder = copy(_numBatchIteration = value)
+
+  /** Returns the builder with a number of hidden nodes in the third layer */
+  def numBootstrapIteration(value: Int): AgentBuilder = copy(_numBootstrapIteration = value)
 
   /** Returns the builder with epsilon value */
   def epsilon(epsilon: Double): AgentBuilder = copy(_epsilon = epsilon)
@@ -146,6 +159,12 @@ case class AgentBuilder(
 
   /** Returns the builder with a maximum absolute gradient value */
   def maxAbsParams(value: Double): AgentBuilder = copy(_maxAbsParams = value)
+
+  /** Returns the builder with a maximum history  */
+  def minHistory(value: Int): AgentBuilder = copy(_minHistory = value)
+
+  /** Returns the builder with a maximum history  */
+  def stepInterval(value: Int): AgentBuilder = copy(_stepInterval = value)
 
   /** Returns the builder with a maximum history  */
   def maxHistory(value: Int): AgentBuilder = copy(_maxHistory = value)
@@ -179,85 +198,24 @@ case class AgentBuilder(
       Nd4j.getRandom()
     }
     _agentType match {
-      case "QAgent" =>
+      case "TDBatchAgent" =>
         val file = _file.map(f => new File(f)).filter(_.canRead())
-        val net = file.map(loadNet).getOrElse(buildNet(random))
-        net.init()
-        TD0QAgent(
+        val net = buildNet(random)
+        TDBatchAgent(
+          config = _config,
           net = net,
-          random = random,
-          epsilon = _epsilon,
-          gamma = _gamma)
-      case "TDAAgent" =>
-        val file = _file.map(f => new File(f)).filter(_.canRead())
-        //        val builder = file.map(loadTraceNet).getOrElse(buildTraceNet(random))
-        val builder = buildTraceNet()
-        val proc = builder.buildProcessor
-        val data = builder.buildData(random)
-        TDAAgent(
-          netProc = proc,
-          netData = data,
-          random = random,
-          epsilon = _epsilon,
-          gamma = _gamma,
-          lambda = _lambda,
-          kappa = _kappa)
-      case "TDABatchAgent" =>
-        val file = _file.map(f => new File(f)).filter(_.canRead())
-        //        val builder = file.map(loadTraceNet).getOrElse(buildTraceNet(random))
-        val builder = buildTraceNet()
-        val proc = builder.buildProcessor
-        val data = builder.buildData(random)
-        TDABatchAgent(
-          netProc = proc,
-          netData = data,
           history = new AgentHistory(_maxHistory, Seq()),
           random = random,
           epsilon = _epsilon,
           gamma = _gamma,
-          lambda = _lambda,
           kappa = _kappa,
-          noBatchIter = _numBatchIteration)
+          minData = _minHistory,
+          stepData = _stepInterval,
+          stepCounter = 0,
+          noBootstrapIter = _numBootstrapIteration,
+          noEpochIter = _numBatchIteration)
       case s => throw new IllegalArgumentException(s"""agent type "${s}" invalid""")
     }
-  }
-
-  //  private def loadTraceNet(file: File): TraceNetwork = {
-  //    logger.info(s"Loading ${file.toString} ...")
-  //    TraceModelSerializer.restoreTraceNetwork(file)
-  //  }
-  //
-  private def buildTraceNet(): NetworkBuilder = {
-
-    val hiddens = for {
-      (nodes, layer) <- _numHiddens.zipWithIndex
-      dense = DenseLayerBuilder(s"${layer}.dense", nodes)
-      act = ActivationLayerBuilder(s"${layer}.activation", TanhActivationFunction)
-      builder <- Array[LayerBuilder](dense, act)
-    } yield builder
-
-    val withOutputs = hiddens :+
-      DenseLayerBuilder("outputs.dense", _numActions)
-
-    val optimizer = _optimizer match {
-      case "SGD"  => SGDOptimizer(alpha = _learningRate)
-      case "ADAM" => AdamOptimizer(alpha = _learningRate, beta1 = _beta1, beta2 = _beta2, epsilon = _epsilonAdam)
-      case s      => throw new IllegalArgumentException(s"""optimizer "${s}" invalid""")
-    }
-
-    val trace = _trace match {
-      case "ACCUMULATE" => AccumulateTraceMode(gamma = _gamma, lambda = _lambda)
-      case "NONE"       => NoneTraceMode
-      case s            => throw new IllegalArgumentException(s"""trace "${s}" invalid""")
-    }
-
-    NetworkBuilder().
-      setNoInputs(_numInputs).
-      setOptimizer(optimizer).
-      setTraceMode(trace).
-      setNormalizer(Normalizer.minMax(_numInputs, 0, 1)).
-      setConstrainAllParms(_maxAbsParams).
-      addLayers(withOutputs: _*)
   }
 
   private def loadNet(file: File): MultiLayerNetwork = {
@@ -275,13 +233,12 @@ case class AgentBuilder(
     } yield new DenseLayer.Builder().
       nIn(ins).
       nOut(outs).
-      weightInit(WeightInit.XAVIER).
       activation(Activation.TANH).
       build()
 
     val outLayer = new OutputLayer.Builder().
       nIn(initialNodes.last).
-      nOut(_numActions).
+      nOut(TDAgentUtils.numOutputs(_config)).
       lossFunction(LossFunction.MSE).
       activation(Activation.IDENTITY).
       build()
@@ -289,7 +246,7 @@ case class AgentBuilder(
     val conf = new NeuralNetConfiguration.Builder().
       seed(_seed).
       weightInit(WeightInit.XAVIER).
-      updater(new Adam(_learningRate)).
+      updater(new Adam(_learningRate, _beta1, _beta2, _epsilonAdam)).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
       constrainAllParameters(new MinMaxNormConstraint(-_maxAbsParams, _maxAbsParams, 1)).
       gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue).
@@ -297,6 +254,8 @@ case class AgentBuilder(
       list((hiddenLayers :+ outLayer): _*).
       build()
 
-    new MultiLayerNetwork(conf);
+    val net = new MultiLayerNetwork(conf)
+    net.init()
+    net
   }
 }

@@ -1,0 +1,33 @@
+---
+env:
+  map:
+  - "|O         |"
+  - "|          |"
+  - "|          |"
+  - "|          |"
+  - "|XXXXXX    |"
+  - "|          |"
+  - "|          |"
+  - "|    XXXXXX|"
+  - "|          |"
+  - "|         *|"
+agent:
+  numInputs: 100
+  numActions: 8
+  numHiddens: []
+  learningRate: 0.1
+  epsilon: 0.1
+  gamma: 0.999
+  lambda: 0.7
+  kappa: 1
+  maxAbsGradients: 1
+  maxAbsParameters: 1e3
+  type: TDAAgent
+  #loadModel: maze.zip
+  #saveModel: maze.zip
+session:
+  numSteps: 10000
+  maxEpisodeLength: 1000000
+  sync: 0
+  mode: stats
+  dump: maze-dump.csv

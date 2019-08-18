@@ -12,7 +12,8 @@ To run the generator execute
 ./runnit.sh
 ```
 
-It repeats forever running the generator createing `data/maze-dump-$(date).csv` file for each generation.
+It repeats forever running the generat
+or createing `data/maze-dump-$(date).csv` file for each generation.
 
 ## Configuration
 
@@ -26,6 +27,25 @@ See `octave/readme.md`
 ## Hyper parameters measuring
 
 Analyze the learning state values step by step.
+To run generate the measure run
+
+```bash
+sbt stage
+```
+
+Generate the graph by running octave scripts
+
+```octave
+plotAlphas
+plotKappas
+plotLambdas
+plotEpsilons
+plotHist
+plotIter
+```
+
+## Analisys of a session
+
 Run the lerning session by
 
 ```yaml

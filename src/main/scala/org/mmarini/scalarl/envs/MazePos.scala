@@ -31,6 +31,7 @@ package org.mmarini.scalarl.envs
 
 import scala.math.sqrt;
 import scala.math.pow;
+import org.nd4j.linalg.api.ndarray.INDArray
 
 /**
  * The cell position in the maze
@@ -42,9 +43,8 @@ import scala.math.pow;
 case class MazePos(row: Int, col: Int) {
 
   /** Returns the position moved from this position by delta */
-  def moveBy(delta: (Int, Int)): MazePos = delta match {
-    case (dRow, dCol) => MazePos(row = row + dRow, col = col + dCol)
-  }
+  def moveBy(delta: INDArray): MazePos =
+    MazePos(row = row + delta.getInt(0), col = col + delta.getInt(1))
 
   def distance(pos: MazePos): Double =
     sqrt(pow(pos.row - row, 2) + pow(pos.col - col, 2))

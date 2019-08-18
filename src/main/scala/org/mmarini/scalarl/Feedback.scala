@@ -36,11 +36,9 @@ package org.mmarini.scalarl
  * @param action the action executed
  * @param reward the reward received
  * @param s1 the final observation
- * @param endUp the flag of final statu reached
  */
 case class Feedback(
   s0:     Observation,
-  action: Action,
+  action: ChannelAction,
   reward: Reward,
-  s1:     Observation,
-  endUp:  EndUp)
+  s1:     Observation)

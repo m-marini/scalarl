@@ -37,6 +37,9 @@ import org.mmarini.scalarl.Observation
 import org.mmarini.scalarl.Reward
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.indexing.NDArrayIndex
+import org.mmarini.scalarl.ActionChannelConfig
+import org.mmarini.scalarl.ChannelAction
+import org.mmarini.scalarl.ActionChannelConfig
 
 /**
  * The environment simulating a subject in a maze.
@@ -54,19 +57,21 @@ case class MazeEnv(
   maze:    Maze,
   subject: MazePos) extends Env {
   private val TargetReward = 10.0
-  private val NoStepReward = -1.0
+  private val NoStepReward = -2
   private val UnitMoveReward = -1.0
 
-  private val Deltas: Array[(Int, Int)] = Array(
-    (-1, 0), //N
-    (-1, 1), // NE
-    (0, 1), // E
-    (1, 1), // SE
-    (1, 0), // S
-    (1, -1), // SW
-    (0, -1), // W
-    (-1, -1) // NW
-  )
+  override def actionConfig: ActionChannelConfig = MazeEnv.ActionConfig
+
+  private val Deltas = Nd4j.create(Array(
+    Array[Double](-1, 0), //N
+    Array[Double](-1, 1), // NE
+    Array[Double](0, 1), // E
+    Array[Double](1, 1), // SE
+    Array[Double](1, 0), // S
+    Array[Double](1, -1), // SW
+    Array[Double](0, -1), // W
+    Array[Double](-1, -1) // NW
+  ))
 
   def render() {
     val map = for {
@@ -99,27 +104,28 @@ case class MazeEnv(
     (next, obs)
   }
 
-  private def endUp(): Boolean = maze.isTarget(subject)
-
   private def moveCost(pos: MazePos): Double =
     NoStepReward + subject.distance(pos) * UnitMoveReward
 
-  override def step(action: Action): (Env, Observation, Reward, EndUp) = {
-    val delta = if (action >= 0 && action < Deltas.length) Deltas(action) else (0, 0)
+  override def step(action: ChannelAction): (Env, Observation, Reward) = {
+    val delta = action.mmul(Deltas)
+
     val destination = subject.moveBy(delta)
     val pos = if (maze.isValid(destination)) destination else subject
-    val endUp = maze.isTarget(pos)
-    val reward = moveCost(pos) + (if (endUp) TargetReward else 0.0)
+    val reward = moveCost(pos) + (if (maze.isTarget(pos)) TargetReward else 0.0)
     val nextEnv = copy(subject = pos)
-    (nextEnv, nextEnv.observation, reward, endUp)
+    (nextEnv, nextEnv.observation, reward)
   }
 
   /** Returns the observation for a given subject location */
   private def observation(subject: MazePos): Observation = {
+
     // Computes the available actions
-    val actions = Nd4j.zeros(Deltas.length.toLong)
+    val n = actionConfig(0)
+    val actions = Nd4j.zeros(n)
     for {
-      (delta, action) <- Deltas.zipWithIndex
+      action <- 0 until n
+      delta = Deltas.getRow(action)
       pos = subject.moveBy(delta)
       if maze.isValid(pos)
     } {
@@ -128,20 +134,16 @@ case class MazeEnv(
 
     // Computes the environment status
     // array of 2 x widht x height
-    val shape = 2L +: maze.map.shape()
+    val shape = maze.map.shape()
     val observation = Nd4j.zeros(shape: _*)
-//    val observation = Nd4j.ones(shape: _*).negi()
-
-    // Fills with wall map
-    val ind1 = NDArrayIndex.point(1)
-    val indAll = NDArrayIndex.all()
-    val map = maze.map
-    observation.put(Array(ind1, indAll, indAll), map)
 
     // Fills with subject position
-    observation.putScalar(Array(0, subject.row, subject.col), 1)
+    observation.putScalar(Array(subject.row, subject.col), 1)
 
-    val obs = INDArrayObservation(observation = observation.ravel(), actions = actions.ravel())
+    val obs = INDArrayObservation(
+      signals = observation.ravel(),
+      actions = actions.ravel(),
+      endUp = maze.isTarget(subject))
     obs
   }
 
@@ -160,10 +162,11 @@ case class MazeEnv(
   } yield {
     observation(MazePos(row, col))
   }
-
 }
 
 object MazeEnv {
+  val ActionConfig: ActionChannelConfig = Array(8)
+
   def fromStrings(lines: Seq[String]): MazeEnv = {
     val maze = Maze.fromStrings(lines)
     MazeEnv(maze, maze.initial)

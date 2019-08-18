@@ -46,10 +46,11 @@ trait Env {
    *  - the environment in the next status,
    *  - the resulting observation,
    *  - the reward for the action,
-   *  - the endUp flag equals true if end episode
-   *  - the additional information
    *
    *  @param action the executing action
    */
-  def step(action: Action): (Env, Observation, Reward, EndUp)
+  def step(action: ChannelAction): (Env, Observation, Reward)
+
+  /** Returns the action channel configuration of the environment */
+  def actionConfig: ActionChannelConfig
 }

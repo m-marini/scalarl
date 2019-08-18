@@ -49,14 +49,21 @@ trait Agent {
    *
    *  @observation the observation of environment
    */
-  def chooseAction(observation: Observation): (Agent, Action)
+  def chooseAction(observation: Observation): (Agent, ChannelAction)
 
   /**
-   * Returns the fit agent by optimizing its strategy policy and the error
+   * Returns the fit agent by optimizing its strategy policy
    *
    * @param feedback the feedback from the last step
    */
-  def fit(feedback: Feedback): (Agent, Double)
+  def fit(feedback: Feedback): Agent
+
+  /**
+   * Returns the score for a feedback
+   *
+   * @param feedback the feedback from the last step
+   */
+  def score(feedback: Feedback): Double
 
   /** Returns the reset agent */
   def reset: Agent
