@@ -246,8 +246,8 @@ class LanderStatusTest3 extends FunSpec with Matchers with GivenWhenThen {
       When("step")
       val (_, _, reward) = status.step(action)
 
-      Then(s"reward should be ${LanderStatus.LandedReward}")
-      reward shouldBe LanderStatus.LandedReward
+      Then(s"reward should be ${status.conf.landedReward}")
+      reward shouldBe status.conf.landedReward
     }
 
     it("should step to out of range reward") {
@@ -265,8 +265,8 @@ class LanderStatusTest3 extends FunSpec with Matchers with GivenWhenThen {
       When("step")
       val (_, _, reward) = status.step(action)
 
-      Then(s"reward should be ${LanderStatus.OutOfRangeReward}")
-      reward shouldBe LanderStatus.OutOfRangeReward
+      Then(s"reward should be ${status.conf.outOfRangeReward}")
+      reward shouldBe status.conf.outOfRangeReward
     }
 
     it("should step to crash reward") {
@@ -284,8 +284,8 @@ class LanderStatusTest3 extends FunSpec with Matchers with GivenWhenThen {
       When("step")
       val (_, _, reward) = status.step(action)
 
-      And(s"reward should be ${LanderStatus.CrashReward}")
-      reward shouldBe LanderStatus.CrashReward
+      And(s"reward should be ${status.conf.crashReward}")
+      reward shouldBe status.conf.crashReward
     }
   }
 }

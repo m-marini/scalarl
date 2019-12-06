@@ -4,7 +4,54 @@
 
 Study of Reinforcement Learning algorithm in a simple environment.
 
-## Running
+## Train lander simulator
+
+### Trivial goal
+
+The first phase to train the lander consist of generation of a base model and samples with a trivial goal landing the shuttle over the landing area at 1 m height.
+
+```bash
+rm lander-samples.csv
+sbt "runMain org.mmarini.scalarl.envs.Main trace-lander-0.yaml"
+```
+
+This creates `lander.zip` model and `lander-samples.csv` dataset.
+Then optimize the model with generated samples by running
+
+```bash
+sbt "runMain org.mmarini.scalarl.envs.Training trainer-lander.yaml"
+```
+
+Run the training again with the trivial goal but starting with the optimized model
+
+```bash
+sbt "runMain org.mmarini.scalarl.envs.Main trace-lander-1.yaml"
+sbt "runMain org.mmarini.scalarl.envs.Training trainer-lander.yaml"
+```
+
+### Increase the goal complexity
+
+Next run the trainig with a harder goal by landing the shuttle from 5 m height and over an wider area of 15 m of radius around the landing area
+
+```bash
+sbt "runMain org.mmarini.scalarl.envs.Main trace-lander-2.yaml"
+sbt "runMain org.mmarini.scalarl.envs.Training trainer-lander.yaml"
+```
+
+Repeat increasing the complexity by running harder and harder goals to the final goal of landing the shuttle from 100m height and 500m of radius over the landing area.
+
+```bash
+sbt "runMain org.mmarini.scalarl.envs.Main trace-lander-3.yaml"
+sbt "runMain org.mmarini.scalarl.envs.Training trainer-lander.yaml"
+
+sbt "runMain org.mmarini.scalarl.envs.Main trace-lander-4.yaml"
+sbt "runMain org.mmarini.scalarl.envs.Training trainer-lander.yaml"
+
+sbt "runMain org.mmarini.scalarl.envs.Main trace-lander-5.yaml"
+sbt "runMain org.mmarini.scalarl.envs.Training trainer-lander.yaml"
+```
+
+## Old running maze
 
 To run the generator execute
 

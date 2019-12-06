@@ -29,9 +29,10 @@
 
 package org.mmarini.scalarl.envs
 
-import com.typesafe.scalalogging.LazyLogging
-import io.circe.ACursor
 import java.io.File
+
+import scala.collection.JavaConversions.`deprecated seqAsJavaList`
+
 import org.mmarini.scalarl.ActionChannelConfig
 import org.mmarini.scalarl.Agent
 import org.mmarini.scalarl.Env
@@ -46,103 +47,87 @@ import org.mmarini.scalarl.agents.TDAgent
 import org.mmarini.scalarl.nn.Sentinel
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
-import scala.collection.JavaConversions.`deprecated seqAsJavaList`
-import com.sun.jndi.ldap.Ber
+
+import com.typesafe.scalalogging.LazyLogging
+
+import io.circe.ACursor
+import org.mmarini.scalarl.agents.AgentNetworkBuilder
 
 object Main extends LazyLogging {
   private val ClearScreen = "\033[2J\033[H"
 
+  /**
+   *
+   */
+  private def buildLanderConf(conf: ACursor): LanderConf = {
+    val landerConf = LanderConf()
+    val l1 = conf.get[Double]("h0Range").toOption.map(value =>
+      landerConf.copy(h0Range = value)).getOrElse(landerConf)
+    val l2 = conf.get[Double]("z0").toOption.map(value =>
+      l1.copy(z0 = value)).getOrElse(l1)
+    val l3 = conf.get[Double]("landingRadius").toOption.map(value =>
+      l2.copy(landingRadius = value)).getOrElse(l2)
+    val l4 = conf.get[Double]("landingVH").toOption.map(value =>
+      l3.copy(landingVH = value)).getOrElse(l3)
+    val l5 = conf.get[Double]("landingVZ").toOption.map(value =>
+      l4.copy(landingVZ = value)).getOrElse(l4)
+    val l6 = conf.get[Double]("dt").toOption.map(value =>
+      l5.copy(dt = value)).getOrElse(l5)
+    val l7 = conf.get[Double]("g").toOption.map(value =>
+      l6.copy(g = value)).getOrElse(l6)
+    val l8 = conf.get[Double]("maxAH").toOption.map(value =>
+      l7.copy(maxAH = value)).getOrElse(l7)
+    val l9 = conf.get[Double]("maxAZ").toOption.map(value =>
+      l8.copy(maxAZ = value)).getOrElse(l8)
+    val l10 = conf.get[Double]("vhSignalScale").toOption.map(value =>
+      l9.copy(vhSignalScale = value)).getOrElse(l9)
+    val l11 = conf.get[Double]("vzSignalScale").toOption.map(value =>
+      l10.copy(vzSignalScale = value)).getOrElse(l10)
+    val l12 = conf.get[Double]("landedReward").toOption.map(value =>
+      l11.copy(landedReward = value)).getOrElse(l11)
+    val l13 = conf.get[Double]("crashReward").toOption.map(value =>
+      l12.copy(crashReward = value)).getOrElse(l12)
+    val l14 = conf.get[Double]("outOfRangeReward").toOption.map(value =>
+      l13.copy(outOfRangeReward = value)).getOrElse(l13)
+    val l15 = conf.get[Double]("rewardDistanceScale").toOption.map(value =>
+      l14.copy(rewardDistanceScale = value)).getOrElse(l14)
+    val l16 = conf.get[Double]("outOfFuelReward").toOption.map(value =>
+      l15.copy(outOfFuelReward = value)).getOrElse(l15)
+    val l17 = conf.get[Int]("fuel").toOption.map(value =>
+      l16.copy(fuel = value)).getOrElse(l16)
+    l17
+  }
+
+  /**
+   * 
+   */
   private def buildEnv(conf: ACursor): Env =
     conf.get[String]("type").toOption match {
       case Some("Maze") =>
         val map = conf.get[Seq[String]]("map").right.get
         MazeEnv.fromStrings(map)
       case Some("Lander") =>
-        val hRange = conf.get[Double]("hRange").right.get
-        val height = conf.get[Double]("height").right.get
+        val landerConf = buildLanderConf(conf)
         val seed = conf.get[Long]("seed").toOption
         val random = seed.map(seed =>
           Nd4j.getRandomFactory().getNewRandomInstance(seed)).
           getOrElse(Nd4j.getRandom())
-        LanderStatus.apply(
-          hRange = hRange,
-          height = height,
+        LanderStatus(
+          conf = landerConf,
           random = random)
       case Some(typ) => throw new IllegalArgumentException(s"Unreconginzed env type '${typ}'")
       case _         => throw new IllegalArgumentException("Missing env type")
     }
 
-  private def loadAgentConf(
-    builder:     AgentBuilder,
+  /**
+   * 
+   */
+  private def buildAgent(
     agentCursor: ACursor,
-    config:      ActionChannelConfig) = {
-    val builder1 = builder.
-      numInputs(agentCursor.get[Int]("numInputs").right.get).
-      config(config)
-
-    val seed = agentCursor.get[Long]("seed").toOption
-    val numHiddens = agentCursor.get[List[Int]]("numHiddens").toOption
-    val epsilon = agentCursor.get[Double]("epsilon").toOption
-    val gamma = agentCursor.get[Double]("gamma").toOption
-    val kappa = agentCursor.get[Double]("kappa").toOption
-
-    val trace = agentCursor.get[String]("trace").toOption
-    val lambda = agentCursor.get[Double]("lambda").toOption
-
-    val optimizer = agentCursor.get[String]("optimizer").toOption
-    val learningRate = agentCursor.get[Double]("learningRate").toOption
-    val beta1 = agentCursor.get[Double]("beta1").toOption
-    val beta2 = agentCursor.get[Double]("beta2").toOption
-    val epsilonAdam = agentCursor.get[Double]("epsilonAdam").toOption
-
-    val maxAbsGrads = agentCursor.get[Double]("maxAbsGradients").toOption
-    val maxAbsParams = agentCursor.get[Double]("maxAbsParameters").toOption
-
-    val minHistory = agentCursor.get[Int]("minHistory").toOption
-    val maxHistory = agentCursor.get[Int]("maxHistory").toOption
-    val stepInterval = agentCursor.get[Int]("stepInterval").toOption
-    val numBootstrapIteration = agentCursor.get[Int]("numBootstrapIteration").toOption
-    val numBatchIteration = agentCursor.get[Int]("numBatchIteration").toOption
-
-    val builder2 = seed.map(builder1.seed).getOrElse(builder1)
-    val builder3 = numHiddens.map(builder2.numHiddens).getOrElse(builder2)
-    val builder4 = epsilon.map(builder3.epsilon).getOrElse(builder3)
-    val builder5 = gamma.map(builder4.gamma).getOrElse(builder4)
-    val builder6 = kappa.map(builder5.kappa).getOrElse(builder5)
-
-    val builder7 = trace.map(builder6.trace).getOrElse(builder6)
-    val builder8 = lambda.map(builder7.lambda).getOrElse(builder7)
-
-    val builder9 = optimizer.map(builder8.optimizer).getOrElse(builder8)
-    val builder10 = learningRate.map(builder9.learningRate).getOrElse(builder9)
-    val builder11 = beta1.map(builder10.beta1).getOrElse(builder10)
-    val builder12 = beta2.map(builder11.beta2).getOrElse(builder11)
-    val builder13 = epsilonAdam.map(builder12.epsilonAdam).getOrElse(builder12)
-
-    val builder14 = maxAbsGrads.map(builder13.maxAbsGradient).getOrElse(builder13)
-    val builder15 = maxAbsParams.map(builder14.maxAbsParams).getOrElse(builder14)
-
-    val builder16 = maxHistory.map(builder15.maxHistory).getOrElse(builder15)
-    val builder17 = numBatchIteration.map(builder16.numBatchIteration).getOrElse(builder16)
-    val builder18 = minHistory.map(builder17.minHistory).getOrElse(builder17)
-    val builder19 = stepInterval.map(builder18.stepInterval).getOrElse(builder18)
-    val builder20 = numBootstrapIteration.map(builder19.numBootstrapIteration).getOrElse(builder19)
-
-    builder20
-  }
-
-  private def buildAgent(agentCursor: ACursor, config: ActionChannelConfig): Agent = {
-    val baseBuilder = AgentBuilder().
-      agentType(agentCursor.
-        get[String]("type").
-        getOrElse("QAgent"))
-
-    val builder = agentCursor.
-      get[String]("loadModel").
-      toOption.
-      map(baseBuilder.file).
-      getOrElse(loadAgentConf(baseBuilder, agentCursor, config))
-    builder.build()
+    netCursor:   ACursor,
+    config:      ActionChannelConfig): Agent = {
+    val netBuilder = AgentNetworkBuilder(netCursor)
+    AgentBuilder(agentCursor).networkBuilder(netBuilder).config(config).build()
   }
 
   /**
@@ -164,6 +149,35 @@ object Main extends LazyLogging {
     val mask = states.map(_.actions)
     val maskMat = Nd4j.vstack(mask).ravel()
     Nd4j.hstack(kpi, policyMat, maskMat)
+  }
+
+  /**
+   * Returns the dump data array of sample
+   * The data array is empty:
+   */
+  private def createLanderSample(step: Step): INDArray = {
+    val env = step.beforeEnv.asInstanceOf[LanderStatus]
+    val obs = env.observation
+    val in = obs.signals
+    val agent = step.beforeAgent.asInstanceOf[PolicyFunction]
+    val q = agent.policy(obs)
+    val action = step.action
+    val reward = step.reward
+    val endUp = if (step.endUp) 1.0 else 0.0
+    Nd4j.hstack(
+      in,
+      q,
+      action,
+      Nd4j.create(Array(reward)),
+      Nd4j.create(Array(endUp)))
+  }
+
+  /**
+   * Returns the dump data array of sample
+   * The data array is empty:
+   */
+  private def createMazeSample(step: Step): INDArray = {
+    Nd4j.zeros(1)
   }
 
   /**
@@ -276,6 +290,9 @@ object Main extends LazyLogging {
       afterAvailableActions)
   }
 
+  /**
+   * 
+   */
   def onEpisode(saveModel: Option[String], dump: Option[String], createDump: Episode => INDArray)(episode: Episode) {
     for {
       file <- saveModel
@@ -301,15 +318,31 @@ object Main extends LazyLogging {
     }%g")
   }
 
-  def onStep(trace: Option[String], createTrace: Step => INDArray)(step: Step) {
+  /**
+   * 
+   */
+  def onStep(
+    trace:        Option[String],
+    createTrace:  Step => INDArray,
+    samplesFile:  Option[String],
+    createSample: Step => INDArray)(step: Step) {
     for {
       file <- trace
     } {
       val data = createTrace(step)
       withFile(file, true)(writeINDArray(_)(data))
     }
+    for {
+      file <- samplesFile
+    } {
+      val data = createSample(step)
+      withFile(file, true)(writeINDArray(_)(data))
+    }
   }
 
+  /**
+   * 
+   */
   private def buildSession(
     sessionCursor: ACursor,
     env:           Env,
@@ -319,39 +352,60 @@ object Main extends LazyLogging {
     val mode = sessionCursor.get[String]("mode").right.get
     val dump = sessionCursor.get[String]("dump").toOption
     val trace = sessionCursor.get[String]("trace").toOption
-    //    val saveModel = jsonConf.hcursor.downField("agent").get[String]("saveModel").toOption
+    val samplesFile = sessionCursor.get[String]("samples").toOption
+    val saveModel = sessionCursor.get[String]("modelFile").toOption
     val maxEpisodeLength = sessionCursor.get[Long]("maxEpisodeLength").getOrElse(Long.MaxValue)
     val sentinel = sessionCursor.get[Boolean]("sentinel").getOrElse(false)
+
     Sentinel.activate(sentinel)
 
-    (dump.toSeq ++ trace).foreach(new File(_).delete())
+    // Clean up all files
+    (dump.toSeq ++ trace ++ saveModel).foreach(new File(_).delete())
 
+    // Create session
     val session = Session(
       noSteps = numSteps,
       env0 = env,
       agent0 = agent,
       maxEpisodeLength = maxEpisodeLength)
 
-    val createDump: Episode => INDArray = if (env.isInstanceOf[Maze])
+    // Create dump function
+    val createDump: Episode => INDArray = if (env.isInstanceOf[Maze]) {
       createMazeDump _
-    else
+    } else {
       createLanderDump _
+    }
 
+    // Subscribe on episode observable
     session.episodeObs.subscribe(
-      onEpisode(None, dump, createDump),
+      onEpisode(saveModel, dump, createDump),
       ex => logger.error(ex.getMessage, ex))
 
-    val createTrace: Step => INDArray = if (env.isInstanceOf[Maze])
+    // Create tracing function
+    val createTrace: Step => INDArray = if (env.isInstanceOf[Maze]) {
       createMazeTrace _
-    else
+    } else {
       createLanderTrace _
+    }
 
+    // Create sampling function
+    val createSamples: Step => INDArray = if (env.isInstanceOf[Maze]) {
+      createMazeSample _
+    } else {
+      createLanderSample _
+    }
+
+    // Subscribe on step observable
     session.stepObs.subscribe(
-      onStep(trace, createTrace),
+      onStep(trace, createTrace, samplesFile, createSamples),
       ex => logger.error(ex.getMessage, ex))
+
     session
   }
 
+  /**
+   * 
+   */
   def main(args: Array[String]) {
     val file = if (args.isEmpty) "maze.yaml" else args(0)
     logger.info("File {}", file)
@@ -361,12 +415,14 @@ object Main extends LazyLogging {
     val env = buildEnv(jsonConf.hcursor.downField("env"))
     val agent = buildAgent(
       jsonConf.hcursor.downField("agent"),
+      jsonConf.hcursor.downField("network"),
       env.actionConfig)
     val session = buildSession(
       jsonConf.hcursor.downField("session"),
       env = env,
       agent = agent)
 
-    session.run()
+    val (env1, agent1) = session.run()
+    logger.info("Session completed.")
   }
 }

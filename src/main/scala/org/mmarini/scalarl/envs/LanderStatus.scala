@@ -51,46 +51,40 @@ import org.nd4j.linalg.factory.Nd4j
 case class LanderStatus(
   pos:    INDArray,
   speed:  INDArray,
-  hRange: Double,
-  height: Double,
+  fuel:   Int,
+  conf:   LanderConf,
   random: Random) extends Env {
 
-  override def actionConfig: ActionChannelConfig = LanderStatus.ActionChannels
+  override def actionConfig: ActionChannelConfig = LanderConf.ActionChannels
 
   override def reset(): (Env, Observation) = {
-    val x = random.nextDouble() * 2 * hRange - hRange
-    val y = random.nextDouble() * 2 * hRange - hRange
-    val pos = Nd4j.create(Array[Double](x, y, height))
     val newEnv = copy(
-      pos = pos,
-      speed = Nd4j.zeros(3))
+      pos = conf.initialPos(random),
+      speed = Nd4j.zeros(3),
+      fuel = conf.fuel)
     (newEnv, newEnv.observation)
   }
+
+  def isOutOfFuel: Boolean = fuel <= 0
 
   override def step(action: ChannelAction): (Env, Observation, Reward) = {
     val newEnv = drive(action)
     val reward = if (newEnv.isOutOfRange) {
-      LanderStatus.OutOfRangeReward
-    } else if (newEnv.isCrush) {
-      LanderStatus.CrashReward
+      conf.outOfRangeReward
+    } else if (newEnv.isCrashed) {
+      conf.crashReward
     } else if (newEnv.isLanded) {
-      LanderStatus.LandedReward
+      conf.landedReward
+    } else if (newEnv.isOutOfFuel) {
+      conf.outOfFuelReward
     } else {
-      val dist = -newEnv.pos.mul(newEnv.pos).sumNumber().doubleValue()
-      dist / 10000
+      conf.rewardFromPosition(newEnv.pos)
     }
     (newEnv, newEnv.observation, reward)
   }
 
-  /** Returns true if the shuttle is out of range */
-  def isOutOfRange: Boolean = {
-    abs(pos.getDouble(0L)) > LanderStatus.MaxHorizontal ||
-      abs(pos.getDouble(1L)) > LanderStatus.MaxHorizontal ||
-      pos.getDouble(2L) > LanderStatus.MaxHeight
-  }
-
   /**
-   * Return the observatin of the current land status
+   * Return the observation of the current land status
    *
    * The signals are composed with
    *  - (0) 2 signals for the horizontal position in the range -1 : 1 (-600 : 600)
@@ -106,168 +100,45 @@ case class LanderStatus(
    */
   lazy val observation: Observation = {
 
-    val x = pos.getDouble(0L)
-    val y = pos.getDouble(1L)
-
-    val vx = speed.getDouble(0L)
-    val vy = speed.getDouble(1L)
-    val vz = speed.getDouble(2L)
-
-    val posSignals: INDArray = pos.mmul(LanderStatus.SignalsFromPos)
-    val speedSignals: INDArray = speed.mmul(LanderStatus.SignalsFromSpeed)
-
-    val squaredPosSignals = posSignals.mul(posSignals)
-    val squaredSpeedSignals = speedSignals.mul(speedSignals)
-
-    val hPosDirSignals = Nd4j.create(Array[Double](
-      if (x >= 0) 1 else 0,
-      if (y >= 0) 1 else 0))
-    val hSpeedDirSignals = Nd4j.create(Array[Double](
-      if (vx >= 0) 1 else 0,
-      if (vy >= 0) 1 else 0,
-      if (vz >= 0) 1 else 0))
-
-    val radius2 = x * x + y * y
-    val noLandPosSignals = Nd4j.create(Array[Double](
-      if (radius2 > LanderStatus.SquareRadius) 1 else 0))
-
-    val vh2 = vx * vx + vy * vy
-
-    val noLandVHSignals = Nd4j.create(Array[Double](
-      if (vh2 > LanderStatus.SquareLandHorizontalSpeed) 1 else 0))
-    val noLandVZSignals = Nd4j.create(Array[Double](
-      if (vz < -LanderStatus.LandVerticalSpeed) 1 else 0,
-      if (vz >= 0) 1 else 0))
-
-    val signal = Nd4j.hstack(
-      posSignals,
-      speedSignals,
-      squaredPosSignals,
-      squaredSpeedSignals,
-      hPosDirSignals,
-      hSpeedDirSignals,
-      noLandPosSignals,
-      noLandVHSignals,
-      noLandVZSignals)
-
     INDArrayObservation(
-      signals = signal,
-      actions = Nd4j.ones(15),
-      endUp = isLanded || isCrush || isOutOfRange)
+      signals = conf.signals(pos, speed),
+      actions = LanderConf.ValidActions,
+      endUp = isLanded || isCrashed || isOutOfRange || isOutOfFuel)
   }
 
-  /** Returns true is the shuttle has touched the ground */
-  private def hasTouchedGround: Boolean =
-    pos.getDouble(2L) < 0
-
-  /** Returns true if the shuttle is in land location */
-  private def isLandPosition: Boolean = {
-    val x = pos.getDouble(0L)
-    val y = pos.getDouble(1L)
-    val squareR = x * x + y * y
-    val landPosition = squareR <= LanderStatus.SquareRadius &&
-      hasTouchedGround
-    landPosition
-  }
-
-  /** Returns true if the shuttle has land speed */
-  private def isLandSpeed: Boolean = {
-    val vx = speed.getDouble(0L)
-    val vy = speed.getDouble(1L)
-    val vz = speed.getDouble(2L)
-    val squareHV = vx * vx + vy * vy
-    val landSpeed = vz >= -LanderStatus.LandVerticalSpeed &&
-      squareHV <= LanderStatus.SquareLandHorizontalSpeed
-    landSpeed
-  }
+  /** Returns true if the shuttle is out of range */
+  def isOutOfRange: Boolean = conf.isOutOfRange(pos)
 
   /** Returns true if the shuttle has landed */
-  def isLanded: Boolean = {
-    val landed = isLandPosition && isLandSpeed
-    landed
-  }
+  def isLanded: Boolean = conf.isLanded(pos, speed)
 
   /** Returns true is the shuttle crush */
-  def isCrush: Boolean = {
-    val x = pos.getDouble(0L)
-    val y = pos.getDouble(1L)
-    val z = pos.getDouble(2L)
-    val squareR = x * x + y * y
-
-    val vx = speed.getDouble(0L)
-    val vy = speed.getDouble(1L)
-    val vz = speed.getDouble(2L)
-    val squareHV = vx * vx + vy * vy
-
-    val crush = hasTouchedGround && (
-      !isLandPosition ||
-      vz < -LanderStatus.LandVerticalSpeed ||
-      squareHV > LanderStatus.SquareLandHorizontalSpeed ||
-      !isLandPosition)
-
-    crush
-  }
+  def isCrashed: Boolean = conf.isCrashed(pos, speed)
 
   /** Returns the new status by driving with action */
   def drive(action: ChannelAction): LanderStatus = {
-    val a = action.mmul(LanderStatus.AccelerationFromAction).addi(LanderStatus.GravityVector)
-    val v = speed.add(a.mul(LanderStatus.Deltat))
-    val p = pos.add(v.mul(LanderStatus.Deltat))
-    copy(pos = p, speed = v)
+    val (p, v) = conf.drive(action, pos, speed)
+    copy(pos = p, speed = v, fuel = fuel - 1)
   }
 }
 
-/** Factory for [[Maze]] instances */
+/** Factory for [[LanderStatus]] instances */
 object LanderStatus {
-  val MaxHorizontal = 600.0
-  val MaxHeight = 100.0
-  val Radius = 10.0
-  val LandVerticalSpeed = 4.0
-  val LandHorizontalSpeed = 0.5
-  val Deltat = 0.25
-  val Gravity = 1.6
-  val MaxHorizontalJet = 1.0
-  val MaxVerticalJet = 3.2
-  val NumDiscreteJet = 5
 
-  val LandedReward = 100
-  val CrashReward = -100
-  val OutOfRangeReward = -100
-
-  val ActionChannels = Array(NumDiscreteJet, NumDiscreteJet, NumDiscreteJet)
-  val SquareRadius = Radius * Radius
-  val SquareLandHorizontalSpeed = LandHorizontalSpeed * LandHorizontalSpeed
-
-  val GravityVector = Nd4j.create(Array[Double](0, 0, -Gravity))
-  val HorizontalJet = (0 until NumDiscreteJet).map(i => (i - 2) * MaxHorizontalJet / 2)
-  val VerticalJet = (0 until NumDiscreteJet).map(i => i * MaxVerticalJet / (NumDiscreteJet - 1))
-  val Filler = (1 to NumDiscreteJet).map(_ => 0.0)
-
-  val AccelerationFromAction = Nd4j.create(Array(
-    (HorizontalJet ++ Filler ++ Filler).toArray,
-    (Filler ++ HorizontalJet ++ Filler).toArray,
-    (Filler ++ Filler ++ VerticalJet).toArray)).transpose
-
-  val SignalsFromPos = Nd4j.create(Array(
-    Array[Double](1.0 / 600, 0, 0),
-    Array[Double](0, 1.0 / 600, 0),
-    Array[Double](0, 0, 1.0 / 100))).transpose()
-  val SignalsFromSpeed = Nd4j.create(Array(
-    Array[Double](1.0 / 24, 0, 0),
-    Array[Double](0, 1.0 / 24, 0),
-    Array[Double](0, 0, 1.0 / 12))).transpose()
-
-  def apply(hRange: Double, height: Double, random: Random): LanderStatus = LanderStatus(
+  def apply(conf: LanderConf, random: Random): LanderStatus = LanderStatus(
     pos = Nd4j.zeros(3),
     speed = Nd4j.zeros(3),
-    height = height,
-    hRange = hRange,
+    conf = conf,
+    fuel = conf.fuel,
     random = random)
 
-  def apply(pos: INDArray, speed: INDArray): LanderStatus = LanderStatus(
-    pos = pos,
-    speed = speed,
-    height = MaxHeight,
-    hRange = MaxHorizontal,
-    random = Nd4j.getRandom())
+  def apply(pos: INDArray, speed: INDArray): LanderStatus = {
+    val conf = LanderConf()
+    LanderStatus(
+      pos = pos,
+      speed = speed,
+      conf = conf,
+      fuel = conf.fuel,
+      random = Nd4j.getRandom())
+  }
 }

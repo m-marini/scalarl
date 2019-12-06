@@ -1,0 +1,7 @@
+---
+training:
+#  samples: lander-training.csv
+  samples: lander-samples.csv
+  epochs: 5000
+network:
+  modelFile: lander.zip

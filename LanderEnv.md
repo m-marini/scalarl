@@ -176,3 +176,13 @@ The available actions consist of the 5 possible levels of jet powers for each of
 ## Output signals
 
 The output signals consists of 15 output units representing the estimation of advantage action value. The higer value of the output indicates the action to be taken.
+
+# Test cases
+
+| Cases |   z | radius | fuel |
+|-------|----:|-------:|-----:|
+|     1 |   1 |      5 |   10 |
+|     2 |   3 |     15 |   30 |
+|     3 |  10 |     50 |  100 |
+|     4 |  30 |    150 |  300 |
+|     5 | 100 |    500 |  500 |

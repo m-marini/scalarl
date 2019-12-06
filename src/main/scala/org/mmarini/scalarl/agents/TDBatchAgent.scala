@@ -52,6 +52,7 @@ import scala.collection.JavaConversions._
 import org.mmarini.scalarl.ChannelAction
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator
 import com.typesafe.scalalogging.LazyLogging
+import org.deeplearning4j.util.ModelSerializer
 
 /**
  * The agent acting in the environment by QLearning T(0) algorithm.
@@ -76,10 +77,11 @@ case class TDBatchAgent(
   noBootstrapIter: Int,
   noEpochIter:     Int) extends TDAgent with LazyLogging {
 
-  override def policy(observation: Observation): Policy = if (observation.endUp)
+  override def policy(observation: Observation): Policy = if (observation.endUp) {
     TDAgentUtils.endStatePolicy(config)
-  else
+  } else {
     net.output(observation.signals)
+  }
 
   override def greedyAction(observation: Observation): ChannelAction =
     TDAgentUtils.actionAndStatusValuesFromPolicy(
@@ -161,9 +163,8 @@ case class TDBatchAgent(
   }
 
   override def writeModel(file: String): TDBatchAgent = {
-    //    TraceModelSerializer.writeModel(net, file)
-    //    this
-    ???
+    ModelSerializer.writeModel(net, new File(file), false)
+    this
   }
 
   override def reset: TDBatchAgent = this

@@ -1,4 +1,3 @@
-
 // Copyright (c) 2019 Marco Marini, marco.marini@mmarini.org
 //
 // Licensed under the MIT License (MIT);
