@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Issue #36: Batch optimization
+
 ## [0.1.0] - 2019-01-28
+
+### Added
 
 - Issue #18:
     Run different sessions on maze environment with different agent (QAgent, TDQAgent) and analize the results.
