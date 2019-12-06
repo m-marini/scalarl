@@ -32,6 +32,16 @@ package org.mmarini.scalarl
 import org.nd4j.linalg.api.ndarray.INDArray
 import java.io.Writer
 import java.io.FileWriter
+import java.io.Reader
+import java.io.BufferedReader
+import rx.lang.scala.Observable
+import java.io.File
+import rx.lang.scala.Subscriber
+import scala.util.Try
+import java.io.FileReader
+import rx.lang.scala.Observer
+import rx.lang.scala.Subscription
+import org.nd4j.linalg.factory.Nd4j
 
 object FileUtils {
 
@@ -56,4 +66,32 @@ object FileUtils {
       fw.write(record.mkString(",") + "\n")
     }
   }
+
+  def readFile(file: File): Observable[String] =
+    Observable(s => {
+      try {
+        val br = new BufferedReader(new FileReader(file))
+        try {
+          var reading = true
+
+          do {
+            val line = Option(br.readLine())
+            if (line.isEmpty) {
+              s.onCompleted()
+              reading = false
+            } else {
+              s.onNext(line.get)
+            }
+          } while (reading)
+        } finally {
+          br.close()
+        }
+      } catch {
+        case ex: Throwable => s.onError(ex)
+      }
+    })
+
+  def readINDArray(file: File): Observable[INDArray] =
+    readFile(file).map(_.split(",").map(_.toDouble)).toArray.map(
+      Nd4j.create)
 }

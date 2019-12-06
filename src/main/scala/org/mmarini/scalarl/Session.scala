@@ -55,6 +55,9 @@ class Session(
   def episodeObs: Observable[Episode] = episodeSubj
   def stepObs: Observable[Step] = stepSubj
 
+  /**
+   *
+   */
   private def runStep(context: SessionContext, sessionStep: Int): SessionContext = {
     val SessionContext(env0, agent0, obs0, step, episode, totalLoss, returnValue, discount) = context
 
@@ -127,20 +130,24 @@ class Session(
    *    - fit the agent
    *    - until detection of end of episode
    */
-  def run(): Session = {
+  def run(): (Env, Agent) = {
     val (initialEnv, initialObs) = env.reset()
     val sessionContext = SessionContext(
       env = initialEnv,
       agent = agent.reset,
       obs = initialObs)
 
-    (1 to noSteps).foldLeft(sessionContext)(runStep)
+    val x = (1 to noSteps).foldLeft(sessionContext)(runStep)
 
-    this
+    (x.env, x.agent)
   }
 }
 
+/**
+ *
+ */
 object Session {
+
   /**
    * Returns a session
    */
@@ -156,6 +163,9 @@ object Session {
       maxEpisodeLength = maxEpisodeLength)
 }
 
+/**
+ *
+ */
 case class SessionContext(
   env:         Env,
   agent:       Agent,

@@ -39,7 +39,7 @@ The trace file format is composed by:
 
 ## Dump file format
 
-Each record of the dump file rapresents an episode and the format is composed by:
+Each record of the dump file represents an episode and the format is composed by:
 
 | Field          | Offset |                  Size |
 |:---------------|-------:|----------------------:|
@@ -47,6 +47,28 @@ Each record of the dump file rapresents an episode and the format is composed by
 | RETURNS        |      2 |                     1 |
 | ERRORS         |      3 |                     1 |
 | **Total size** |        |                 **3** |
+
+## Samples file format
+
+Each reacord of samples file contains the data for batch learning.
+
+| Field            | Offset |    Size |
+|:-----------------|-------:|--------:|
+| POS_SIG          |      1 |       3 |
+| SPEED_SIG        |      4 |       3 |
+| SQR_POS_SIG      |      7 |       3 |
+| SQR_SPEED_SIG    |     10 |       3 |
+| H_POS_DIR_SIG    |     13 |       2 |
+| H_SPEED_DIR_SIG  |     15 |       3 |
+| NO_LAND_POS__SIG |     18 |       1 |
+| NO_LAND_VH__SIG  |     19 |       1 |
+| NO_LAND_VZ__SIG  |     20 |       2 |
+| Q                |     22 |      15 |
+| ACTION           |     37 |      15 |
+| REWARD           |     52 |       1 |
+| ENDUP            |     53 |       1 |
+| **Total size**   |        |  **53** |
+
 
 ## Trace analysis
 

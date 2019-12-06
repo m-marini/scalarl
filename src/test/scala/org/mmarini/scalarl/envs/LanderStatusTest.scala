@@ -52,8 +52,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       And("should not be out of range")
       status should not be 'outOfRange
 
-      And("should not be crush")
-      status should not be 'crush
+      And("should not be crashed")
+      status should not be 'crashed
 
       And("should be endUp")
       status.observation shouldBe 'endUp
@@ -71,8 +71,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       And("should not be out of range")
       status should not be 'outOfRange
 
-      And("should not be crush")
-      status should not be 'crush
+      And("should not be crashed")
+      status should not be 'crashed
 
       And("should be endUp")
       status.observation shouldBe 'endUp
@@ -90,8 +90,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       And("should not be out of range")
       status should not be 'outOfRange
 
-      And("should not be crush")
-      status should not be 'crush
+      And("should not be crashed")
+      status should not be 'crashed
 
       And("should be endUp")
       status.observation shouldBe 'endUp
@@ -109,8 +109,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       And("should not be out of range")
       status should not be 'outOfRange
 
-      And("should not be crush")
-      status should not be 'crush
+      And("should not be crashed")
+      status should not be 'crashed
 
       And("should be endUp")
       status.observation shouldBe 'endUp
@@ -128,8 +128,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       And("should not be out of range")
       status should not be 'outOfRange
 
-      And("should not be crush")
-      status should not be 'crush
+      And("should not be crashed")
+      status should not be 'crashed
 
       And("should be endUp")
       status.observation shouldBe 'endUp
@@ -147,8 +147,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       And("should not be out of range")
       status should not be 'outOfRange
 
-      And("should not be crush")
-      status should not be 'crush
+      And("should not be crashed")
+      status should not be 'crashed
 
       And("should be endUp")
       status.observation shouldBe 'endUp
@@ -166,8 +166,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       And("should not be out of range")
       status should not be 'outOfRange
 
-      And("should not be crush")
-      status should not be 'crush
+      And("should not be crashed")
+      status should not be 'crashed
 
       And("should be endUp")
       status.observation shouldBe 'endUp
@@ -185,8 +185,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       And("should not be out of range")
       status should not be 'outOfRange
 
-      And("should not be crush")
-      status should not be 'crush
+      And("should not be crashed")
+      status should not be 'crashed
 
       And("should be endUp")
       status.observation shouldBe 'endUp
@@ -204,8 +204,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       And("should not be out of range")
       status should not be 'outOfRange
 
-      And("should not be crush")
-      status should not be 'crush
+      And("should not be crashed")
+      status should not be 'crashed
 
       And("should be endUp")
       status.observation shouldBe 'endUp
@@ -223,8 +223,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       And("should not be out of range")
       status should not be 'outOfRange
 
-      And("should not be crush")
-      status should not be 'crush
+      And("should not be crashed")
+      status should not be 'crashed
 
       And("should be endUp")
       status.observation shouldBe 'endUp
@@ -242,8 +242,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       And("should not be out of range")
       status should not be 'outOfRange
 
-      And("should not be crush")
-      status should not be 'crush
+      And("should not be crashed")
+      status should not be 'crashed
 
       And("should be endUp")
       status.observation shouldBe 'endUp
@@ -261,8 +261,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       And("should not be out of range")
       status should not be 'outOfRange
 
-      And("should not be crush")
-      status should not be 'crush
+      And("should not be crashed")
+      status should not be 'crashed
 
       And("should be endUp")
       status.observation shouldBe 'endUp
@@ -280,23 +280,23 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       And("should not be out of range")
       status should not be 'outOfRange
 
-      And("should not be crush")
-      status should not be 'crush
+      And("should not be crashed")
+      status should not be 'crashed
 
       And("should be endUp")
       status.observation shouldBe 'endUp
     }
   }
 
-  describe("A crush LanderStatus") {
-    it("should result crush at (0,0,-0.1) speed (0,0,-4.1)") {
+  describe("A crashed LanderStatus") {
+    it("should result crashed at (0,0,-0.1) speed (0,0,-4.1)") {
       Given("a lander status at (0,0,-0.1) speed (0,0,-4.1)")
       val status = LanderStatus(
         pos = Nd4j.create(Array[Double](0, 0, -0.1)),
         speed = Nd4j.create(Array[Double](0, 0, -4.1)))
 
-      Then("should be crush")
-      status shouldBe 'crush
+      Then("should be crashed")
+      status shouldBe 'crashed
 
       And("should not be landed")
       status should not be 'landed
@@ -308,14 +308,14 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       status.observation shouldBe 'endUp
     }
 
-    it("should result crush at (0,0,-0.1) speed (0.354,0.354,-4.1)") {
+    it("should result crashed at (0,0,-0.1) speed (0.354,0.354,-4.1)") {
       Given("a lander status at (0,0,-0.1) speed (0.354,0.354,-4.1)")
       val status = LanderStatus(
         pos = Nd4j.create(Array[Double](0, 0, -0.1)),
         speed = Nd4j.create(Array[Double](0.354, 0.354, -4.1)))
 
-      Then("should be crush")
-      status shouldBe 'crush
+      Then("should be crashed")
+      status shouldBe 'crashed
 
       And("should not be landed")
       status should not be 'landed
@@ -327,14 +327,14 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       status.observation shouldBe 'endUp
     }
 
-    it("should result crush at (7.08,7-08,-0.1) speed (0, 0, 0)") {
+    it("should result crashed at (7.08,7-08,-0.1) speed (0, 0, 0)") {
       Given("a lander status at (7.08,7-08,-0.1) speed (0, 0, 0)")
       val status = LanderStatus(
         pos = Nd4j.create(Array[Double](7.08, 7.08, -0.1)),
         speed = Nd4j.create(Array[Double](0, 0, 0)))
 
-      Then("should be crush")
-      status shouldBe 'crush
+      Then("should be crashed")
+      status shouldBe 'crashed
 
       And("should not be landed")
       status should not be 'landed
@@ -357,8 +357,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       Then("should be out of range")
       status shouldBe 'outOfRange
 
-      Then("should not be crush")
-      status should not be 'crush
+      Then("should not be crashed")
+      status should not be 'crashed
 
       And("should not be landed")
       status should not be 'landed
@@ -376,8 +376,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       Then("should be out of range")
       status shouldBe 'outOfRange
 
-      Then("should not be crush")
-      status should not be 'crush
+      Then("should not be crashed")
+      status should not be 'crashed
 
       And("should not be landed")
       status should not be 'landed
@@ -395,8 +395,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       Then("should be out of range")
       status shouldBe 'outOfRange
 
-      Then("should not be crush")
-      status should not be 'crush
+      Then("should not be crashed")
+      status should not be 'crashed
 
       And("should not be landed")
       status should not be 'landed
@@ -414,8 +414,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       Then("should be out of range")
       status shouldBe 'outOfRange
 
-      Then("should not be crush")
-      status should not be 'crush
+      Then("should not be crashed")
+      status should not be 'crashed
 
       And("should not be landed")
       status should not be 'landed
@@ -433,8 +433,8 @@ class LanderStatusTest extends FunSpec with Matchers with GivenWhenThen {
       Then("should be out of range")
       status shouldBe 'outOfRange
 
-      Then("should not be crush")
-      status should not be 'crush
+      Then("should not be crashed")
+      status should not be 'crashed
 
       And("should not be landed")
       status should not be 'landed

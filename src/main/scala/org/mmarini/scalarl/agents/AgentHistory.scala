@@ -50,7 +50,7 @@ case class AgentHistory(
 
   /** Returns the number of feedback */
   def length = data.length
-  
+
   /** Append a feedback to history */
   def :+(feedback: Feedback): AgentHistory = {
     val newData = (if (data.length >= maxLength) data.tail else data) :+ feedback
