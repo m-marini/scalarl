@@ -38,6 +38,9 @@ import org.mmarini.scalarl.ActionChannelConfig
 import org.mmarini.scalarl.ts._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
+import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.indexing.NDArrayIndex
+import org.nd4j.linalg.ops.transforms.Transforms._
 
 /**
  * The agent acting in the environment by QLearning T(0) algorithm.
@@ -56,7 +59,8 @@ case class DynaQPlusAgent(net: MultiLayerNetwork,
                           gamma: Double,
                           kappa: Double,
                           kappaPlus: Double,
-                          planningStepsCounter: Int) extends Agent {
+                          planningStepsCounter: Int,
+                          tolerance: Option[INDArray]) extends Agent {
   /**
    * Returns the new agent and the chosen action.
    * Chooses the action to be executed to the environment.
@@ -110,7 +114,23 @@ case class DynaQPlusAgent(net: MultiLayerNetwork,
    */
   private def learnModel(feedback: Feedback): Seq[Feedback] = {
     if (maxModelSize > 0) {
-      val removed = model.filterNot(f => f.s0.signals == feedback.s0.signals && f.action == feedback.action)
+      val removed = model.filterNot(f => {
+        tolerance.map(t => {
+          if (f.action == feedback.action) {
+            val d = f.s0.signals.sub(feedback.s0.signals)
+            val diff = abs(d).subi(t)
+            // array with ones if diff > 0 (states are different)
+            val neqf = diff.gti(0)
+            // count differences
+            val diffCount = neqf.sumNumber().doubleValue()
+            val eq = diffCount == 0
+            eq
+          } else {
+            false
+          }
+        }).getOrElse(f.s0.signals == feedback.s0.signals && f.action == feedback.action)
+      })
+
       val cap = if (removed.size >= maxModelSize) removed.tail else removed
       cap :+ feedback
     } else {
@@ -164,17 +184,6 @@ case class DynaQPlusAgent(net: MultiLayerNetwork,
   }
 
   /**
-   * Returns the policy for an observation
-   *
-   * @param observation the observation
-   */
-  def policy(observation: Observation): Policy = if (observation.endUp) {
-    AgentUtils.endStatePolicy(config)
-  } else {
-    net.output(observation.signals)
-  }
-
-  /**
    * Returns the score a feedback
    *
    * @param feedback the feedback from the last step
@@ -189,6 +198,17 @@ case class DynaQPlusAgent(net: MultiLayerNetwork,
       val d2 = label.squaredDistance(policy0)
       val nch = valueMask0.sumNumber().doubleValue()
       d2 / nch
+  }
+
+  /**
+   * Returns the policy for an observation
+   *
+   * @param observation the observation
+   */
+  def policy(observation: Observation): Policy = if (observation.endUp) {
+    AgentUtils.endStatePolicy(config)
+  } else {
+    net.output(observation.signals)
   }
 
   /**
@@ -210,8 +230,14 @@ case class DynaQPlusAgent(net: MultiLayerNetwork,
   }
 }
 
+private case class Interval(interval: (Int, Int), value: Double) {
+  require(interval._1 >= 0)
+  require(interval._2 >= interval._1)
+}
+
 /** The factory of [[DynaQPlusAgent]] */
 object DynaQPlusAgent {
+
   /**
    * Returns the Dyna+Agent
    *
@@ -220,6 +246,7 @@ object DynaQPlusAgent {
    * @param config the action channel configuration
    */
   def apply(conf: ACursor, net: MultiLayerNetwork, config: ActionChannelConfig): DynaQPlusAgent = {
+    val tolerance = loadTolerance(conf.downField("tolerance"))
     DynaQPlusAgent(net = net,
       model = Seq(),
       config = config,
@@ -228,6 +255,37 @@ object DynaQPlusAgent {
       gamma = conf.get[Double]("gamma").right.get,
       kappa = conf.get[Double]("kappa").right.get,
       kappaPlus = conf.get[Double]("kappaPlus").right.get,
-      planningStepsCounter = conf.get[Int]("planningStepsCounter").right.get)
+      planningStepsCounter = conf.get[Int]("planningStepsCounter").right.get,
+      tolerance = tolerance)
+  }
+
+  /**
+   * Returns the tolerance for the model
+   *
+   * @param cursor the tolerance configuration
+   */
+  private def loadTolerance(cursor: ACursor): Option[INDArray] = {
+    val intervals = cursor.values.map(list => {
+      list.map(item => {
+        val interval = item.hcursor.get[List[Int]]("interval").right.get
+        if (interval.size != 2) {
+          throw new IllegalArgumentException("Wrong interval")
+        }
+        val value = item.hcursor.get[Double]("value").right.get
+        Interval((interval.head, interval(1)), value)
+      })
+    })
+    val result = intervals.map(inters => {
+      val last = inters.map(_.interval._2).max
+      val tolerance = Nd4j.zeros(last + 1L)
+      inters.foreach(interval => {
+        tolerance.get(NDArrayIndex.interval(
+          interval.interval._1,
+          interval.interval._2 + 1)).
+          assign(interval.value)
+      })
+      tolerance
+    })
+    result
   }
 }

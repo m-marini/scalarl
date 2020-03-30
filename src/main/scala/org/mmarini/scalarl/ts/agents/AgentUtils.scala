@@ -74,6 +74,21 @@ object AgentUtils {
   }
 
   /**
+   * Returns the start,end indexes for each channel
+   *
+   * @param conf the configuration of action channels
+   */
+  def sliceIdxFromChannels(conf: ActionChannelConfig): Array[(Int, Int)] = {
+    val (indexes, _) = conf.foldLeft((Array[(Int, Int)](), 0)) {
+      case ((indexes, start), length) =>
+        val next = start + length
+        val newIndexes = indexes :+ (start, next - 1)
+        (newIndexes, next)
+    }
+    indexes
+  }
+
+  /**
    * Returns the bootstrap policy for a transaction feedback
    *
    * Given `policy0` the policy for a state s0 with the relative action mask
@@ -150,20 +165,5 @@ object AgentUtils {
       }
     }
     (action, values)
-  }
-
-  /**
-   * Returns the start,end indexes for each channel
-   *
-   * @param conf the configuration of action channels
-   */
-  def sliceIdxFromChannels(conf: ActionChannelConfig): Array[(Int, Int)] = {
-    val (indexes, _) = conf.foldLeft((Array[(Int, Int)](), 0)) {
-      case ((indexes, start), length) =>
-        val next = start + length
-        val newIndexes = indexes :+ (start, next - 1)
-        (newIndexes, next)
-    }
-    indexes
   }
 }

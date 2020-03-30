@@ -103,43 +103,6 @@ case class NetworkBuilder(
         acc.then(builder))
 
   /**
-   * Returns the sequence of operation builder to perform the forward process.
-   *   - First operation creates the "normalized" input from "inputs"
-   *   - Then applies the forward process for each layer copying the outputs to the next inputs of each layer
-   *   - Finally copies the output of last layer to the "output" container
-   */
-  private def internalForwardBuilder = {
-    val normalized = normalizer.map(n =>
-      OperationBuilder(data =>
-        data + ("normalized" -> n.normalize(data("inputs"))))).getOrElse(
-      OperationBuilder(data =>
-        data + ("normalized" -> data("inputs"))))
-    // Forwards updater of each layer
-    val layerForwards = layers.map(layer =>
-      layer.forwardBuilder(this))
-    // merger updaters for each layer interconnection
-    val in2Out = for {
-      (prev, next) <- layers.zip(layers.tail)
-    } yield {
-      val toKey = s"${next.id}.inputs"
-      val fromKey = s"${prev.id}.outputs"
-      OperationBuilder(data =>
-        data + (toKey -> data(fromKey)))
-    }
-    // Sequence the forward updaters and the mergers
-    val seq = for {
-      (forward, in2Out) <- layerForwards.zip(in2Out)
-      builder <- Seq(forward, in2Out)
-    } yield builder
-    // Output Extractor
-    val key = s"${layers.last.id}.outputs"
-    val outputExractor = OperationBuilder(data =>
-      data + ("outputs" -> data(key)))
-
-    normalized +: seq :+ layerForwards.last :+ outputExractor
-  }
-
-  /**
    * Returns the fit process operations builder.
    *   - Performs a forward process generating "normalized", "outputs", "*.inputs", "*.outputs", "outputs"
    * for each layer
@@ -178,6 +141,43 @@ case class NetworkBuilder(
 
     all.foldLeft(OperationBuilder())((acc, builder) =>
       acc.then(builder))
+  }
+
+  /**
+   * Returns the sequence of operation builder to perform the forward process.
+   *   - First operation creates the "normalized" input from "inputs"
+   *   - Then applies the forward process for each layer copying the outputs to the next inputs of each layer
+   *   - Finally copies the output of last layer to the "output" container
+   */
+  private def internalForwardBuilder = {
+    val normalized = normalizer.map(n =>
+      OperationBuilder(data =>
+        data + ("normalized" -> n.normalize(data("inputs"))))).getOrElse(
+      OperationBuilder(data =>
+        data + ("normalized" -> data("inputs"))))
+    // Forwards updater of each layer
+    val layerForwards = layers.map(layer =>
+      layer.forwardBuilder(this))
+    // merger updaters for each layer interconnection
+    val in2Out = for {
+      (prev, next) <- layers.zip(layers.tail)
+    } yield {
+      val toKey = s"${next.id}.inputs"
+      val fromKey = s"${prev.id}.outputs"
+      OperationBuilder(data =>
+        data + (toKey -> data(fromKey)))
+    }
+    // Sequence the forward updaters and the mergers
+    val seq = for {
+      (forward, in2Out) <- layerForwards.zip(in2Out)
+      builder <- Seq(forward, in2Out)
+    } yield builder
+    // Output Extractor
+    val key = s"${layers.last.id}.outputs"
+    val outputExractor = OperationBuilder(data =>
+      data + ("outputs" -> data(key)))
+
+    normalized +: seq :+ layerForwards.last :+ outputExractor
   }
 
   /**

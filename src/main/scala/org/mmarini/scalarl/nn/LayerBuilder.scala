@@ -177,6 +177,13 @@ case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder wi
     (theta: INDArray) => theta.get(NDArrayIndex.interval(n * m, n * (m + 1)))
   }
 
+  /** Returns the converter og thetas to weights */
+  def weights(topology: NetworkTopology): INDArray => INDArray = {
+    val n = noInputs(topology)
+    val m = noOutputs
+    (theta: INDArray) => theta.get(NDArrayIndex.interval(0, n * m)).reshape(n, m)
+  }
+
   def gradientBuilder(topology: NetworkTopology): OperationBuilder = {
     val n = noInputs(topology)
     val m = noOutputs
@@ -203,13 +210,6 @@ case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder wi
       val inpDelta = delta.mmul(w.transpose())
       data + (key("inputDelta") -> inpDelta)
     })
-  }
-
-  /** Returns the converter og thetas to weights */
-  def weights(topology: NetworkTopology): INDArray => INDArray = {
-    val n = noInputs(topology)
-    val m = noOutputs
-    (theta: INDArray) => theta.get(NDArrayIndex.interval(0, n * m)).reshape(n, m)
   }
 
   override def broadcastDeltaBuilder(topology: NetworkTopology): OperationBuilder = {
