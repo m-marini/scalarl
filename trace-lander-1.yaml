@@ -55,14 +55,3 @@ session:
   #  samples: lander-samples.csv
   sentinel: false
   modelFile: lander.zip
-  tolerance:
-    - interval: [0, 1]
-      value: 200.0e-6 # 10 cm / 500 m
-    - interval: [2, 2]
-      value: 666.7e-6 # 10 cm / 150 m
-    - interval: [3, 4]
-      value: 2.08e-3 # 0.05 m/s / 24 m/s
-    - interval: [5, 5]
-      value: 33.3e-3 # 0.4 m/s / 12 m/s
-    - interval: [6, 27]
-      value: 0.5 # binary features
