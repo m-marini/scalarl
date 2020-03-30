@@ -29,18 +29,16 @@
 
 package org.mmarini.scalarl.nn
 
-import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.FunSpec
-import org.scalatest.GivenWhenThen
-import org.scalatest.Matchers
-
 import io.circe.yaml.parser
+import org.nd4j.linalg.factory.Nd4j
+import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
 
 class SGDOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
   val Epsilon = 1e-6
   val Alpha = 0.1
 
-  val yamlDoc = """---
+  val yamlDoc =
+    """---
 alpha: 0.1
 mode: SGD
 """
@@ -98,10 +96,10 @@ mode: SGD
       json shouldBe 'isObject
 
       And("should contain mode SGD")
-      json.asObject.flatMap(_("mode")).flatMap(_.asString) should contain("SGD")
+      json.asObject.flatMap(_ ("mode")).flatMap(_.asString) should contain("SGD")
 
       And(s"should contain alpha ${Alpha}")
-      json.asObject.flatMap(_("alpha")).flatMap(_.asNumber).map(_.toDouble) should contain(Alpha)
+      json.asObject.flatMap(_ ("alpha")).flatMap(_.asNumber).map(_.toDouble) should contain(Alpha)
     }
 
     it("should generate from json") {

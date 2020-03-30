@@ -1,7 +1,10 @@
 ---
 training:
-#  samples: lander-training.csv
+  #  samples: lander-training.csv
   samples: lander-samples.csv
+  gamma: 0.999
   epochs: 5000
+  monitorCounter: 100
+  batchSimulation: 6000
 network:
   modelFile: lander.zip

@@ -27,17 +27,20 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.envs
+package org.mmarini.scalarl.ts
 
-import java.io.FileReader
-import java.io.Reader
+import org.nd4j.linalg.api.ndarray.INDArray
 
-import io.circe.Json
-import io.circe.yaml.parser
-
-object Configuration {
-
-  def jsonFromFile(file: String): Json = jsonFromReader(new FileReader(file))
-
-  def jsonFromReader(reader: Reader): Json = parser.parse(reader).right.get
+/**
+ * The concrete observation of the environment status.
+ *
+ * @param time    the instant
+ * @param signals the environment status observation
+ * @param actions the valid action for the current environment status
+ * @param endUp   true if end status observation
+ */
+case class INDArrayObservation(time: Double,
+                               signals: INDArray,
+                               actions: INDArray,
+                               endUp: Boolean) extends Observation {
 }

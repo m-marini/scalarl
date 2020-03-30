@@ -29,12 +29,9 @@
 
 package org.mmarini.scalarl.nn
 
-import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.FunSpec
-import org.scalatest.GivenWhenThen
-import org.scalatest.Matchers
-
 import io.circe.yaml.parser
+import org.nd4j.linalg.factory.Nd4j
+import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
 
 class AdamOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
   val Alpha = 0.1
@@ -44,7 +41,8 @@ class AdamOptimizerTest extends FunSpec with GivenWhenThen with Matchers {
 
   Nd4j.create()
 
-  val yamlDoc = """---
+  val yamlDoc =
+    """---
 mode: ADAM
 alpha: 0.1
 beta1: 0.9
@@ -120,19 +118,19 @@ epsilon: 0.001
       json shouldBe 'isObject
 
       And("should contain mode ADAM")
-      json.asObject.flatMap(_("mode")).flatMap(_.asString) should contain("ADAM")
+      json.asObject.flatMap(_ ("mode")).flatMap(_.asString) should contain("ADAM")
 
       And(s"should contain alpha ${Alpha}")
-      json.asObject.flatMap(_("alpha")).flatMap(_.asNumber).map(_.toDouble) should contain(Alpha)
+      json.asObject.flatMap(_ ("alpha")).flatMap(_.asNumber).map(_.toDouble) should contain(Alpha)
 
       And(s"should contain beta1 ${Beta1}")
-      json.asObject.flatMap(_("beta1")).flatMap(_.asNumber).map(_.toDouble) should contain(Beta1)
+      json.asObject.flatMap(_ ("beta1")).flatMap(_.asNumber).map(_.toDouble) should contain(Beta1)
 
       And(s"should contain beta2 ${Beta2}")
-      json.asObject.flatMap(_("beta2")).flatMap(_.asNumber).map(_.toDouble) should contain(Beta2)
+      json.asObject.flatMap(_ ("beta2")).flatMap(_.asNumber).map(_.toDouble) should contain(Beta2)
 
       And(s"should contain epsilon ${Epsilon}")
-      json.asObject.flatMap(_("epsilon")).flatMap(_.asNumber).map(_.toDouble) should contain(Epsilon)
+      json.asObject.flatMap(_ ("epsilon")).flatMap(_.asNumber).map(_.toDouble) should contain(Epsilon)
     }
 
     it("should generate from json") {

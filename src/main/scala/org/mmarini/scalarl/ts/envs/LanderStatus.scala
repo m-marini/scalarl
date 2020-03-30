@@ -27,16 +27,10 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.envs
-
-import scala.math.abs
+package org.mmarini.scalarl.ts.envs
 
 import org.mmarini.scalarl.ActionChannelConfig
-import org.mmarini.scalarl.ChannelAction
-import org.mmarini.scalarl.Env
-import org.mmarini.scalarl.INDArrayObservation
-import org.mmarini.scalarl.Observation
-import org.mmarini.scalarl.Reward
+import org.mmarini.scalarl.ts._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
@@ -45,43 +39,19 @@ import org.nd4j.linalg.factory.Nd4j
  * The LanderStatus with position and speed
  *
  * @constructor create a LanderStatus with position and speed
- * @param pos the position
+ * @param pos   the position
+ * @param time  the time instant
  * @param speed the speed
+ * @param fuel  the fuel stock
+ * @param conf  the configuration
  */
-case class LanderStatus(
-  pos:    INDArray,
-  speed:  INDArray,
-  fuel:   Int,
-  conf:   LanderConf,
-  random: Random) extends Env {
+case class LanderStatus(pos: INDArray,
+                        speed: INDArray,
+                        time: Double,
+                        fuel: Int,
+                        conf: LanderConf) extends Env {
 
-  override def actionConfig: ActionChannelConfig = LanderConf.ActionChannels
-
-  override def reset(): (Env, Observation) = {
-    val newEnv = copy(
-      pos = conf.initialPos(random),
-      speed = Nd4j.zeros(3),
-      fuel = conf.fuel)
-    (newEnv, newEnv.observation)
-  }
-
-  def isOutOfFuel: Boolean = fuel <= 0
-
-  override def step(action: ChannelAction): (Env, Observation, Reward) = {
-    val newEnv = drive(action)
-    val reward = if (newEnv.isOutOfRange) {
-      conf.outOfRangeReward
-    } else if (newEnv.isCrashed) {
-      conf.crashReward
-    } else if (newEnv.isLanded) {
-      conf.landedReward
-    } else if (newEnv.isOutOfFuel) {
-      conf.outOfFuelReward
-    } else {
-      conf.rewardFromPosition(newEnv.pos)
-    }
-    (newEnv, newEnv.observation, reward)
-  }
+  //  override def actionConfig: ActionChannelConfig = LanderConf.ActionChannels
 
   /**
    * Return the observation of the current land status
@@ -98,13 +68,39 @@ case class LanderStatus(
    *  - (17) 1 signal for horizontal no landing position 0, 1
    *  - (18) 3 signals for no land speed 0, 1 (vh high, vz low, vz high)
    */
-  lazy val observation: Observation = {
-
+  lazy val observation: Observation =
     INDArrayObservation(
       signals = conf.signals(pos, speed),
       actions = LanderConf.ValidActions,
+      time = time,
       endUp = isLanded || isCrashed || isOutOfRange || isOutOfFuel)
+
+  override def reset(random: Random): (Env, Observation) = {
+    val newEnv = copy(
+      pos = conf.initialPos(random),
+      speed = Nd4j.zeros(3),
+      fuel = conf.fuel)
+    (newEnv, newEnv.observation)
   }
+
+  override def change(action: ChannelAction, random: Random): (Env, Observation, Reward) = {
+    val newEnv = drive(action)
+    val reward = if (newEnv.isOutOfRange) {
+      conf.outOfRangeReward
+    } else if (newEnv.isCrashed) {
+      conf.crashReward
+    } else if (newEnv.isLanded) {
+      conf.landedReward
+    } else if (newEnv.isOutOfFuel) {
+      conf.outOfFuelReward
+    } else {
+      conf.rewardFromPosition(newEnv.pos)
+    }
+    (newEnv, newEnv.observation, reward)
+  }
+
+  /** Returns trueh is out of fuel */
+  def isOutOfFuel: Boolean = fuel <= 0
 
   /** Returns true if the shuttle is out of range */
   def isOutOfRange: Boolean = conf.isOutOfRange(pos)
@@ -115,30 +111,34 @@ case class LanderStatus(
   /** Returns true is the shuttle crush */
   def isCrashed: Boolean = conf.isCrashed(pos, speed)
 
-  /** Returns the new status by driving with action */
-  def drive(action: ChannelAction): LanderStatus = {
-    val (p, v) = conf.drive(action, pos, speed)
-    copy(pos = p, speed = v, fuel = fuel - 1)
+  /**
+   * Returns the new status by driving with actions
+   *
+   * @param actions the actions
+   */
+  def drive(actions: ChannelAction): LanderStatus = {
+    val (p, v) = conf.drive(actions, pos, speed)
+    copy(pos = p, speed = v, fuel = fuel - 1, time = time + conf.dt)
   }
+
+  override def actionConfig: ActionChannelConfig = LanderConf.ActionChannels
+
+  /** Returns the number of signals */
+  override def signalSize: Int = 28
 }
 
 /** Factory for [[LanderStatus]] instances */
 object LanderStatus {
 
-  def apply(conf: LanderConf, random: Random): LanderStatus = LanderStatus(
+  /**
+   * Returns the initial environent
+   *
+   * @param conf the configuration
+   */
+  def apply(conf: LanderConf): LanderStatus = LanderStatus(
     pos = Nd4j.zeros(3),
     speed = Nd4j.zeros(3),
+    time = 0,
     conf = conf,
-    fuel = conf.fuel,
-    random = random)
-
-  def apply(pos: INDArray, speed: INDArray): LanderStatus = {
-    val conf = LanderConf()
-    LanderStatus(
-      pos = pos,
-      speed = speed,
-      conf = conf,
-      fuel = conf.fuel,
-      random = Nd4j.getRandom())
-  }
+    fuel = conf.fuel)
 }

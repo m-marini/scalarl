@@ -29,65 +29,41 @@
 
 package org.mmarini.scalarl.agents
 
-import org.mmarini.scalarl.Action
-import org.mmarini.scalarl.Agent
-import org.mmarini.scalarl.Feedback
-import org.mmarini.scalarl.Observation
-import org.mmarini.scalarl.nn.NetworkData
-import org.mmarini.scalarl.nn.NetworkProcessor
-import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.api.rng.Random
-import org.nd4j.linalg.factory.Nd4j
-import org.mmarini.scalarl.nn.NetDataMaterializer
 import java.io.File
-import org.mmarini.scalarl.ChannelAction
-import org.mmarini.scalarl.ActionChannelConfig
-import org.mmarini.scalarl.ActionChannelConfig
-import org.mmarini.scalarl.StatusValues
-import org.mmarini.scalarl.Policy
-import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
-import org.deeplearning4j.datasets.iterator.INDArrayDataSetIterator
-import org.nd4j.linalg.primitives.Pair
-import scala.collection.JavaConversions._
-import org.mmarini.scalarl.ChannelAction
-import org.nd4j.linalg.dataset.api.iterator.DataSetIterator
+
 import com.typesafe.scalalogging.LazyLogging
+import org.deeplearning4j.datasets.iterator.INDArrayDataSetIterator
+import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.util.ModelSerializer
+import org.mmarini.scalarl._
+import org.nd4j.linalg.api.rng.Random
+import org.nd4j.linalg.dataset.api.iterator.DataSetIterator
+import org.nd4j.linalg.primitives.Pair
+
+import scala.collection.JavaConverters._
 
 /**
  * The agent acting in the environment by QLearning T(0) algorithm.
  *
- *  Generates actions to change the status of environment basing on observation of the environment
- *  and the internal strategy policy.
+ * Generates actions to change the status of environment basing on observation of the environment
+ * and the internal strategy policy.
  *
- *  Updates its strategy policy to optimize the return value (discount sum of rewards)
- *  and the observation of resulting environment
+ * Updates its strategy policy to optimize the return value (discount sum of rewards)
+ * and the observation of resulting environment
  */
 case class TDBatchAgent(
-  net:             MultiLayerNetwork,
-  history:         AgentHistory,
-  random:          Random,
-  config:          ActionChannelConfig,
-  epsilon:         Double,
-  gamma:           Double,
-  kappa:           Double,
-  minData:         Int,
-  stepData:        Int,
-  stepCounter:     Int,
-  noBootstrapIter: Int,
-  noEpochIter:     Int) extends TDAgent with LazyLogging {
-
-  override def policy(observation: Observation): Policy = if (observation.endUp) {
-    TDAgentUtils.endStatePolicy(config)
-  } else {
-    net.output(observation.signals)
-  }
-
-  override def greedyAction(observation: Observation): ChannelAction =
-    TDAgentUtils.actionAndStatusValuesFromPolicy(
-      policy = policy(observation),
-      valueMask = observation.actions,
-      conf = config)._1
+                         net: MultiLayerNetwork,
+                         history: AgentHistory,
+                         random: Random,
+                         config: ActionChannelConfig,
+                         epsilon: Double,
+                         gamma: Double,
+                         kappa: Double,
+                         minData: Int,
+                         stepData: Int,
+                         stepCounter: Int,
+                         noBootstrapIter: Int,
+                         noEpochIter: Int) extends TDAgent with LazyLogging {
 
   /**
    * Chooses the action for an observation
@@ -96,7 +72,7 @@ case class TDBatchAgent(
    * This actor apply a epsilon greedy policy choosing a random actin with probability epsilon
    * and the action with highest action value with probability 1 - epsilon.
    *
-   *  @param observation the observation of environment status
+   * @param observation the observation of environment status
    */
   override def chooseAction(observation: Observation): (Agent, ChannelAction) = {
     val valueMask = observation.actions
@@ -107,6 +83,18 @@ case class TDBatchAgent(
       greedyAction(observation)
     }
     (this, action)
+  }
+
+  override def greedyAction(observation: Observation): ChannelAction =
+    TDAgentUtils.actionAndStatusValuesFromPolicy(
+      policy = policy(observation),
+      valueMask = observation.actions,
+      conf = config)._1
+
+  override def policy(observation: Observation): Policy = if (observation.endUp) {
+    TDAgentUtils.endStatePolicy(config)
+  } else {
+    net.output(observation.signals)
   }
 
   override def fit(feedback: Feedback): Agent = {
@@ -123,11 +111,30 @@ case class TDBatchAgent(
           newNet.fit(iter, noEpochIter)
           agent.copy(net = newNet)
         })
-      val score = newAgent.net.score()
       newAgent.copy(stepCounter = 0)
     } else {
       agentWithNewHistory.copy(stepCounter = stepCounter + 1)
     }
+  }
+
+  /**
+   * Returns inputs, labels, mask, noClearTrace data to fit the network from history
+   */
+  def createDataSetIterator: DataSetIterator = {
+    // Computes the labels and mask dataset
+    require(history.length >= 1)
+    val data: Seq[Pair[ChannelAction, Policy]] = history.data.map {
+      case Feedback(obs0, action, reward, obs1) =>
+        val policy0 = policy(obs0)
+        val valueMask0 = obs0.actions
+        val policy1 = policy(obs1)
+        val valueMask1 = obs1.actions
+        val label = TDAgentUtils.bootstrapPolicy(policy0, valueMask0, policy1, valueMask1, action, reward, gamma, kappa, config)
+        Pair.of(obs0.signals, label)
+    }
+    val batchSize = data.length
+    val iter = new INDArrayDataSetIterator(data.asJava, batchSize)
+    iter
   }
 
   override def score(feedback: Feedback): Double = feedback match {
@@ -140,26 +147,6 @@ case class TDBatchAgent(
       val d2 = label.squaredDistance(policy0)
       val nch = valueMask0.sumNumber().doubleValue()
       d2 / nch
-  }
-
-  /**
-   * Returns inputs, labels, mask, noClearTrace data to fit the network from history
-   */
-  def createDataSetIterator: DataSetIterator = {
-    // Computes the labels and mask dataset
-    require(history.length >= 1)
-    val data = history.data.map {
-      case Feedback(obs0, action, reward, obs1) =>
-        val policy0 = policy(obs0)
-        val valueMask0 = obs0.actions
-        val policy1 = policy(obs1)
-        val valueMask1 = obs1.actions
-        val label = TDAgentUtils.bootstrapPolicy(policy0, valueMask0, policy1, valueMask1, action, reward, gamma, kappa, config)
-        Pair.of(obs0.signals, label)
-    }
-    val batchSize = data.length
-    val iter = new INDArrayDataSetIterator(data, batchSize)
-    iter
   }
 
   override def writeModel(file: String): TDBatchAgent = {

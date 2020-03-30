@@ -20,12 +20,12 @@ agent:
 network:
   numInputs: 21
   numOutputs: 15
-  numHiddens: 
-  - 100
-  - 100
+  numHiddens:
+    - 100
+    - 100
   seed: 1234
-#  learningRate about 100 / noParameters
-#  learningRate: 0.03 # for 100 hidden nodes
+  #  learningRate about 100 / noParameters
+  #  learningRate: 0.03 # for 100 hidden nodes
   learningRate: 10e-3 # for 100 x 100 hidden nodes
   beta1: 0.9
   beta2: 0.999

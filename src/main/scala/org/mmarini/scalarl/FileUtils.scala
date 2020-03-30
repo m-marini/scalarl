@@ -29,43 +29,39 @@
 
 package org.mmarini.scalarl
 
+import java.io._
+
 import org.nd4j.linalg.api.ndarray.INDArray
-import java.io.Writer
-import java.io.FileWriter
-import java.io.Reader
-import java.io.BufferedReader
-import rx.lang.scala.Observable
-import java.io.File
-import rx.lang.scala.Subscriber
-import scala.util.Try
-import java.io.FileReader
-import rx.lang.scala.Observer
-import rx.lang.scala.Subscription
 import org.nd4j.linalg.factory.Nd4j
+import rx.lang.scala.Observable
 
 object FileUtils {
-
-  def withWriter(w: Writer)(f: Writer => Unit) {
-    try {
-      f(w)
-    } finally {
-      w.close();
-    }
-  }
 
   def withFile(file: String, append: Boolean)(f: Writer => Unit) {
     withWriter(new FileWriter(file, true))(f)
   }
 
-  def writeINDArray(fw: Writer)(matrix: INDArray) {
+  def withWriter(w: Writer)(f: Writer => Unit) {
+    try {
+      f(w)
+    } finally {
+      w.close()
+    }
+  }
+
+  def writeINDArray(matrix: INDArray)(fw: Writer) {
     val Array(n, m) = matrix.shape()
     for {
       i <- 0L until n
     } {
-      val record = for { j <- 0L until m } yield matrix.getDouble(i, j).toString
+      val record = for {j <- 0L until m} yield matrix.getDouble(i, j).toString
       fw.write(record.mkString(",") + "\n")
     }
   }
+
+  def readINDArray(file: File): Observable[INDArray] =
+    readFile(file).map(_.split(",").map(_.toDouble)).toArray.map(
+      Nd4j.create)
 
   def readFile(file: File): Observable[String] =
     Observable(s => {
@@ -90,8 +86,4 @@ object FileUtils {
         case ex: Throwable => s.onError(ex)
       }
     })
-
-  def readINDArray(file: File): Observable[INDArray] =
-    readFile(file).map(_.split(",").map(_.toDouble)).toArray.map(
-      Nd4j.create)
 }

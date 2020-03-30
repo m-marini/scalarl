@@ -29,19 +29,17 @@
 
 package org.mmarini.scalarl.nn
 
-import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.FunSpec
-import org.scalatest.GivenWhenThen
-import org.scalatest.Matchers
-
 import io.circe.yaml.parser
+import org.nd4j.linalg.factory.Nd4j
+import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
 
 class NoneTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
   val Epsilon = 1e-3
 
   Nd4j.create()
 
-  val yamlDoc = """---
+  val yamlDoc =
+    """---
 mode: NONE
 """
 
@@ -57,7 +55,7 @@ mode: NONE
       json.isObject shouldBe true
 
       And("should contain mode NONE")
-      json.asObject.flatMap(_("mode")).flatMap(_.asString) should contain("NONE")
+      json.asObject.flatMap(_ ("mode")).flatMap(_.asString) should contain("NONE")
     }
 
     it("should generate trace mode from yaml") {

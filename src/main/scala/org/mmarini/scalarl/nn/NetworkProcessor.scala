@@ -61,8 +61,8 @@ import org.nd4j.linalg.api.ndarray.INDArray
  * }}}
  */
 class NetworkProcessor(
-  _forward: Operation,
-  _fit:     Operation)
+                        _forward: Operation,
+                        _fit: Operation)
   extends Network {
 
   /** Returns the data with computed outputs */
@@ -75,11 +75,11 @@ class NetworkProcessor(
 
   /** Returns the data with changed parameters to fit the labels */
   def fit(
-    data:         NetworkData,
-    inputs:       INDArray,
-    labels:       INDArray,
-    mask:         INDArray,
-    noClearTrace: INDArray): NetworkData = {
+           data: NetworkData,
+           inputs: INDArray,
+           labels: INDArray,
+           mask: INDArray,
+           noClearTrace: INDArray): NetworkData = {
     Sentinel(inputs, "inputs")
     Sentinel(labels, "labels")
     Sentinel(mask, "mask")

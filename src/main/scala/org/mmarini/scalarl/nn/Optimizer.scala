@@ -29,9 +29,8 @@
 
 package org.mmarini.scalarl.nn
 
-import org.nd4j.linalg.ops.transforms.Transforms
-
 import io.circe.Json
+import org.nd4j.linalg.ops.transforms.Transforms
 
 trait Optimizer {
 
@@ -43,6 +42,10 @@ trait Optimizer {
 case class SGDOptimizer(alpha: Double) extends Optimizer {
 
   require(alpha >= 0.0)
+
+  lazy val toJson = Json.obj(
+    "mode" -> Json.fromString("SGD"),
+    "alpha" -> Json.fromDoubleOrNull(alpha))
 
   def optimizeBuilder(key: String): OperationBuilder = {
     val gradientKey = s"${key}.gradient"
@@ -60,10 +63,6 @@ case class SGDOptimizer(alpha: Double) extends Optimizer {
         getOrElse(data)
     })
   }
-
-  lazy val toJson = Json.obj(
-    "mode" -> Json.fromString("SGD"),
-    "alpha" -> Json.fromDoubleOrNull(alpha))
 }
 
 case class AdamOptimizer(alpha: Double, beta1: Double, beta2: Double, epsilon: Double) extends Optimizer {
@@ -72,6 +71,12 @@ case class AdamOptimizer(alpha: Double, beta1: Double, beta2: Double, epsilon: D
   require(beta2 >= 0.0)
   require(epsilon >= 0.0)
 
+  lazy val toJson = Json.obj(
+    "mode" -> Json.fromString("ADAM"),
+    "alpha" -> Json.fromDoubleOrNull(alpha),
+    "beta1" -> Json.fromDoubleOrNull(beta1),
+    "beta2" -> Json.fromDoubleOrNull(beta2),
+    "epsilon" -> Json.fromDoubleOrNull(epsilon))
   val omb1 = 1 - beta1
   val omb2 = 1 - beta2
 
@@ -108,45 +113,38 @@ case class AdamOptimizer(alpha: Double, beta1: Double, beta2: Double, epsilon: D
             (feedbackKey -> feedback)
         }).getOrElse(data))
   }
-
-  lazy val toJson = Json.obj(
-    "mode" -> Json.fromString("ADAM"),
-    "alpha" -> Json.fromDoubleOrNull(alpha),
-    "beta1" -> Json.fromDoubleOrNull(beta1),
-    "beta2" -> Json.fromDoubleOrNull(beta2),
-    "epsilon" -> Json.fromDoubleOrNull(epsilon))
 }
 
 object Optimizer {
   def fromJson(json: Json): Optimizer = json.hcursor.get[String]("mode") match {
-    case Right("SGD")  => sgdFromJson(json)
+    case Right("SGD") => sgdFromJson(json)
     case Right("ADAM") => adamFromJson(json)
-    case Right(x)      => throw new IllegalArgumentException(s"""optimizer mode "${x}" invalid""")
-    case _             => throw new IllegalArgumentException("missing optimizer mode")
+    case Right(x) => throw new IllegalArgumentException(s"""optimizer mode "${x}" invalid""")
+    case _ => throw new IllegalArgumentException("missing optimizer mode")
   }
 
   private def sgdFromJson(json: Json) =
     json.hcursor.get[Double]("alpha") match {
       case Right(x) => SGDOptimizer(x)
-      case _        => throw new IllegalArgumentException("missing alpha")
+      case _ => throw new IllegalArgumentException("missing alpha")
     }
 
   private def adamFromJson(json: Json) = {
     val alpha = json.hcursor.get[Double]("alpha") match {
       case Right(x) => x
-      case _        => throw new IllegalArgumentException("missing alpha")
+      case _ => throw new IllegalArgumentException("missing alpha")
     }
     val beta1 = json.hcursor.get[Double]("beta1") match {
       case Right(x) => x
-      case _        => throw new IllegalArgumentException("missing beta1")
+      case _ => throw new IllegalArgumentException("missing beta1")
     }
     val beta2 = json.hcursor.get[Double]("beta2") match {
       case Right(x) => x
-      case _        => throw new IllegalArgumentException("missing beta2")
+      case _ => throw new IllegalArgumentException("missing beta2")
     }
     val epsilon = json.hcursor.get[Double]("epsilon") match {
       case Right(x) => x
-      case _        => throw new IllegalArgumentException("missing epsilon")
+      case _ => throw new IllegalArgumentException("missing epsilon")
     }
     AdamOptimizer(alpha = alpha, beta1 = beta1, beta2 = beta2, epsilon = epsilon)
   }

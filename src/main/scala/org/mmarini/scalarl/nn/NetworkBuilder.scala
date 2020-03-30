@@ -29,10 +29,9 @@
 
 package org.mmarini.scalarl.nn
 
+import io.circe.Json
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
-
-import io.circe.Json
 
 /** Allows to navigate throw the topology of network */
 trait NetworkTopology {
@@ -46,13 +45,21 @@ trait NetworkTopology {
 
 /** Builders of network */
 case class NetworkBuilder(
-  lossFunction:      LossFunction,
-  initializer:       Initializer,
-  optimizer:         Optimizer,
-  traceMode:         TraceMode,
-  normalizer:        Option[Normalizer],
-  constrainAllParms: Option[Double],
-  layers:            Seq[LayerBuilder]) extends NetworkTopology {
+                           lossFunction: LossFunction,
+                           initializer: Initializer,
+                           optimizer: Optimizer,
+                           traceMode: TraceMode,
+                           normalizer: Option[Normalizer],
+                           constrainAllParms: Option[Double],
+                           layers: Seq[LayerBuilder]) extends NetworkTopology {
+
+  lazy val toJson: Json = Json.obj(
+    "noInputs" -> Json.fromInt(noInputs),
+    "lossFunction" -> lossFunction.toJson,
+    "initializer" -> initializer.toJson,
+    "optimizer" -> optimizer.toJson,
+    "traceMode" -> traceMode.toJson,
+    "layers" -> Json.arr(layers.tail.map(_.toJson).toArray: _*))
 
   override def nextLayer(layer: LayerBuilder): Option[LayerBuilder] = {
     val idx = layers.indexOf(layer)
@@ -75,19 +82,25 @@ case class NetworkBuilder(
   def noInputs: Int = layers.head.asInstanceOf[InputLayerBuilder].noInputs
 
   def setLossFunction(lossFunction: LossFunction): NetworkBuilder = copy(lossFunction = lossFunction)
+
   def setInitializer(initializer: Initializer): NetworkBuilder = copy(initializer = initializer)
+
   def setOptimizer(optimizer: Optimizer): NetworkBuilder = copy(optimizer = optimizer)
+
   def setTraceMode(traceMode: TraceMode): NetworkBuilder = copy(traceMode = traceMode)
+
   def setConstrainAllParms(constrainAllParms: Double) = copy(constrainAllParms = Some(constrainAllParms))
+
   def addLayers(layers: LayerBuilder*): NetworkBuilder = copy(layers = this.layers ++ layers)
 
-  lazy val toJson: Json = Json.obj(
-    "noInputs" -> Json.fromInt(noInputs),
-    "lossFunction" -> lossFunction.toJson,
-    "initializer" -> initializer.toJson,
-    "optimizer" -> optimizer.toJson,
-    "traceMode" -> traceMode.toJson,
-    "layers" -> Json.arr(layers.tail.map(_.toJson).toArray: _*))
+  def buildProcessor: NetworkProcessor = new NetworkProcessor(
+    _forward = forwardBuilder.build,
+    _fit = fitBuilder.build)
+
+  private def forwardBuilder =
+    internalForwardBuilder.
+      foldLeft(OperationBuilder())((acc, builder) =>
+        acc.then(builder))
 
   /**
    * Returns the sequence of operation builder to perform the forward process.
@@ -126,52 +139,10 @@ case class NetworkBuilder(
     normalized +: seq :+ layerForwards.last :+ outputExractor
   }
 
-  private def forwardBuilder =
-    internalForwardBuilder.
-      foldLeft(OperationBuilder())((acc, builder) =>
-        acc.then(builder))
-
-  /**
-   * Returns the sequence of backward process operations
-   *   - Copies the "delta" into the "*.delta" of last layer
-   *   - Computes the inputDelta from "*.inputs", "*.outputs", "*.delta" for each layer
-   *     from last to first backwarding the resulting "*.inputDelta" as "*.delta" of previous layer
-   */
-  private def backwardBuilder = {
-    val reverseLayer = layers.reverse
-    val layerBackward = reverseLayer.map(layer =>
-      layer.deltaBuilder(this))
-
-    // merger updaters for each layer interconnection
-    val in2Out = for {
-      (next, prev) <- reverseLayer.zip(reverseLayer.tail)
-    } yield {
-      val toKey = s"${prev.id}.delta"
-      val fromKey = s"${next.id}.inputDelta"
-      OperationBuilder(data =>
-        data + (toKey -> data(fromKey)))
-    }
-    // Sequence the backword updaters and the mergers
-    val seq = for {
-      (deltaLayer, in2Out) <- layerBackward.zip(in2Out)
-      builder <- Seq(deltaLayer, in2Out)
-    } yield builder
-
-    // deltaFeed
-    val key = s"${reverseLayer.head.id}.delta"
-    val deltaFeed = OperationBuilder(data => {
-      val delta = data("delta")
-      Sentinel(delta, key)
-      data + (key -> delta)
-    })
-
-    deltaFeed +: seq :+ layerBackward.last
-  }
-
   /**
    * Returns the fit process operations builder.
    *   - Performs a forward process generating "normalized", "outputs", "*.inputs", "*.outputs", "outputs"
-   *     for each layer
+   * for each layer
    *   - Computes the "*.gradient" for each layer
    *   - Computes the "delta" by loss function
    *   - Computes the "loss" value
@@ -209,9 +180,42 @@ case class NetworkBuilder(
       acc.then(builder))
   }
 
-  def buildProcessor: NetworkProcessor = new NetworkProcessor(
-    _forward = forwardBuilder.build,
-    _fit = fitBuilder.build)
+  /**
+   * Returns the sequence of backward process operations
+   *   - Copies the "delta" into the "*.delta" of last layer
+   *   - Computes the inputDelta from "*.inputs", "*.outputs", "*.delta" for each layer
+   * from last to first backwarding the resulting "*.inputDelta" as "*.delta" of previous layer
+   */
+  private def backwardBuilder = {
+    val reverseLayer = layers.reverse
+    val layerBackward = reverseLayer.map(layer =>
+      layer.deltaBuilder(this))
+
+    // merger updaters for each layer interconnection
+    val in2Out = for {
+      (next, prev) <- reverseLayer.zip(reverseLayer.tail)
+    } yield {
+      val toKey = s"${prev.id}.delta"
+      val fromKey = s"${next.id}.inputDelta"
+      OperationBuilder(data =>
+        data + (toKey -> data(fromKey)))
+    }
+    // Sequence the backword updaters and the mergers
+    val seq = for {
+      (deltaLayer, in2Out) <- layerBackward.zip(in2Out)
+      builder <- Seq(deltaLayer, in2Out)
+    } yield builder
+
+    // deltaFeed
+    val key = s"${reverseLayer.head.id}.delta"
+    val deltaFeed = OperationBuilder(data => {
+      val delta = data("delta")
+      Sentinel(delta, key)
+      data + (key -> delta)
+    })
+
+    deltaFeed +: seq :+ layerBackward.last
+  }
 
   def buildData(random: Random): NetworkData =
     layers.foldLeft(Map[String, INDArray]())((data, layer) =>
@@ -221,43 +225,34 @@ case class NetworkBuilder(
 object NetworkBuilder {
   val DefaultAlpha = 0.1
 
-  def apply(): NetworkBuilder = NetworkBuilder(
-    lossFunction = MSELossFunction,
-    initializer = XavierInitializer,
-    optimizer = SGDOptimizer(alpha = DefaultAlpha),
-    traceMode = NoneTraceMode,
-    normalizer = None,
-    constrainAllParms = None,
-    layers = Array(InputLayerBuilder("inputs", 0)))
-
   def fromJson(net: Json): NetworkBuilder = {
     val noInputs = net.hcursor.get[Int]("noInputs") match {
       case Right(x) => x
-      case _        => throw new IllegalArgumentException("missing noInput in network definition")
+      case _ => throw new IllegalArgumentException("missing noInput in network definition")
     }
     val traceMode = net.hcursor.get[Json]("traceMode") match {
       case Right(x) => TraceMode.fromJson(x)
-      case _        => throw new IllegalArgumentException("missing traceMode in network definition")
+      case _ => throw new IllegalArgumentException("missing traceMode in network definition")
     }
     val optimizer = net.hcursor.get[Json]("optimizer") match {
       case Right(x) => Optimizer.fromJson(x)
-      case _        => throw new IllegalArgumentException("missing optimizer in network definition")
+      case _ => throw new IllegalArgumentException("missing optimizer in network definition")
     }
     val initializer = net.hcursor.get[Json]("initializer") match {
       case Right(x) => Initializer.fromJson(x)
-      case _        => throw new IllegalArgumentException("missing initializer in network definition")
+      case _ => throw new IllegalArgumentException("missing initializer in network definition")
     }
     val lossFunction = net.hcursor.get[Json]("lossFunction") match {
       case Right(x) => LossFunction.fromJson(x)
-      case _        => throw new IllegalArgumentException("missing lossFunction in network definition")
+      case _ => throw new IllegalArgumentException("missing lossFunction in network definition")
     }
     val constrainAllParms = net.hcursor.get[Double]("constrainAllParms") match {
       case Right(x) => x
-      case _        => throw new IllegalArgumentException("missing constrainAllParms in network definition")
+      case _ => throw new IllegalArgumentException("missing constrainAllParms in network definition")
     }
     val layers = net.hcursor.get[Seq[Json]]("layers") match {
       case Right(x) => x.map(LayerBuilder.fromJson _)
-      case _        => throw new IllegalArgumentException("missing layers in network definition")
+      case _ => throw new IllegalArgumentException("missing layers in network definition")
     }
     NetworkBuilder().
       setNoInputs(noInputs).
@@ -268,4 +263,13 @@ object NetworkBuilder {
       setConstrainAllParms(constrainAllParms).
       addLayers(layers.toArray: _*)
   }
+
+  def apply(): NetworkBuilder = NetworkBuilder(
+    lossFunction = MSELossFunction,
+    initializer = XavierInitializer,
+    optimizer = SGDOptimizer(alpha = DefaultAlpha),
+    traceMode = NoneTraceMode,
+    normalizer = None,
+    constrainAllParms = None,
+    layers = Array(InputLayerBuilder("inputs", 0)))
 }

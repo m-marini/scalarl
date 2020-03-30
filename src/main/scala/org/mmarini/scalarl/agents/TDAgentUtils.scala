@@ -29,73 +29,19 @@
 
 package org.mmarini.scalarl.agents
 
-import org.mmarini.scalarl.ActionChannelConfig
-import org.mmarini.scalarl.ActionMask
-import org.mmarini.scalarl.ChannelAction
-import org.mmarini.scalarl.StatusValues
-import org.mmarini.scalarl.Policy
-import org.mmarini.scalarl.Reward
-import org.nd4j.linalg.api.ndarray.INDArray
+import org.mmarini.scalarl._
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
-import org.mmarini.scalarl.ActionChannelConfig
 
 object TDAgentUtils {
-
-  /** Returns the number of output for a given action channel configuration */
-  def numOutputs(config: ActionChannelConfig): Int =
-    config.sum
-
-  /** Returns the start,end indexes for each channel */
-  def sliceIdxFromChannels(conf: ActionChannelConfig): Array[(Int, Int)] = {
-    val (indexes, _) = conf.foldLeft((Array[(Int, Int)](), 0)) {
-      case ((indexes, start), length) =>
-        val next = start + length
-        val newIndexes = indexes :+ (start, next - 1)
-        (newIndexes, next)
-    }
-    indexes
-  }
-
-  /**
-   * Returns the action for a policy, a value mask and a channel configuration
-   */
-  def actionAndStatusValuesFromPolicy(
-    policy:    Policy,
-    valueMask: ActionMask,
-    conf:      ActionChannelConfig): (ChannelAction, StatusValues) = {
-
-    val action = Nd4j.zeros(policy.shape(): _*)
-    val values = action.dup()
-    for {
-      (start, to) <- sliceIdxFromChannels(conf)
-    } {
-      var max = Double.NegativeInfinity
-      var idx = -1L
-      for {
-        i <- start to to
-        if (valueMask.getInt(i) != 0)
-        v = policy.getDouble(i.toLong)
-        if (v > max)
-      } {
-        max = v
-        idx = i
-      }
-      if (idx >= 0) {
-        action.putScalar(idx, 1)
-      }
-      for {
-        i <- start to to
-      } {
-        values.putScalar(i, max)
-      }
-    }
-    (action, values)
-  }
 
   /** Returns the end state policy for a channel configuration */
   def endStatePolicy(conf: ActionChannelConfig): Policy =
     Nd4j.zeros(numOutputs(conf))
+
+  /** Returns the number of output for a given action channel configuration */
+  def numOutputs(config: ActionChannelConfig): Int =
+    config.sum
 
   /** Returns a random action for a valueMask, channel configuration */
   def randomAction(valueMask: ActionMask, conf: ActionChannelConfig)(random: Random): ChannelAction = {
@@ -131,14 +77,61 @@ object TDAgentUtils {
                       policy1: Policy, valueMask1: ActionMask,
                       action: ChannelAction,
                       reward: Reward,
-                      gamma:  Double,
-                      kappa:  Double,
-                      conf:   ActionChannelConfig): Policy = {
+                      gamma: Double,
+                      kappa: Double,
+                      conf: ActionChannelConfig): Policy = {
     val (_, v0) = actionAndStatusValuesFromPolicy(policy0, valueMask0, conf)
     val (_, v1) = actionAndStatusValuesFromPolicy(policy1, valueMask1, conf)
     // a' = v0 + (R + gamma * v1 - v0) / kappa
     val p1 = v0.add(v1.mul(gamma).subi(v0).addi(reward).divi(kappa)).muli(action)
     val fit = policy0.mul(action.sub(1).neg()).add(p1)
     fit
+  }
+
+  /**
+   * Returns the action for a policy, a value mask and a channel configuration
+   */
+  def actionAndStatusValuesFromPolicy(
+                                       policy: Policy,
+                                       valueMask: ActionMask,
+                                       conf: ActionChannelConfig): (ChannelAction, StatusValues) = {
+
+    val action = Nd4j.zeros(policy.shape(): _*)
+    val values = action.dup()
+    for {
+      (start, to) <- sliceIdxFromChannels(conf)
+    } {
+      var max = Double.NegativeInfinity
+      var idx = -1L
+      for {
+        i <- start to to
+        if (valueMask.getInt(i) != 0)
+        v = policy.getDouble(i.toLong)
+        if (v > max)
+      } {
+        max = v
+        idx = i
+      }
+      if (idx >= 0) {
+        action.putScalar(idx, 1)
+      }
+      for {
+        i <- start to to
+      } {
+        values.putScalar(i, max)
+      }
+    }
+    (action, values)
+  }
+
+  /** Returns the start,end indexes for each channel */
+  def sliceIdxFromChannels(conf: ActionChannelConfig): Array[(Int, Int)] = {
+    val (indexes, _) = conf.foldLeft((Array[(Int, Int)](), 0)) {
+      case ((indexes, start), length) =>
+        val next = start + length
+        val newIndexes = indexes :+ (start, next - 1)
+        (newIndexes, next)
+    }
+    indexes
   }
 }

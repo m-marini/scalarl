@@ -12,43 +12,27 @@ The first phase to train the lander consist of generation of a base model and sa
 
 ```bash
 rm lander-samples.csv
-sbt "runMain org.mmarini.scalarl.envs.Main trace-lander-0.yaml"
+sbt "runMain org.mmarini.scalarl.ts.envs.Main trace-lander-0.yaml"
 ```
 
-This creates `lander.zip` model and `lander-samples.csv` dataset.
-Then optimize the model with generated samples by running
-
-```bash
-sbt "runMain org.mmarini.scalarl.envs.Training trainer-lander.yaml"
-```
-
-Run the training again with the trivial goal but starting with the optimized model
-
-```bash
-sbt "runMain org.mmarini.scalarl.envs.Main trace-lander-1.yaml"
-sbt "runMain org.mmarini.scalarl.envs.Training trainer-lander.yaml"
-```
+This creates `lander.zip` model dataset.
 
 ### Increase the goal complexity
 
 Next run the trainig with a harder goal by landing the shuttle from 5 m height and over an wider area of 15 m of radius around the landing area
 
 ```bash
-sbt "runMain org.mmarini.scalarl.envs.Main trace-lander-2.yaml"
-sbt "runMain org.mmarini.scalarl.envs.Training trainer-lander.yaml"
+sbt "runMain org.mmarini.scalarl.ts.envs.Main trace-lander-2.yaml"
 ```
 
 Repeat increasing the complexity by running harder and harder goals to the final goal of landing the shuttle from 100m height and 500m of radius over the landing area.
 
 ```bash
-sbt "runMain org.mmarini.scalarl.envs.Main trace-lander-3.yaml"
-sbt "runMain org.mmarini.scalarl.envs.Training trainer-lander.yaml"
+sbt "runMain org.mmarini.scalarl.ts.envs.Main trace-lander-3.yaml"
 
-sbt "runMain org.mmarini.scalarl.envs.Main trace-lander-4.yaml"
-sbt "runMain org.mmarini.scalarl.envs.Training trainer-lander.yaml"
+sbt "runMain org.mmarini.scalarl.ts.envs.Main trace-lander-4.yaml"
 
-sbt "runMain org.mmarini.scalarl.envs.Main trace-lander-5.yaml"
-sbt "runMain org.mmarini.scalarl.envs.Training trainer-lander.yaml"
+sbt "runMain org.mmarini.scalarl.ts.envs.Main trace-lander-5.yaml"
 ```
 
 ## Old running maze

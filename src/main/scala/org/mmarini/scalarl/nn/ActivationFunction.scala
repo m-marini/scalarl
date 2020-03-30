@@ -29,10 +29,9 @@
 
 package org.mmarini.scalarl.nn
 
-import org.yaml.snakeyaml.Yaml
 import io.circe.Json
-import org.nd4j.linalg.ops.transforms.Transforms
 import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.ops.transforms.Transforms
 
 /**
  * Defines the activation function used in activation layer
@@ -52,6 +51,8 @@ trait ActivationFunction {
 
 object TanhActivationFunction extends ActivationFunction {
 
+  lazy val toJson = Json.fromString("TANH")
+
   def activate(inputs: INDArray): INDArray =
     Transforms.tanh(inputs)
 
@@ -60,9 +61,8 @@ object TanhActivationFunction extends ActivationFunction {
     val inputDelta = grad.muli(delta)
     inputDelta
   }
-
-  lazy val toJson = Json.fromString("TANH")
 }
+
 //object HardTanhActivationFunctionBuilder extends ActivationFunctionBuilder
 //object SigmoidActivationFunctionBuilder extends ActivationFunctionBuilder
 //object ReluActivationFunctionBuilder extends ActivationFunctionBuilder

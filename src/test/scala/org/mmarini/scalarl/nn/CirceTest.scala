@@ -29,21 +29,13 @@
 
 package org.mmarini.scalarl.nn
 
-import org.scalatest.FunSpec
-import org.scalatest.Matchers
-import org.scalatest.prop.PropertyChecks
-
 import io.circe.Json
-import io.circe.yaml
-import io.circe.yaml.syntax.AsYaml
-import org.nd4j.linalg.factory.Nd4j
-import org.scalacheck.Gen
-import org.scalatest.GivenWhenThen
 import io.circe.yaml.parser
-import io.circe.ParsingFailure
+import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
 
 class CirceTest extends FunSpec with GivenWhenThen with Matchers {
-  val document = """---
+  val document =
+    """---
 a:
 - 1
 - 2
@@ -125,7 +117,7 @@ s: aaaa
       val s = json.hcursor.get[String]("s")
 
       Then("array should contain 2 element")
-       a.as[Seq[Json]].right.get should have size(2)
+      a.as[Seq[Json]].right.get should have size (2)
 
       And("first element should be 1")
       a.downN(0).as[Double].toOption should contain(1)

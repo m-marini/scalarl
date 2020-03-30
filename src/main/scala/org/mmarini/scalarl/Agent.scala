@@ -29,25 +29,23 @@
 
 package org.mmarini.scalarl
 
-import org.nd4j.linalg.api.ndarray.INDArray
-
 /**
  * The agent acting in the environment
  *
- *  Generates actions to change the status of environment basing on observation of the environment
- *  and the internal strategy policy.
+ * Generates actions to change the status of environment basing on observation of the environment
+ * and the internal strategy policy.
  *
- *  Updates its strategy policy to optimize the return value (discount sum of rewards)
- *  and the observation of resulting environment
+ * Updates its strategy policy to optimize the return value (discount sum of rewards)
+ * and the observation of resulting environment
  */
 trait Agent {
 
   /**
    * Chooses the action to be executed to the environment
    *
-   *  Returns the new agent and the chosen action
+   * Returns the new agent and the chosen action
    *
-   *  @observation the observation of environment
+   * @observation the observation of environment
    */
   def chooseAction(observation: Observation): (Agent, ChannelAction)
 

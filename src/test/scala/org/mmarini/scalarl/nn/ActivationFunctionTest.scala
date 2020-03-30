@@ -29,17 +29,8 @@
 
 package org.mmarini.scalarl.nn
 
-import org.scalatest.FunSpec
-import org.scalatest.Matchers
-import org.scalatest.prop.PropertyChecks
-
-import io.circe.Json
-import io.circe.yaml
-import io.circe.yaml.syntax.AsYaml
 import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.PropSpec
-import org.scalacheck.Gen
-import org.scalatest.GivenWhenThen
+import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
 
 class ActivationFunctionTest extends FunSpec with Matchers with GivenWhenThen {
   val Epsilon = 1e-6

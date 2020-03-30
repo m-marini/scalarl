@@ -31,9 +31,8 @@ package org.mmarini.scalarl.nn
 
 import org.nd4j.linalg.factory.Nd4j
 import org.scalacheck.Gen
-import org.scalatest.Matchers
-import org.scalatest.PropSpec
 import org.scalatest.prop.PropertyChecks
+import org.scalatest.{Matchers, PropSpec}
 
 class ActivationLayerBuilderTest extends PropSpec with PropertyChecks with Matchers {
   val Epsilon = 1e-6
@@ -41,8 +40,10 @@ class ActivationLayerBuilderTest extends PropSpec with PropertyChecks with Match
   val tanhLayer = ActivationLayerBuilder("tanh", TanhActivationFunction)
 
   def valueGen = Gen.choose(-1.0, 1.0)
-  def inputsGen = Gen.choose(-1.0, 1.0).map(v => Nd4j.ones(2).mul(v))
+
   def inputsDataGen = inputsGen.map(inputs => Map("tanh.inputs" -> inputs))
+
+  def inputsGen = Gen.choose(-1.0, 1.0).map(v => Nd4j.ones(2).mul(v))
 
   private def buildInputs(value: Double) = {
     val inputs = Nd4j.ones(2).mul(value)
@@ -50,7 +51,8 @@ class ActivationLayerBuilderTest extends PropSpec with PropertyChecks with Match
     (inputs, data)
   }
 
-  property("""
+  property(
+    """
 Given an Activation layer builder
   and a initial layer data with 2 random input
   when build a forward updater
@@ -58,18 +60,19 @@ Given an Activation layer builder
   then should result the layer with activated outputs""") {
     forAll(
       (valueGen, "value")) {
-        value =>
-          val (inputs, inputsData) = buildInputs(value)
-          val updater = tanhLayer.forwardBuilder(None.orNull)
-          val newData = updater.build(inputsData)
+      value =>
+        val (inputs, inputsData) = buildInputs(value)
+        val updater = tanhLayer.forwardBuilder(None.orNull)
+        val newData = updater.build(inputsData)
 
-          val y = Math.tanh(value)
-          val expected = Nd4j.ones(2).mul(y)
-          newData.get("tanh.outputs") should contain(expected)
-      }
+        val y = Math.tanh(value)
+        val expected = Nd4j.ones(2).mul(y)
+        newData.get("tanh.outputs") should contain(expected)
+    }
   }
 
-  property("""
+  property(
+    """
 Given an Activation layer builder
   and a initial layer data with 2 random input
   when build a gradient updater
@@ -77,18 +80,19 @@ Given an Activation layer builder
   then should result the layer with gradient""") {
     forAll(
       (valueGen, "value")) {
-        value =>
-          val (inputs, inputsData) = buildInputs(value)
-          val updater = tanhLayer.gradientBuilder(None.orNull).build
-          val y = Math.tanh(value)
-          val withOutputs = inputsData + ("tanh.outputs" -> Nd4j.ones(2).mul(y))
-          val newData = updater(withOutputs)
+      value =>
+        val (inputs, inputsData) = buildInputs(value)
+        val updater = tanhLayer.gradientBuilder(None.orNull).build
+        val y = Math.tanh(value)
+        val withOutputs = inputsData + ("tanh.outputs" -> Nd4j.ones(2).mul(y))
+        val newData = updater(withOutputs)
 
-          newData should be theSameInstanceAs (withOutputs)
-      }
+        newData should be theSameInstanceAs (withOutputs)
+    }
   }
 
-  property("""
+  property(
+    """
 Given an Activation layer builder
   and a initial layer data with 2 random input and delta and gradient
   when build a delta updater
@@ -97,20 +101,20 @@ Given an Activation layer builder
     forAll(
       (valueGen, "value"),
       (valueGen, "delta")) {
-        (value, delta) =>
-          val (inputs, inputsData) = buildInputs(value)
-          val grad = 1 - value * value
-          val expectedDelta = delta * grad
+      (value, delta) =>
+        val (inputs, inputsData) = buildInputs(value)
+        val grad = 1 - value * value
+        val expectedDelta = delta * grad
 
-          val withDelta = inputsData +
-            ("tanh.delta" -> Nd4j.ones(2).mul(delta)) +
-            ("tanh.outputs" -> Nd4j.ones(2).mul(value))
+        val withDelta = inputsData +
+          ("tanh.delta" -> Nd4j.ones(2).mul(delta)) +
+          ("tanh.outputs" -> Nd4j.ones(2).mul(value))
 
-          val updater = tanhLayer.deltaBuilder(None.orNull).build
-          val newData = updater(withDelta)
+        val updater = tanhLayer.deltaBuilder(None.orNull).build
+        val newData = updater(withDelta)
 
-          val expected = Nd4j.ones(2).mul(expectedDelta)
-          newData.get("tanh.inputDelta") should contain(expected)
-      }
+        val expected = Nd4j.ones(2).mul(expectedDelta)
+        newData.get("tanh.inputDelta") should contain(expected)
+    }
   }
 }

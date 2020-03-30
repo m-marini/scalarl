@@ -29,32 +29,21 @@
 
 package org.mmarini.scalarl.agents
 
-import org.mmarini.scalarl.Action
-import org.mmarini.scalarl.Agent
-import org.mmarini.scalarl.Feedback
-import org.mmarini.scalarl.Observation
-import org.mmarini.scalarl.nn.NetworkData
-import org.mmarini.scalarl.nn.NetworkProcessor
-import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.api.rng.Random
-import org.nd4j.linalg.factory.Nd4j
-import org.mmarini.scalarl.nn.NetDataMaterializer
-import java.io.File
+import org.mmarini.scalarl.{Action, Feedback}
 
 /**
  * The agent history stores the data collected during environment interaction
  */
 case class AgentHistory(
-  maxLength: Int,
-  data:      Seq[Feedback]) {
+                         maxLength: Int,
+                         data: Seq[Feedback]) {
 
   /** Returns the number of feedback */
-  def length = data.length
+  def length: Action = data.length
 
   /** Append a feedback to history */
   def :+(feedback: Feedback): AgentHistory = {
     val newData = (if (data.length >= maxLength) data.tail else data) :+ feedback
     copy(data = newData)
   }
-
 }

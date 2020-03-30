@@ -29,14 +29,22 @@
 
 package org.mmarini.scalarl.nn
 
-import java.io.FileWriter
-import java.io.Writer
-import cats.syntax.either._
-import io.circe.yaml._
-import io.circe.yaml.syntax._
+import java.io.{FileWriter, Writer}
+
 import io.circe.Json
+import io.circe.yaml.syntax._
 
 object NetDataMaterializer {
+  def write(file: String, data: NetworkData) {
+    val fw = new FileWriter(file)
+    write(fw, data)
+    fw.close()
+  }
+
+  def write(writer: Writer, data: NetworkData) {
+    writer.write(toJson(data).asYaml.spaces2)
+  }
+
   def toJson(data: NetworkData): Json = {
     val x = data.toArray.map {
       case (key, value) =>
@@ -45,16 +53,6 @@ object NetDataMaterializer {
         (key, aj)
     };
     Json.obj(x: _*)
-  }
-
-  def write(writer: Writer, data: NetworkData) {
-    writer.write(toJson(data).asYaml.spaces2)
-  }
-
-  def write(file: String, data: NetworkData) {
-    val fw = new FileWriter(file)
-    write(fw, data)
-    fw.close()
   }
 
 }

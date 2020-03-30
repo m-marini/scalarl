@@ -31,7 +31,9 @@ package org.mmarini.scalarl.nn
 
 class MockTopology extends NetworkTopology {
   def prevLayer(layer: LayerBuilder): Option[LayerBuilder] = ???
+
   def nextLayer(layer: LayerBuilder): Option[LayerBuilder] = ???
+
   //  def noOutputs(topology: NetworkTopology): Int = ???
   //  def noInputs(topology: NetworkTopology): Int = ???
   //  def buildClearTrace(context: NetworkTopology): Updater = ???

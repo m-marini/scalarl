@@ -1,31 +1,42 @@
 ---
 env:
   type: Lander
+  dt: 0.25
   h0Range: 5
-  z0: 1
-  seed: 1234
+  z0: 3
   fuel: 10
+  zMax: 150
+  z1: 10
+  hRange: 500
+  zRange: 150
+  vhRange: 24
+  vzRange: 12
+  landingRadius: 10
+  landingVH: 0.5
+  landingVZ: 4
+  g: 1.6
+  maxAH: 1
+  maxAZ: 3.2
+  landedReward: 100
+  crashReward: -100
+  outOfRangeReward: -100
+  outOfFuelReward: -100
+  rewardDistanceScale: 0.01
 agent:
-  type: TDBatchAgent
-  numInputs: 21
-  seed: 1234
+  type: DynaQ+Agent
   epsilon: 0.01
   gamma: 0.999
   kappa: 1
-  maxHistory: 1
-  minHistory: 1
-  stepInterval: 1
-  numBootstrapIteration: 1
-  numBatchIteration: 1
+  maxModelSize: 1000
+  kappaPlus: 0
+  planningStepsCounter: 10
 network:
-  numInputs: 21
-  numOutputs: 15
-  numHiddens: 
-  - 100
-  - 100
+  numHiddens:
+    - 100
+    - 100
   seed: 1234
-#  learningRate about 100 / noParameters
-#  learningRate: 0.03 # for 100 hidden nodes
+  #  learningRate about 100 / noParameters
+  #  learningRate: 0.03 # for 100 hidden nodes
   learningRate: 10e-3 # for 100 x 100 hidden nodes
   beta1: 0.9
   beta2: 0.999
@@ -35,11 +46,12 @@ network:
   modelFile: lander.zip
 session:
   numSteps: 10000
+  seed: 1234
   maxEpisodeLength: 10000
   sync: 0
   mode: stats
   trace: lander-trace.csv
   dump: lander-dump.csv
-  samples: lander-samples.csv
+  #  samples: lander-samples.csv
   sentinel: false
   modelFile: lander.zip

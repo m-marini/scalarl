@@ -29,14 +29,12 @@
 
 package org.mmarini.scalarl.nn
 
-import org.scalatest.FunSpec
-import org.scalatest.GivenWhenThen
-import org.scalatest.Matchers
-
 import io.circe.yaml.parser
+import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
 
 class ActivationLayerBuilder2Test extends FunSpec with GivenWhenThen with Matchers {
-  val yamlDoc = """---
+  val yamlDoc =
+    """---
 id: l
 type: ACTIVATION
 activation: TANH
@@ -53,13 +51,13 @@ activation: TANH
       json.isObject shouldBe true
 
       And("should have id l")
-      json.asObject.flatMap(_("id")).flatMap(_.asString) should contain("l")
+      json.asObject.flatMap(_ ("id")).flatMap(_.asString) should contain("l")
 
       And("should have type ACTIVATION")
-      json.asObject.flatMap(_("type")).flatMap(_.asString) should contain("ACTIVATION")
+      json.asObject.flatMap(_ ("type")).flatMap(_.asString) should contain("ACTIVATION")
 
       And("should have activation TANH")
-      json.asObject.flatMap(_("activation")).flatMap(_.asString) should contain("TANH")
+      json.asObject.flatMap(_ ("activation")).flatMap(_.asString) should contain("TANH")
     }
 
     it("should generate from json") {

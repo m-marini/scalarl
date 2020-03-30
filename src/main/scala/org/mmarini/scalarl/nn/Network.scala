@@ -50,9 +50,9 @@ trait Network {
 
   /** Returns the data with changed parameters to fit the labels */
   def fit(
-    data:         NetworkData,
-    inputs:       INDArray,
-    labels:       INDArray,
-    mask:         INDArray,
-    noClearTrace: INDArray): NetworkData
+           data: NetworkData,
+           inputs: INDArray,
+           labels: INDArray,
+           mask: INDArray,
+           noClearTrace: INDArray): NetworkData
 }

@@ -29,12 +29,9 @@
 
 package org.mmarini.scalarl.nn
 
-import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.FunSpec
-import org.scalatest.GivenWhenThen
-import org.scalatest.Matchers
-
 import io.circe.Json
+import org.nd4j.linalg.factory.Nd4j
+import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
 
 class MSELossFunctionTest extends FunSpec with GivenWhenThen with Matchers {
   val Epsilon = 1e-6
