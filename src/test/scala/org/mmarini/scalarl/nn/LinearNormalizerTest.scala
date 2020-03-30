@@ -29,23 +29,15 @@
 
 package org.mmarini.scalarl.nn
 
-import org.scalatest.FunSpec
-import org.scalatest.Matchers
-import org.scalatest.prop.PropertyChecks
-
-import io.circe.Json
-import io.circe.yaml
-import io.circe.yaml.syntax.AsYaml
-import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.PropSpec
-import org.scalacheck.Gen
-import org.scalatest.GivenWhenThen
 import io.circe.yaml.parser
+import org.nd4j.linalg.factory.Nd4j
+import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
 
 class LinearNormalizerTest extends FunSpec with Matchers with GivenWhenThen {
   val Epsilon = 1e-6
 
-  val JsonDoc = """---
+  val JsonDoc =
+    """---
 type: LINEAR
 offset:
 - 0.5
@@ -135,7 +127,7 @@ scale:
 
       And("should be a linear normalizer")
       norm shouldBe a[LinearNormalizer]
-      
+
       And("offset")
       norm.asInstanceOf[LinearNormalizer].offset shouldBe Nd4j.create(Array(0.5, 0.5))
 

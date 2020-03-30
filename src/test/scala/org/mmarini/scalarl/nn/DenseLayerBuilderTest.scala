@@ -29,19 +29,17 @@
 
 package org.mmarini.scalarl.nn
 
-import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.FunSpec
-import org.scalatest.GivenWhenThen
-import org.scalatest.Matchers
-
 import io.circe.yaml.parser
+import org.nd4j.linalg.factory.Nd4j
+import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
 
 class DenseLayerBuilderTest extends FunSpec with GivenWhenThen with Matchers {
   val Epsilon = 1e-6
 
   Nd4j.create()
 
-  val yamlDoc = """---
+  val yamlDoc =
+    """---
 id: l
 type: DENSE
 noOutputs: 2

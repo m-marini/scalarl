@@ -30,9 +30,7 @@
 package org.mmarini.scalarl.agents
 
 import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.FunSpec
-import org.scalatest.GivenWhenThen
-import org.scalatest.Matchers
+import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
 
 class TDAgentUtilsTest extends FunSpec with GivenWhenThen with Matchers {
 

@@ -2,21 +2,21 @@
 env:
   type: Maze
   map:
-  - "|O         |"
-  - "|          |"
-  - "|          |"
-  - "|          |"
-  - "|XXXXXX    |"
-  - "|          |"
-  - "|          |"
-  - "|    XXXXXX|"
-  - "|          |"
-  - "|         *|"
+    - "|O         |"
+    - "|          |"
+    - "|          |"
+    - "|          |"
+    - "|XXXXXX    |"
+    - "|          |"
+    - "|          |"
+    - "|    XXXXXX|"
+    - "|          |"
+    - "|         *|"
 agent:
   type: TDBatchAgent
   numInputs: 100
   numHiddens: [30,10]
-#  numHiddens: []
+  #  numHiddens: []
   seed: 1234
   epsilon: 0.01
   gamma: 0.999
@@ -24,9 +24,9 @@ agent:
   trace: ACCUMULATE
   lambda: 0.8
   optimizer: ADAM
-#  learningRate: 100e-6
-# For no layer
-#  learningRate: 0.1
+  #  learningRate: 100e-6
+  # For no layer
+  #  learningRate: 0.1
   learningRate: 0.001
   beta1: 0.9
   beta2: 0.999

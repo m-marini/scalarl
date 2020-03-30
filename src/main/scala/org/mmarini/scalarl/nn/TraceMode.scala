@@ -33,20 +33,26 @@ import io.circe.Json
 
 trait TraceMode {
   def traceBuilder(key: String): OperationBuilder
+
   def toJson: Json
 }
 
 object NoneTraceMode extends TraceMode {
 
-  def traceBuilder(key: String): OperationBuilder = OperationBuilder()
-
   lazy val toJson = Json.obj(
     "mode" -> Json.fromString("NONE"))
+
+  def traceBuilder(key: String): OperationBuilder = OperationBuilder()
 }
 
 case class AccumulateTraceMode(lambda: Double, gamma: Double) extends TraceMode {
   require(lambda >= 0.0)
   require(gamma >= 0.0)
+
+  lazy val toJson = Json.obj(
+    "mode" -> Json.fromString("ACCUMULATE"),
+    "lambda" -> Json.fromDoubleOrNull(lambda),
+    "gamma" -> Json.fromDoubleOrNull(gamma))
 
   def traceBuilder(key: String): OperationBuilder = {
     val decay = lambda * gamma
@@ -65,30 +71,25 @@ case class AccumulateTraceMode(lambda: Double, gamma: Double) extends TraceMode 
           (feedbackKey -> newTrace)
       }).getOrElse(data))
   }
-
-  lazy val toJson = Json.obj(
-    "mode" -> Json.fromString("ACCUMULATE"),
-    "lambda" -> Json.fromDoubleOrNull(lambda),
-    "gamma" -> Json.fromDoubleOrNull(gamma))
 }
 
 object TraceMode {
   def fromJson(json: Json): TraceMode =
     json.hcursor.get[String]("mode") match {
-      case Right("NONE")       => NoneTraceMode
+      case Right("NONE") => NoneTraceMode
       case Right("ACCUMULATE") => accumulateFromJson(json)
-      case Right(x)            => throw new IllegalArgumentException(s"""trace mode "${x}" invalid""")
-      case _                   => throw new IllegalArgumentException("trace mode not found")
+      case Right(x) => throw new IllegalArgumentException(s"""trace mode "${x}" invalid""")
+      case _ => throw new IllegalArgumentException("trace mode not found")
     }
 
   private def accumulateFromJson(json: Json) = {
     val lambda = json.hcursor.get[Double]("lambda") match {
       case Right(x) => x
-      case _        => throw new IllegalArgumentException("lambda not found")
+      case _ => throw new IllegalArgumentException("lambda not found")
     }
     val gamma = json.hcursor.get[Double]("gamma") match {
       case Right(x) => x
-      case _        => throw new IllegalArgumentException("gamma not found")
+      case _ => throw new IllegalArgumentException("gamma not found")
     }
     AccumulateTraceMode(lambda = lambda, gamma = gamma)
   }

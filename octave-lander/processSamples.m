@@ -10,7 +10,7 @@ function Y = processSamples(X, GAMMA = 0.999)
   # Reverse
   Y = flipud(X);
   # clear last uncompleted episode
-  ENDIDX = 53;
+  ENDIDX = 38;
   ENDEPISODES = find(Y(:, ENDIDX) != 0);
   Y = Y(ENDEPISODES(1) : end, :);
   N = size(Y, 1);
@@ -24,7 +24,7 @@ function Y = processSamples(X, GAMMA = 0.999)
       G = GAMMA;
     endif
     G = G * GAMMA;
-    RET = RET * G + Y(i, 52);
+    RET = RET * G + Y(i, 37);
     IDX = find(Y(i, 37: 51));
     Y(i, IDX + 21) = RET;
   endfor

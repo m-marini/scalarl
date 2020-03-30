@@ -29,12 +29,9 @@
 
 package org.mmarini.scalarl.nn
 
-import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.FunSpec
-import org.scalatest.GivenWhenThen
-import org.scalatest.Matchers
-
 import io.circe.yaml.parser
+import org.nd4j.linalg.factory.Nd4j
+import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
 
 class AccumulateTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
   val Gamma = 0.9
@@ -43,7 +40,8 @@ class AccumulateTraceModeTest extends FunSpec with GivenWhenThen with Matchers {
 
   Nd4j.create()
 
-  val yamlDoc = """---
+  val yamlDoc =
+    """---
 mode: ACCUMULATE
 gamma: 0.9
 lambda: 0.8
@@ -132,13 +130,13 @@ lambda: 0.8
       json.isObject shouldBe true
 
       And("should contain mode ACCUMULATE")
-      json.asObject.flatMap(_("mode")).flatMap(_.asString) should contain("ACCUMULATE")
+      json.asObject.flatMap(_ ("mode")).flatMap(_.asString) should contain("ACCUMULATE")
 
       And("should contain gamma Gamma")
-      json.asObject.flatMap(_("gamma")).flatMap(_.asNumber).map(_.toDouble) should contain(Gamma)
+      json.asObject.flatMap(_ ("gamma")).flatMap(_.asNumber).map(_.toDouble) should contain(Gamma)
 
       And("should contain lambda Lambda")
-      json.asObject.flatMap(_("lambda")).flatMap(_.asNumber).map(_.toDouble) should contain(Lambda)
+      json.asObject.flatMap(_ ("lambda")).flatMap(_.asNumber).map(_.toDouble) should contain(Lambda)
     }
 
     it("should generate trace mode from yaml") {

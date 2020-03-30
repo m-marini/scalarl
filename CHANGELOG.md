@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- Issue #30: Batch agent
+- Issue #31: Continuos environment
 - Issue #36: Batch optimization
 
 ## [0.1.0] - 2019-01-28

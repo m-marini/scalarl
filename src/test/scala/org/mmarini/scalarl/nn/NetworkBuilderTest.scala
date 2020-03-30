@@ -31,10 +31,7 @@ package org.mmarini.scalarl.nn
 
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
-import org.scalatest.FunSpec
-import org.scalatest.GivenWhenThen
-import org.scalatest.Matchers
-import scala.math.tanh
+import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
 
 class NetworkBuilderTest extends FunSpec with GivenWhenThen with Matchers {
 

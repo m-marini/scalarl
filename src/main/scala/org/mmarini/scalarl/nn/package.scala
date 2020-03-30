@@ -58,4 +58,5 @@ package object nn {
       active = activate
     }
   }
+
 }

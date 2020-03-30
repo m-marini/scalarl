@@ -29,31 +29,57 @@
 
 package org.mmarini.scalarl
 
-import rx.lang.scala.Observable
-import rx.lang.scala.Subject
+import rx.lang.scala.{Observable, Subject}
 
 /**
  * The session executes the interactions between the environment and the agent
  *
- *  @constructor Creates a [[Session]]
- *  @param numEpisode the number of episodes of the current session
- *  @param env the environment
- *  @param agent the agent
- *  @param mode the rendering mode of environment
- *  @param close true if closing rendering window
- *  @param sync the time interval between each step in millis
+ * @constructor Creates a [[Session]]
+ * @param numEpisode the number of episodes of the current session
+ * @param env        the environment
+ * @param agent      the agent
+ * @param mode       the rendering mode of environment
+ * @param close      true if closing rendering window
+ * @param sync       the time interval between each step in millis
  */
 class Session(
-  env:              Env,
-  agent:            Agent,
-  noSteps:          Int,
-  maxEpisodeLength: Long) {
+               env: Env,
+               agent: Agent,
+               noSteps: Int,
+               maxEpisodeLength: Long) {
 
   private val episodeSubj: Subject[Episode] = Subject()
   private val stepSubj: Subject[Step] = Subject()
 
   def episodeObs: Observable[Episode] = episodeSubj
+
   def stepObs: Observable[Step] = stepSubj
+
+  /**
+   * Runs the interactions for the number of episodes
+   *
+   * Each episode is compo
+   * sed by the
+   *  - reset of environment
+   *  - render of the environment
+   *  - a iteration of
+   *    - choose of action by the agent
+   *    - step the environment with the chosen action
+   *    - render the environment
+   *    - fit the agent
+   *    - until detection of end of episode
+   */
+  def run(): (Env, Agent) = {
+    val (initialEnv, initialObs) = env.reset()
+    val sessionContext = SessionContext(
+      env = initialEnv,
+      agent = agent.reset,
+      obs = initialObs)
+
+    val x = (1 to noSteps).foldLeft(sessionContext)(runStep)
+
+    (x.env, x.agent)
+  }
 
   /**
    *
@@ -115,32 +141,6 @@ class Session(
         discount = discount1)
     }
   }
-
-  /**
-   * Runs the interactions for the number of episodes
-   *
-   *  Each episode is compo
-   *  sed by the
-   *  - reset of environment
-   *  - render of the environment
-   *  - a iteration of
-   *    - choose of action by the agent
-   *    - step the environment with the chosen action
-   *    - render the environment
-   *    - fit the agent
-   *    - until detection of end of episode
-   */
-  def run(): (Env, Agent) = {
-    val (initialEnv, initialObs) = env.reset()
-    val sessionContext = SessionContext(
-      env = initialEnv,
-      agent = agent.reset,
-      obs = initialObs)
-
-    val x = (1 to noSteps).foldLeft(sessionContext)(runStep)
-
-    (x.env, x.agent)
-  }
 }
 
 /**
@@ -152,10 +152,10 @@ object Session {
    * Returns a session
    */
   def apply(
-    noSteps:          Int,
-    env0:             Env,
-    agent0:           Agent,
-    maxEpisodeLength: Long): Session =
+             noSteps: Int,
+             env0: Env,
+             agent0: Agent,
+             maxEpisodeLength: Long): Session =
     new Session(
       noSteps = noSteps,
       env = env0,
@@ -167,11 +167,11 @@ object Session {
  *
  */
 case class SessionContext(
-  env:         Env,
-  agent:       Agent,
-  obs:         Observation,
-  step:        Int         = 0,
-  episode:     Int         = 0,
-  totalLoss:   Double      = 0,
-  returnValue: Double      = 0,
-  discount:    Double      = 1);
+                           env: Env,
+                           agent: Agent,
+                           obs: Observation,
+                           step: Int = 0,
+                           episode: Int = 0,
+                           totalLoss: Double = 0,
+                           returnValue: Double = 0,
+                           discount: Double = 1);

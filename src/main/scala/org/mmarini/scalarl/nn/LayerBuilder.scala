@@ -29,12 +29,11 @@
 
 package org.mmarini.scalarl.nn
 
+import io.circe.Json
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.indexing.NDArrayIndex
-
-import io.circe.Json
 
 /**
  * Defines layer architecture and builds the layer functional updater such that for clear trace.
@@ -105,6 +104,11 @@ case class InputLayerBuilder(id: String, noInputs: Int) extends LayerBuilder wit
  * @constructor Creates an activation layer
  */
 case class ActivationLayerBuilder(id: String, activation: ActivationFunction) extends LayerBuilder with KeyBuilder {
+  lazy val toJson = Json.obj(
+    "id" -> Json.fromString(id),
+    "type" -> Json.fromString("ACTIVATION"),
+    "activation" -> activation.toJson)
+
   def noOutputs(topology: NetworkTopology): Int = noInputs(topology)
 
   def gradientBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder()
@@ -133,11 +137,6 @@ case class ActivationLayerBuilder(id: String, activation: ActivationFunction) ex
   override def broadcastDeltaBuilder(topology: NetworkTopology): OperationBuilder = OperationBuilder()
 
   def buildData(topology: NetworkTopology, initializer: Initializer, random: Random): NetworkData = Map()
-
-  lazy val toJson = Json.obj(
-    "id" -> Json.fromString(id),
-    "type" -> Json.fromString("ACTIVATION"),
-    "activation" -> activation.toJson)
 }
 
 /**
@@ -146,21 +145,12 @@ case class ActivationLayerBuilder(id: String, activation: ActivationFunction) ex
 case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder with KeyBuilder {
   require(noOutputs > 0)
 
+  lazy val toJson = Json.obj(
+    "id" -> Json.fromString(id),
+    "type" -> Json.fromString("DENSE"),
+    "noOutputs" -> Json.fromInt(noOutputs))
+
   def noOutputs(topology: NetworkTopology): Int = noOutputs
-
-  /** Returns the converter og thetas to weights */
-  def weights(topology: NetworkTopology): INDArray => INDArray = {
-    val n = noInputs(topology)
-    val m = noOutputs
-    (theta: INDArray) => theta.get(NDArrayIndex.interval(0, n * m)).reshape(n, m)
-  }
-
-  /** Returns the converter of thetas to bias */
-  def bias(topology: NetworkTopology): INDArray => INDArray = {
-    val n = noInputs(topology)
-    val m = noOutputs
-    (theta: INDArray) => theta.get(NDArrayIndex.interval(n * m, n * (m + 1)))
-  }
 
   override def forwardBuilder(topology: NetworkTopology): OperationBuilder = {
     val fw = weights(topology)
@@ -178,6 +168,13 @@ case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder wi
 
       data + (key("outputs") -> y)
     })
+  }
+
+  /** Returns the converter of thetas to bias */
+  def bias(topology: NetworkTopology): INDArray => INDArray = {
+    val n = noInputs(topology)
+    val m = noOutputs
+    (theta: INDArray) => theta.get(NDArrayIndex.interval(n * m, n * (m + 1)))
   }
 
   def gradientBuilder(topology: NetworkTopology): OperationBuilder = {
@@ -208,6 +205,13 @@ case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder wi
     })
   }
 
+  /** Returns the converter og thetas to weights */
+  def weights(topology: NetworkTopology): INDArray => INDArray = {
+    val n = noInputs(topology)
+    val m = noOutputs
+    (theta: INDArray) => theta.get(NDArrayIndex.interval(0, n * m)).reshape(n, m)
+  }
+
   override def broadcastDeltaBuilder(topology: NetworkTopology): OperationBuilder = {
     val n = noInputs(topology)
     val m = noOutputs
@@ -236,30 +240,25 @@ case class DenseLayerBuilder(id: String, noOutputs: Int) extends LayerBuilder wi
       key("m1") -> zeros,
       key("m2") -> zeros)
   }
-
-  lazy val toJson = Json.obj(
-    "id" -> Json.fromString(id),
-    "type" -> Json.fromString("DENSE"),
-    "noOutputs" -> Json.fromInt(noOutputs))
 }
 
 object LayerBuilder {
   def fromJson(json: Json): LayerBuilder =
     json.hcursor.get[String]("type") match {
-      case Right("DENSE")      => denseFromJson(json)
+      case Right("DENSE") => denseFromJson(json)
       case Right("ACTIVATION") => activationFromJson(json)
-      case Right(x)            => throw new IllegalArgumentException(s"""layer type "${x}" illegal""")
-      case Left(x)             => throw new IllegalArgumentException("missing layer type")
+      case Right(x) => throw new IllegalArgumentException(s"""layer type "${x}" illegal""")
+      case Left(x) => throw new IllegalArgumentException("missing layer type")
     }
 
   private def denseFromJson(json: Json) = {
     val id = json.hcursor.get[String]("id") match {
       case Right(x) => x
-      case Left(x)  => throw new IllegalArgumentException("missing layer id")
+      case Left(x) => throw new IllegalArgumentException("missing layer id")
     }
     val noOutputs = json.hcursor.get[Int]("noOutputs") match {
       case Right(x) => x
-      case Left(x)  => throw new IllegalArgumentException("missing noOutputs")
+      case Left(x) => throw new IllegalArgumentException("missing noOutputs")
     }
     DenseLayerBuilder(id, noOutputs)
   }
@@ -267,12 +266,12 @@ object LayerBuilder {
   private def activationFromJson(json: Json) = {
     val id = json.hcursor.get[String]("id") match {
       case Right(x) => x
-      case Left(x)  => throw new IllegalArgumentException("missing layer id")
+      case Left(x) => throw new IllegalArgumentException("missing layer id")
     }
     val activation = json.hcursor.get[String]("activation") match {
       case Right("TANH") => TanhActivationFunction
-      case Right(x)      => throw new IllegalArgumentException(s"""activation "${x}" illegal""")
-      case _             => throw new IllegalArgumentException("missing activation")
+      case Right(x) => throw new IllegalArgumentException(s"""activation "${x}" illegal""")
+      case _ => throw new IllegalArgumentException("missing activation")
     }
     ActivationLayerBuilder(id, activation)
   }

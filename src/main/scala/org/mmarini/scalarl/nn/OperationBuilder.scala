@@ -37,12 +37,15 @@ import org.nd4j.linalg.ops.transforms.Transforms
  */
 trait OperationBuilder {
   def build: Operation
+
   def then(f1: Operation): OperationBuilder
+
   def then(u: OperationBuilder): OperationBuilder
 }
 
 object OperationBuilder {
   def apply(f: Operation): OperationBuilder = new MonoOperationBuilder(f)
+
   def apply(): OperationBuilder = IdentityBuilder
 
   def thetaBuilder(key: String, constrainAllParms: Option[Double]): OperationBuilder = {
@@ -71,18 +74,18 @@ object OperationBuilder {
 class MonoOperationBuilder(f: Operation) extends OperationBuilder {
   def build = f
 
-  def then(f1: Operation): OperationBuilder =
-    new MonoOperationBuilder(data => f1(f(data)))
-
   def then(u: OperationBuilder): OperationBuilder =
     if (u == IdentityBuilder) this else then(u.build)
+
+  def then(f1: Operation): OperationBuilder =
+    new MonoOperationBuilder(data => f1(f(data)))
 }
 
 object IdentityBuilder extends OperationBuilder {
   val build = data => data
 
-  def then(f1: NetworkData => NetworkData): OperationBuilder = new MonoOperationBuilder(f1)
-
   def then(u: OperationBuilder): OperationBuilder =
     if (u == IdentityBuilder) this else then(u.build)
+
+  def then(f1: NetworkData => NetworkData): OperationBuilder = new MonoOperationBuilder(f1)
 }

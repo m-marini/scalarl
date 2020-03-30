@@ -29,10 +29,9 @@
 
 package org.mmarini.scalarl.nn
 
+import io.circe.Json
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
-
-import io.circe.Json
 
 /**
  * Defines layer architecture and builds the layer functional updater such that for clear trace.
@@ -78,7 +77,7 @@ object Normalizer {
           offset = Nd4j.create(offset),
           scale = Nd4j.create(scala))
       case Right(x) => throw new IllegalArgumentException(s"""normalizer type "${x}" illegal""")
-      case Left(x)  => throw new IllegalArgumentException("missing normalizer type")
+      case Left(x) => throw new IllegalArgumentException("missing normalizer type")
     }
 
   def minMax(min: INDArray, max: INDArray) = {

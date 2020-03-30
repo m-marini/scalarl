@@ -29,13 +29,7 @@
 
 package org.mmarini.scalarl.agents
 
-import org.mmarini.scalarl.Action
-import org.mmarini.scalarl.Agent
-import org.mmarini.scalarl.Observation
-import org.nd4j.linalg.api.ndarray.INDArray
-import org.mmarini.scalarl.Policy
-import org.mmarini.scalarl.StatusValues
-import org.mmarini.scalarl.ChannelAction
+import org.mmarini.scalarl.{Agent, ChannelAction, Observation, Policy}
 
 /**
  *
@@ -56,11 +50,11 @@ trait GreedyActionFunction {
 /**
  * The agent acting in the environment
  *
- *  Generates actions to change the status of environment basing on observation of the environment
- *  and the internal strategy policy.
+ * Generates actions to change the status of environment basing on observation of the environment
+ * and the internal strategy policy.
  *
- *  Updates its strategy policy to optimize the return value (discount sum of rewards)
- *  and the observation of resulting environment
+ * Updates its strategy policy to optimize the return value (discount sum of rewards)
+ * and the observation of resulting environment
  */
 trait TDAgent extends Agent with GreedyActionFunction with PolicyFunction {
 }

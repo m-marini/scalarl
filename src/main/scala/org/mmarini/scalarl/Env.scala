@@ -42,12 +42,12 @@ trait Env {
   /**
    * Computes the next status of environment executing an action.
    *
-   *  It returns a n-uple with:
+   * It returns a n-uple with:
    *  - the environment in the next status,
    *  - the resulting observation,
    *  - the reward for the action,
    *
-   *  @param action the executing action
+   * @param action the executing action
    */
   def step(action: ChannelAction): (Env, Observation, Reward)
 
