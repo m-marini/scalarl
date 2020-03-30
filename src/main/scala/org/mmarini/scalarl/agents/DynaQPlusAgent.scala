@@ -137,12 +137,6 @@ case class DynaQPlusAgent(net: MultiLayerNetwork,
       (obs0.signals, label)
   }
 
-  override def policy(observation: Observation): Policy = if (observation.endUp) {
-    TDAgentUtils.endStatePolicy(config)
-  } else {
-    net.output(observation.signals)
-  }
-
   override def score(feedback: Feedback): Double = feedback match {
     case Feedback(obs0, action, reward, obs1) =>
       val policy0 = policy(obs0)
@@ -153,6 +147,12 @@ case class DynaQPlusAgent(net: MultiLayerNetwork,
       val d2 = label.squaredDistance(policy0)
       val nch = valueMask0.sumNumber().doubleValue()
       d2 / nch
+  }
+
+  override def policy(observation: Observation): Policy = if (observation.endUp) {
+    TDAgentUtils.endStatePolicy(config)
+  } else {
+    net.output(observation.signals)
   }
 
   override def writeModel(file: String): DynaQPlusAgent = {

@@ -6,7 +6,7 @@ env:
   z0: 3
   fuel: 10
   zMax: 150
-  z1: 10
+  z1: 5 # safe altitude 2.5 m sensor warning at 5 m
   hRange: 500
   zRange: 150
   vhRange: 24
