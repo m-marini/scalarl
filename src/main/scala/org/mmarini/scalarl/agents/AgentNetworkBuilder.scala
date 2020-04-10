@@ -60,20 +60,21 @@ import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
  * @param _epsilonAdam    epsilon parameter of ADAM algorithm
  * @param _maxAbsParams   max absolute value of parameters
  * @param _maxAbsGradient max absolute value of gradients
+ * @param _dropOut        dropout probability
  * @param _file           the filename of model to load
  */
-case class AgentNetworkBuilder(
-                                _numInputs: Int,
-                                _numOutputs: Int,
-                                _numHiddens: Array[Int],
-                                _seed: Long,
-                                _learningRate: Double,
-                                _beta1: Double,
-                                _beta2: Double,
-                                _epsilonAdam: Double,
-                                _maxAbsParams: Double,
-                                _maxAbsGradient: Double,
-                                _file: Option[String]) extends LazyLogging {
+case class AgentNetworkBuilder(_numInputs: Int,
+                               _numOutputs: Int,
+                               _numHiddens: Array[Int],
+                               _seed: Long,
+                               _learningRate: Double,
+                               _beta1: Double,
+                               _beta2: Double,
+                               _epsilonAdam: Double,
+                               _maxAbsParams: Double,
+                               _maxAbsGradient: Double,
+                               _dropOut: Double,
+                               _file: Option[String]) extends LazyLogging {
 
   /**
    * Returns the builder with a number of output nodes
@@ -115,6 +116,10 @@ case class AgentNetworkBuilder(
   /** Returns the builder for epsilonAdam adam parameter */
   def epsilonAdam(epsilonAdam: Double): AgentNetworkBuilder = copy(_epsilonAdam = epsilonAdam)
 
+  /** Returns the builder for dropOut parameter */
+  def dropOut(dropOut: Double): AgentNetworkBuilder = copy(_dropOut = dropOut)
+
+  /** Returns the neural network */
   def build(): MultiLayerNetwork =
     _file.map(f => loadNet(new File(f))).getOrElse(createNetwork())
 
@@ -134,6 +139,7 @@ case class AgentNetworkBuilder(
       nIn(ins).
       nOut(outs).
       activation(Activation.TANH).
+      dropOut(_dropOut).
       build()
 
     val outLayer = new OutputLayer.Builder().
@@ -172,6 +178,7 @@ object AgentNetworkBuilder {
   val DefaultEpsilonAdam = 0.001
   val DefaultMaxAbsParams = 0.0
   val DefaultMaxAbsGradient = 0.0
+  val DefaultDropOut = 0.8
 
   /**
    * Returns [AgentNetworkBuilder for a configuration
@@ -197,7 +204,8 @@ object AgentNetworkBuilder {
         beta2(agentCursor.get[Double]("beta2").right.get).
         epsilonAdam(agentCursor.get[Double]("epsilonAdam").right.get).
         maxAbsGradient(agentCursor.get[Double]("maxAbsGradients").right.get).
-        maxAbsParams(agentCursor.get[Double]("maxAbsParameters").right.get)
+        maxAbsParams(agentCursor.get[Double]("maxAbsParameters").right.get).
+        dropOut(agentCursor.get[Double]("dropOut").right.get)
     )
 
   /** Returns default [AgentNetworkBuilder] */
@@ -212,5 +220,6 @@ object AgentNetworkBuilder {
     _epsilonAdam = DefaultEpsilonAdam,
     _maxAbsParams = DefaultMaxAbsParams,
     _maxAbsGradient = DefaultMaxAbsGradient,
+    _dropOut = DefaultDropOut,
     _file = None)
 }

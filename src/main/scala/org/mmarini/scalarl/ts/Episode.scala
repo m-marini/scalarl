@@ -37,7 +37,7 @@ package org.mmarini.scalarl.ts
  * @param episode     the episode number
  * @param stepCount   the number of steps executed
  * @param returnValue the return value of episode
- * @param avgLoss     the average loss value of episode
+ * @param totalScore  the average loss value of episode
  * @param env         the final environment
  * @param agent       the final agent
  * @param session     the learning session
@@ -46,7 +46,7 @@ case class Episode(step: Int,
                    episode: Int,
                    stepCount: Int,
                    returnValue: Double,
-                   avgLoss: Double,
+                   totalScore: Double,
                    env: Env,
                    agent: Agent,
                    session: Session)

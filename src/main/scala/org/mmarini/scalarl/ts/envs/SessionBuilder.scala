@@ -124,7 +124,7 @@ class SessionBuilder(sessionCursor: ACursor) extends LazyLogging {
    * - 10 x 10 x 8 of q action values for each state for each action
    */
   private def createLanderDump(episode: Episode): INDArray = {
-    val kpi = Nd4j.create(Array(Array(episode.stepCount, episode.returnValue, episode.avgLoss)))
+    val kpi = Nd4j.create(Array(Array(episode.stepCount, episode.returnValue, episode.totalScore)))
     Nd4j.hstack(kpi)
   }
 
@@ -203,10 +203,14 @@ class SessionBuilder(sessionCursor: ACursor) extends LazyLogging {
       episode.episode
     }%,6d, Steps ${
       episode.stepCount
-    }%,6d, loss=${
-      episode.avgLoss
-    }%12g ,returns=${
+    }%6d ,returns=${
       episode.returnValue
+    }%12g ,avg rewards=${
+      if (episode.stepCount != 0) episode.returnValue / episode.stepCount else 0.0
+    }%,12g, totalScore=${
+      episode.totalScore
+    }%,12g, avgScore=${
+      if (episode.stepCount != 0) episode.totalScore / episode.stepCount else 0.0
     }%12g")
   }
 

@@ -50,7 +50,7 @@ object Main extends LazyLogging {
     val env = EnvBuilder(jsonConf.hcursor.downField("env")).build()
     val net = AgentNetworkBuilder(jsonConf.hcursor.downField("network"),
       env.signalSize,
-      env.actionConfig.sum).build()
+      env.actionConfig.size).build()
     val agent = DynaQPlusAgent(jsonConf.hcursor.downField("agent"), net, env.actionConfig)
     val (session, random) = SessionBuilder(jsonConf.hcursor.downField("session")).
       build(env = env, agent = agent)

@@ -2,11 +2,11 @@
 env:
   type: Lander
   dt: 0.25
-  h0Range: 50
-  z0: 10
-  fuel: 100
+  h0Range: 150
+  z0: 30
+  fuel: 300
   zMax: 150
-  z1: 10
+  z1: 5 # safe altitude 2.5 m sensor warning at 5 m
   hRange: 500
   zRange: 150
   vhRange: 24
@@ -17,10 +17,10 @@ env:
   g: 1.6
   maxAH: 1
   maxAZ: 3.2
-  landedReward: 100
-  crashReward: -100
-  outOfRangeReward: -100
-  outOfFuelReward: -100
+  landedReward: 10
+  crashReward: -1
+  outOfRangeReward: -1
+  outOfFuelReward: -1
   rewardDistanceScale: 0.01
 agent:
   type: DynaQ+Agent
@@ -30,6 +30,19 @@ agent:
   maxModelSize: 1000
   kappaPlus: 0
   planningStepsCounter: 10
+  avgReward: 0
+  beta: 0.9
+  tolerance:
+    - interval: [0, 1]
+      value: 0.01 # 5m / 500 m
+    - interval: [2, 2]
+      value: 0.01 # 1.5m / 150 m
+    - interval: [3, 4]
+      value: 0.01 # 0.24 m/s / 24 m/s
+    - interval: [5, 5]
+      value: 0.2 # 2.4 m/s / 12 m/s
+    - interval: [6, 27]
+      value: 0.5 # binary features
 network:
   numHiddens:
     - 100
@@ -43,7 +56,7 @@ network:
   epsilonAdam: 0.1
   maxAbsGradients: 1
   maxAbsParameters: 10e3
-  modelFile: lander.zip
+  modelFile: lander-2.zip
 session:
   numSteps: 10000
   seed: 1234
@@ -52,6 +65,5 @@ session:
   mode: stats
   trace: lander-trace.csv
   dump: lander-dump.csv
-  #samples: lander-samples.csv
-  sentinel: false
-  modelFile: lander.zip
+  #  samples: lander-samples.csv
+  modelFile: lander-3.zip

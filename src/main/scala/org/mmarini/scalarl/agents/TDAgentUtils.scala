@@ -60,6 +60,17 @@ object TDAgentUtils {
     action
   }
 
+  /** Returns the start,end indexes for each channel */
+  def sliceIdxFromChannels(conf: ActionChannelConfig): Array[(Int, Int)] = {
+    val (indexes, _) = conf.foldLeft((Array[(Int, Int)](), 0)) {
+      case ((indexes, start), length) =>
+        val next = start + length
+        val newIndexes = indexes :+ (start, next - 1)
+        (newIndexes, next)
+    }
+    indexes
+  }
+
   /**
    * Returns the bootstrap policy for a transaction feedback
    *
@@ -122,16 +133,5 @@ object TDAgentUtils {
       }
     }
     (action, values)
-  }
-
-  /** Returns the start,end indexes for each channel */
-  def sliceIdxFromChannels(conf: ActionChannelConfig): Array[(Int, Int)] = {
-    val (indexes, _) = conf.foldLeft((Array[(Int, Int)](), 0)) {
-      case ((indexes, start), length) =>
-        val next = start + length
-        val newIndexes = indexes :+ (start, next - 1)
-        (newIndexes, next)
-    }
-    indexes
   }
 }

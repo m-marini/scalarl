@@ -29,7 +29,6 @@
 
 package org.mmarini.scalarl.ts
 
-import org.mmarini.scalarl.ActionChannelConfig
 import org.nd4j.linalg.api.rng.Random
 
 /**
@@ -40,11 +39,11 @@ import org.nd4j.linalg.api.rng.Random
 trait Env {
 
   /**
-   * Returns the environment simulator in reset status and the [Observation] of the reset status
+   * Returns the environment simulator in reset status
    *
    * @param random the random generator
    */
-  def reset(random: Random): (Env, Observation)
+  def reset(random: Random): Env
 
   /**
    * Computes the next status of environment executing an action.
@@ -53,14 +52,16 @@ trait Env {
    * @param random the random generator
    * @return a n-uple with:
    *         - the environment in the next status,
-   *         - the resulting observation,
    *         - the reward for the action,
    */
-  def change(action: ChannelAction, random: Random): (Env, Observation, Reward)
+  def change(action: ChannelAction, random: Random): (Env, Reward)
 
   /** Returns the action channel configuration of the environment */
-  def actionConfig: ActionChannelConfig
+  def actionConfig: DiscreteActionChannels
 
   /** Returns the number of signals */
   def signalSize: Int
+
+  /** Returns the [[Observation]] for the environment */
+  def observation: Observation
 }

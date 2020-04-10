@@ -29,6 +29,7 @@
 
 package org.mmarini.scalarl.ts
 
+import com.typesafe.scalalogging.LazyLogging
 import monix.reactive.Observable
 import monix.reactive.subjects.PublishSubject
 import org.nd4j.linalg.api.rng.Random
@@ -45,7 +46,7 @@ import org.nd4j.linalg.api.rng.Random
 class Session(env: Env,
               agent: Agent,
               noSteps: Int,
-              maxEpisodeLength: Long) {
+              maxEpisodeLength: Long) extends LazyLogging {
 
   private val stepsPub = PublishSubject[Step]()
   private val episodesPub = PublishSubject[Episode]()
@@ -73,7 +74,8 @@ class Session(env: Env,
    * @return the environment and agent after the interaction session
    */
   def run(random: Random): (Env, Agent) = {
-    val (env0, obs0) = env.reset(random)
+    val env0 = env.reset(random)
+    val obs0 = env0.observation
     val agent0 = agent.reset(random)
     val context0 = SessionContext(
       env = env0,
@@ -97,20 +99,19 @@ class Session(env: Env,
    */
   private def runStep(random: Random)(context: SessionContext, sessionStep: Int): SessionContext = {
     // unfold context data
-    val SessionContext(env0, agent0, obs0, step, episode, totalLoss, returnValue, discount) = context
+    val SessionContext(env0, agent0, obs0, step, episode, totalScore, returnValue) = context
 
     // Agent chooses the action
-    val (agent1, action) = agent0.chooseAction(obs0, random)
+    val action = agent0.chooseAction(obs0, random)
 
     // Updates environment
-    val (env1, obs1, reward) = env0.change(action, random)
+    val (env1, reward) = env0.change(action, random)
+    val obs1 = env1.observation
     val feedback = Feedback(obs0, action, reward, obs1)
-    val agent2 = agent1.fit(feedback, random)
-    val error = agent1.score(feedback)
+    val (agent1, score) = agent0.fit(feedback, random)
 
-    val returnValue1 = returnValue + reward * discount
-    val totalLoss1 = totalLoss + error * error
-    val discount1 = discount * agent.gamma
+    val returnValue1 = returnValue + reward
+    val totalScore1 = totalScore + score * score
     val step1 = step + 1
 
     // Generate step event
@@ -122,7 +123,7 @@ class Session(env: Env,
       beforeEnv = env0,
       beforeAgent = agent0,
       afterEnv = env1,
-      afterAgent = agent2,
+      afterAgent = agent1,
       session = this)
     stepsPub.onNext(stepInfo)
 
@@ -130,33 +131,32 @@ class Session(env: Env,
       // Episode completed
 
       // Emits episode event
-      val avgLoss = if (step1 > 1) totalLoss1 / step else totalLoss1
       val episodeInfo = Episode(step = sessionStep,
         episode = episode,
         stepCount = step1,
         returnValue = returnValue1,
-        avgLoss = avgLoss,
+        totalScore = totalScore1,
         env = env1,
-        agent = agent2,
+        agent = agent1,
         session = this)
       episodesPub.onNext(episodeInfo)
 
       // Reinitialize session for next episode
-      val (initialEnv, initialObs) = env1.reset(random)
+      val initialEnv = env1.reset(random)
+      val initialObs = initialEnv.observation
       SessionContext(
         env = initialEnv,
-        agent = agent2.reset(random),
+        agent = agent1.reset(random),
         obs = initialObs,
         episode = episode + 1)
     } else {
       context.copy(
         env = env1,
-        agent = agent2,
+        agent = agent1,
         obs = obs1,
         step = step1,
-        totalLoss = totalLoss1,
-        returnValue = returnValue1,
-        discount = discount1)
+        totalScore = totalScore1,
+        returnValue = returnValue1)
     }
   }
 }
@@ -193,15 +193,13 @@ object Session {
  * @param obs         the observable
  * @param step        the step counter
  * @param episode     the episode counter
- * @param totalLoss   the total loss
+ * @param totalScore  the total loss
  * @param returnValue the return value
- * @param discount    the discount
  */
 case class SessionContext(env: Env,
                           agent: Agent,
                           obs: Observation,
                           step: Int = 0,
                           episode: Int = 0,
-                          totalLoss: Double = 0,
-                          returnValue: Double = 0,
-                          discount: Double = 1);
+                          totalScore: Double = 0,
+                          returnValue: Double = 0);
