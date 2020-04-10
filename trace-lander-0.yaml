@@ -17,10 +17,10 @@ env:
   g: 1.6
   maxAH: 1
   maxAZ: 3.2
-  landedReward: 100
-  crashReward: -100
-  outOfRangeReward: -100
-  outOfFuelReward: -100
+  landedReward: 10
+  crashReward: -1
+  outOfRangeReward: -1
+  outOfFuelReward: -1
   rewardDistanceScale: 0.01
 agent:
   type: DynaQ+Agent
@@ -30,6 +30,8 @@ agent:
   maxModelSize: 1000
   kappaPlus: 0
   planningStepsCounter: 10
+  avgReward: 0
+  beta: 0.9
   tolerance:
     - interval: [0, 1]
       value: 0.01 # 5m / 500 m
@@ -44,7 +46,7 @@ agent:
 network:
   numHiddens:
     - 100
-    - 100
+    - 30
   seed: 1234
   #  learningRate about 100 / noParameters
   #  learningRate: 0.03 # for 100 hidden nodes
@@ -54,14 +56,13 @@ network:
   epsilonAdam: 0.1
   maxAbsGradients: 1
   maxAbsParameters: 10e3
+  dropOut: 0.8
   #modelFile: lander.zip
 session:
   numSteps: 10000
   seed: 1234
-  maxEpisodeLength: 10000
-  sync: 0
-  mode: stats
-  trace: lander-trace.csv
-  dump: lander-dump.csv
+  maxEpisodeLength: 100
+  trace: lander-trace-0.csv
+  dump: lander-dump-0.csv
   #  samples: lander-samples.csv
-  modelFile: lander.zip
+  modelFile: lander-0.zip

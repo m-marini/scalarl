@@ -29,7 +29,6 @@
 
 package org.mmarini.scalarl.ts.envs
 
-import org.mmarini.scalarl.ActionChannelConfig
 import org.mmarini.scalarl.ts._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
@@ -50,9 +49,6 @@ case class LanderStatus(pos: INDArray,
                         time: Double,
                         fuel: Int,
                         conf: LanderConf) extends Env {
-
-  //  override def actionConfig: ActionChannelConfig = LanderConf.ActionChannels
-
   /**
    * Return the observation of the current land status
    *
@@ -68,22 +64,25 @@ case class LanderStatus(pos: INDArray,
    *  - (17) 1 signal for horizontal no landing position 0, 1
    *  - (18) 3 signals for no land speed 0, 1 (vh high, vz low, vz high)
    */
-  lazy val observation: Observation =
+  override lazy val observation: Observation =
     INDArrayObservation(
       signals = conf.signals(pos, speed),
       actions = LanderConf.ValidActions,
       time = time,
       endUp = isLanded || isCrashed || isOutOfRange || isOutOfFuel)
 
-  override def reset(random: Random): (Env, Observation) = {
+  //  override def actionConfig: ActionChannelConfig = LanderConf.ActionChannels
+  private val SignalSize = 28
+
+  override def reset(random: Random): Env = {
     val newEnv = copy(
       pos = conf.initialPos(random),
       speed = Nd4j.zeros(3),
       fuel = conf.fuel)
-    (newEnv, newEnv.observation)
+    newEnv
   }
 
-  override def change(action: ChannelAction, random: Random): (Env, Observation, Reward) = {
+  override def change(action: ChannelAction, random: Random): (Env, Reward) = {
     val newEnv = drive(action)
     val reward = if (newEnv.isOutOfRange) {
       conf.outOfRangeReward
@@ -96,7 +95,7 @@ case class LanderStatus(pos: INDArray,
     } else {
       conf.rewardFromPosition(newEnv.pos)
     }
-    (newEnv, newEnv.observation, reward)
+    (newEnv, reward)
   }
 
   /** Returns trueh is out of fuel */
@@ -121,10 +120,10 @@ case class LanderStatus(pos: INDArray,
     copy(pos = p, speed = v, fuel = fuel - 1, time = time + conf.dt)
   }
 
-  override def actionConfig: ActionChannelConfig = LanderConf.ActionChannels
+  override def actionConfig: DiscreteActionChannels = LanderConf.ActionChannels
 
   /** Returns the number of signals */
-  override def signalSize: Int = 28
+  override def signalSize: Int = SignalSize
 }
 
 /** Factory for [[LanderStatus]] instances */

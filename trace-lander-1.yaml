@@ -2,9 +2,9 @@
 env:
   type: Lander
   dt: 0.25
-  h0Range: 5
+  h0Range: 15
   z0: 3
-  fuel: 10
+  fuel: 30
   zMax: 150
   z1: 5 # safe altitude 2.5 m sensor warning at 5 m
   hRange: 500
@@ -30,28 +30,25 @@ agent:
   maxModelSize: 1000
   kappaPlus: 0
   planningStepsCounter: 10
+  tolerance:
+    - interval: [0, 1]
+      value: 0.01 # 5m / 500 m
+    - interval: [2, 2]
+      value: 0.01 # 1.5m / 150 m
+    - interval: [3, 4]
+      value: 0.01 # 0.24 m/s / 24 m/s
+    - interval: [5, 5]
+      value: 0.2 # 2.4 m/s / 12 m/s
+    - interval: [6, 27]
+      value: 0.5 # binary features
 network:
-  numHiddens:
-    - 100
-    - 100
-  seed: 1234
-  #  learningRate about 100 / noParameters
-  #  learningRate: 0.03 # for 100 hidden nodes
-  learningRate: 10e-3 # for 100 x 100 hidden nodes
-  beta1: 0.9
-  beta2: 0.999
-  epsilonAdam: 0.1
-  maxAbsGradients: 1
-  maxAbsParameters: 10e3
-  modelFile: lander.zip
+  modelFile: lander-0.zip
 session:
   numSteps: 10000
   seed: 1234
-  maxEpisodeLength: 10000
+  maxEpisodeLength: 100
   sync: 0
-  mode: stats
   trace: lander-trace.csv
   dump: lander-dump.csv
   #  samples: lander-samples.csv
-  sentinel: false
-  modelFile: lander.zip
+  modelFile: lander-1.zip

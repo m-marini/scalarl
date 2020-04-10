@@ -30,7 +30,7 @@
 package org.mmarini.scalarl.ts.envs
 
 import io.circe.ACursor
-import org.mmarini.scalarl.ts.ChannelAction
+import org.mmarini.scalarl.ts.{ChannelAction, DiscreteActionChannels}
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
@@ -308,7 +308,7 @@ case class LanderConf(dt: Double,
 /** Factory for [[LanderConf]] instances */
 object LanderConf {
   val NumDiscreteJet = 5
-  val ActionChannels: Array[Int] = Array(NumDiscreteJet, NumDiscreteJet, NumDiscreteJet)
+  val ActionChannels: DiscreteActionChannels = DiscreteActionChannels(Array(NumDiscreteJet, NumDiscreteJet, NumDiscreteJet))
   val Filler: Seq[Double] = (1 to NumDiscreteJet).map(_ => 0.0)
   val ValidActions: ChannelAction = Nd4j.ones(NumDiscreteJet * 3)
 

@@ -49,16 +49,16 @@ trait Agent {
    * @param observation the observation of environment
    * @param random      the random generator
    */
-  def chooseAction(observation: Observation, random: Random): (Agent, ChannelAction)
+  def chooseAction(observation: Observation, random: Random): ChannelAction
 
 
   /**
-   * Returns the fit agent by optimizing its strategy policy
+   * Returns the fit agent by optimizing its strategy policy and the score
    *
    * @param feedback the feedback from the last step
    * @param random   the random generator
    */
-  def fit(feedback: Feedback, random: Random): Agent
+  def fit(feedback: Feedback, random: Random): (Agent, Double)
 
   /**
    * Returns the score for a feedback
@@ -73,9 +73,6 @@ trait Agent {
    * @param random the random generator
    */
   def reset(random: Random): Agent
-
-  ///** Returns the discount parameter */
-  def gamma: Double
 
   /**
    * Writes the agent status to file
