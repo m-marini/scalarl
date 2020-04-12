@@ -39,6 +39,7 @@ import org.nd4j.linalg.indexing.{INDArrayIndex, NDArrayIndex}
  * @param sizes size of each action channel
  */
 case class DiscreteActionChannels(sizes: Array[Int]) {
+
   /** Returns the indices of channels (start, end inclusive) */
   val indices: Array[(Int, Int)] = {
     val (indexes, _) = sizes.foldLeft((Array[(Int, Int)](), 0)) {
@@ -61,39 +62,6 @@ case class DiscreteActionChannels(sizes: Array[Int]) {
   val zeroPolicy: INDArray = Nd4j.zeros(size)
 
   /**
-   * Returns a random action
-   *
-   * @param mask   the mask of available actions
-   * @param random the random generator
-   */
-  def random(mask: INDArray, random: Random): INDArray = {
-    val idx = for {
-      inter <- intervals
-    } yield {
-      val chMask = mask.get(inter)
-      val maskIdx = notZeroIndices(chMask)
-      require(maskIdx.nonEmpty, "mask should not be empty")
-      val idx = if (maskIdx.isEmpty) {
-        0
-      } else {
-        maskIdx(random.nextInt(maskIdx.length))
-      }
-      idx
-    }
-    action(idx: _*)
-  }
-
-  /**
-   * Returns the index of not zero values
-   *
-   * @param data the data
-   */
-  def notZeroIndices(data: INDArray): Seq[Int] = for {
-    i <- 0 until data.length().toInt
-    if data.getInt(i) != 0
-  } yield i
-
-  /**
    * Returns the action signal
    *
    * @param actions the action indices of each channel
@@ -111,13 +79,50 @@ case class DiscreteActionChannels(sizes: Array[Int]) {
   }
 
   /**
+   * Returns the state value for each channel
+   *
+   * @param q    the action values
+   * @param mask the actions mask
+   */
+  def v(q: INDArray, mask: INDArray): INDArray = {
+    val result = Nd4j.zeros(noChannels)
+    for {(chInt, i) <- intervals.zipWithIndex} {
+      val qch = q.get(chInt)
+      val idx = Utils.find(mask.get(chInt))
+      val value = Utils.indexed(qch, idx).maxNumber().doubleValue()
+      result.putScalar(i, value)
+    }
+    result
+  }
+
+  /**
+   * Returns the expected value
+   *
+   * @param q       the action values
+   * @param mask    the available actions mask
+   * @param epsilon epsilon parameter
+   */
+  def vExp(q: INDArray, mask: INDArray, epsilon: Double): INDArray = {
+    val result = Nd4j.zeros(noChannels)
+    for {(chInt, i) <- intervals.zipWithIndex} {
+      val qch = q.get(chInt)
+      val idx = Utils.find(mask.get(chInt))
+      val qa = Utils.indexed(qch, idx)
+      val pi = Utils.egreedy(qa, epsilon)
+      val value = pi.mul(qa).sumNumber().doubleValue()
+      result.putScalar(i, value)
+    }
+    result
+  }
+
+  /**
    * Returns the action indices of each channel
    *
    * @param data the action data value 1 for each action channel features
    */
-  def actions(data: INDArray): Seq[Int] = {
+  def actions(data: INDArray): Seq[Long] = {
     require(data.length() == size, s"action length [${data.length()}] should be $size")
-    val idx = notZeroIndices(data)
+    val idx = Utils.find(data)
     require(idx.length == sizes.length, s"number of actions [${idx.length}] should be ${sizes.length}")
     for {(a, (from, to)) <- idx.zip(indices)} {
       require(a >= from && a <= to, s"action value $a should be between $from to $to")
@@ -136,41 +141,43 @@ case class DiscreteActionChannels(sizes: Array[Int]) {
    * @return a vector of values of policy where mask is not zero
    */
   def actionValues(policy: Policy, action: INDArray): INDArray = {
-    val maskIdx = notZeroIndices(action)
-    val values = maskIdx.map(i => policy.getDouble(i.toLong)).toArray
-    Nd4j.create(values)
+    val maskIdx = Utils.find(action)
+    Utils.indexed(policy, maskIdx)
   }
 
   /**
-   * Returns the mask of max feature values for channels
+   * Returns the probabilities of actions selection for each channel
    *
-   * @param policy the policy
-   * @param mask   the mask of available actions
+   * @param q       the action values
+   * @param mask    the mask of valid actions
+   * @param epsilon the epsilon parameter
    */
-  def greedyAction(policy: Policy, mask: INDArray): INDArray = {
-    val (_, idx) = statusValue(policy, mask)
-    action(idx: _*)
-  }
-
-  /**
-   * Returns the status value for the action and argMax
-   * The status value of a policy is the max value for the channel
-   *
-   * @param policy action value
-   * @param action mask of available actions
-   * @return the array of values for each channel and the indices of max action features
-   */
-  def statusValue(policy: Policy, action: INDArray): (INDArray, Array[Int]) = {
-    val x = for {interval <- intervals} yield {
-      val p = policy.get(interval)
-      val maskIdx = notZeroIndices(action.get(interval))
-      val values = maskIdx.map(i => p.getDouble(i.toLong))
-      val max = values.max
-      val idx = values.indexOf(max)
-      (max, maskIdx(idx))
+  def egreedyPolicy(q: INDArray, mask: INDArray, epsilon: Double): INDArray = {
+    val result = Nd4j.zeros(q.shape(): _*)
+    val x = for {
+      chInt <- intervals
+    } yield {
+      val chQ = q.get(chInt)
+      val idx = Utils.find(mask.get(chInt))
+      val m = Utils.indexed(chQ, idx)
+      val pr = Utils.egreedy(m, epsilon)
+      val res = result.get(chInt)
+      for {(i, j) <- idx.zipWithIndex} {
+        res.putScalar(i, pr.getDouble(j.toLong))
+      }
     }
-    val (vals, idx) = x.unzip
-    val values = Nd4j.create(vals)
-    (values, idx)
+    result
+  }
+
+  /**
+   * Returns a random action with a given policy
+   *
+   * @param p      the policy of action
+   * @param random the random generator
+   */
+  def actionFromPolicy(p: INDArray)(random: Random): INDArray = {
+    val actions = for {chInt <- intervals} yield
+      Utils.randomInt(p.get(chInt))(random)
+    action(actions: _*)
   }
 }
