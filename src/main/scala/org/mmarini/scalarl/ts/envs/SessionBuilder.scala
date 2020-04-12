@@ -37,7 +37,7 @@ import monix.eval.Task
 import monix.execution.Scheduler
 import org.mmarini.scalarl.FileUtils.{withFile, writeINDArray}
 import org.mmarini.scalarl.ts._
-import org.mmarini.scalarl.ts.agents.DynaQPlusAgent
+import org.mmarini.scalarl.ts.agents.ExpSarsaAgent
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
@@ -146,38 +146,35 @@ class SessionBuilder(sessionCursor: ACursor) extends LazyLogging {
    * - prev q1
    */
   private def createLanderTrace(step: Step): INDArray = {
-    val beforeEnv = step.beforeEnv.asInstanceOf[LanderStatus]
-    val beforePos = beforeEnv.pos
-    val beforeSpeed = beforeEnv.speed
-    val afterEnv = step.afterEnv.asInstanceOf[LanderStatus]
-    val afterPos = afterEnv.pos
-    val afterSpeed = afterEnv.speed
-    val head = Nd4j.create(Array(Array[Double](
+    val env0 = step.beforeEnv.asInstanceOf[LanderStatus]
+    val pos0 = env0.pos
+    val speed0 = env0.speed
+    val env1 = step.afterEnv.asInstanceOf[LanderStatus]
+    val pos1 = env1.pos
+    val speed1 = env1.speed
+    val head = Nd4j.create(Array[Double](
       step.episode,
-      step.step)))
-    val mid = Nd4j.create(Array(Array(
+      step.step))
+    val mid = Nd4j.create(Array(
       step.feedback.reward,
-      if (step.feedback.s1.endUp) 1 else 0)))
-    val beforeAgent = step.beforeAgent.asInstanceOf[DynaQPlusAgent]
-    val afterAgent = step.afterAgent.asInstanceOf[DynaQPlusAgent]
-    val beforeQ = beforeAgent.policy(beforeEnv.observation)
-    val afterQ = beforeAgent.policy(afterEnv.observation)
-    val fitQ = afterAgent.policy(beforeEnv.observation)
-    val availableActions = beforeEnv.observation.actions.ravel()
-    val afterAvailableActions = afterEnv.observation.actions.ravel()
+      if (step.feedback.s1.endUp) 1 else 0))
+    val agent0 = step.beforeAgent.asInstanceOf[ExpSarsaAgent]
+    val agent1 = step.afterAgent.asInstanceOf[ExpSarsaAgent]
+    val q0 = agent0.q(env0.observation)
+    val q1 = agent0.q(env1.observation)
+    val q01 = agent1.q(env0.observation)
     Nd4j.hstack(
       head,
       step.feedback.action,
       mid,
-      beforePos,
-      beforeSpeed,
-      beforeQ,
-      afterPos,
-      afterSpeed,
-      fitQ,
-      afterQ,
-      availableActions,
-      afterAvailableActions)
+      pos0,
+      speed0,
+      pos1,
+      speed1,
+      agent0.avgReward,
+      q0,
+      q1,
+      q01)
   }
 
   /**

@@ -1,4 +1,4 @@
-function Q = qFromTrace(X)
+function Q = q0FromTrace(X)
 ## -*- texinfo -*-
 ## @deftypefn  {Function File} [@var{R} @var[V]] = qFromTrace (@var{X})
 ## Return the policy values from trace data
@@ -7,5 +7,5 @@ function Q = qFromTrace(X)
 ####
 ## The return values @var{Q} is a matrix containing the policy rows
 ## @end deftypefn
-  Q = X(:, 32 : 46);
+  Q = X(:, 37 : 51);
 endfunction

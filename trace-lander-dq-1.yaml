@@ -25,7 +25,6 @@ env:
 agent:
   type: DynaQ+Agent
   epsilon: 0.01
-  gamma: 0.999
   kappa: 1
   maxModelSize: 1000
   kappaPlus: 0

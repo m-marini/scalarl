@@ -27,9 +27,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.ts.agents
+package org.mmarini.scalarl.ts
 
-import org.mmarini.scalarl.ts.DiscreteActionChannels
 import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FunSpec, Matchers}
 
@@ -64,11 +63,6 @@ class DiscreteActionChannelsTest extends FunSpec with Matchers {
       data shouldBe Nd4j.create(Array(1.0, 1.0, 0.0, 0.0, 1.0, 0.0))
     }
 
-    it("should get indices") {
-      val data = channels.notZeroIndices(Nd4j.create(Array(1.0, 1.0, 0.0, 0.0, 1.0, 0.0)))
-      data shouldBe Seq(0, 1, Index4)
-    }
-
     it("should get action indices") {
       val data = channels.actions(Nd4j.create(Array(1.0, 1.0, 0.0, 0.0, 1.0, 0.0)))
       data shouldBe Seq(0, 0, 1)
@@ -95,50 +89,46 @@ class DiscreteActionChannelsTest extends FunSpec with Matchers {
       thrown.getMessage shouldBe "requirement failed: action length [5] should be 6"
     }
 
-    it("should generate a random action") {
-      val mask = Nd4j.ones(Size)
-      val random = Nd4j.getRandomFactory.getNewRandomInstance(1L)
-      val data = channels.random(mask, random)
-      data shouldBe Nd4j.create(Array(1.0, 0.0, 1.0, 0.0, 0.0, 1.0))
-    }
-
-    it("should generate a random action with mask") {
-      val mask = Nd4j.create(Array(1.0, 1.0, 0.0, 1.0, 1.0, 0.0))
-      val random = Nd4j.getRandomFactory.getNewRandomInstance(1L)
-      val data = channels.random(mask, random)
-      data shouldBe Nd4j.create(Array(1.0, 1.0, 0.0, 1.0, 0.0, 0.0))
-    }
-
     it("should get status value for channels") {
       val mask = Nd4j.ones(Size)
       val policy = Nd4j.create(Array(1.5, 1.0, 2.0, -1.0, 2.5, 1.0))
-      val (data, idx) = channels.statusValue(policy, mask)
-
+      val data = channels.v(policy, mask)
       data shouldBe Nd4j.create(Array(1.5, 2.0, 2.5))
-      idx shouldBe Array(0, 1, 1)
     }
 
     it("should get status value for channels with mask") {
       val mask = Nd4j.create(Array(1.0, 1.0, 0.0, 1.0, 0.0, 1.0))
       val policy = Nd4j.create(Array(1.5, 1.0, 2.0, -1.0, 2.5, 1.0))
-      val (data, idx) = channels.statusValue(policy, mask)
-
+      val data = channels.v(policy, mask)
       data shouldBe Nd4j.create(Array(1.5, 1.0, 1.0))
-      idx shouldBe Array(0, 0, 2)
     }
 
-    it("should get greedyAction") {
+    it("should get expected status value for channels") {
       val mask = Nd4j.ones(Size)
       val policy = Nd4j.create(Array(1.5, 1.0, 2.0, -1.0, 2.5, 1.0))
-      val data = channels.greedyAction(policy, mask)
-      data shouldBe Nd4j.create(Array(1.0, 0.0, 1.0, 0.0, 1.0, 0.0))
+      val data = channels.vExp(policy, mask, 0.1)
+      data shouldBe Nd4j.create(Array(1.5, 1.0 * 0.1 + 2.0 * 0.9, -1.0 * 0.05 + 2.5 * 0.9 + 0.05 * 1.0))
     }
 
-    it("should get greedyAction with mask") {
+    it("should get expected status value for channels with mask") {
       val mask = Nd4j.create(Array(1.0, 1.0, 0.0, 1.0, 0.0, 1.0))
       val policy = Nd4j.create(Array(1.5, 1.0, 2.0, -1.0, 2.5, 1.0))
-      val data = channels.greedyAction(policy, mask)
-      data shouldBe Nd4j.create(Array(1.0, 1.0, 0.0, 0.0, 0.0, 1.0))
+      val data = channels.vExp(policy, mask, 0.1)
+      data shouldBe Nd4j.create(Array(1.5, 1.0, -1.0 * 0.1 + 1.0 * 0.9))
+    }
+
+    it("should get greedy policy") {
+      val mask = Nd4j.ones(Size)
+      val policy = Nd4j.create(Array(1.5, 1.0, 2.0, -1.0, 2.5, 1.0))
+      val data = channels.egreedyPolicy(policy, mask, 0.1)
+      data shouldBe Nd4j.create(Array(1.0, 0.1, 0.9, 0.05, 0.9, 0.05))
+    }
+
+    it("should get greedy policy with mask") {
+      val policy = Nd4j.create(Array(1.5, 1.0, 2.0, -1.0, 2.5, 1.0))
+      val mask = Nd4j.create(Array(1.0, 1.0, 0.0, 1.0, 0.0, 1.0))
+      val data = channels.egreedyPolicy(policy, mask, 0.1)
+      data shouldBe Nd4j.create(Array(1.0, 1.0, 0.0, 0.1, 0.0, 0.9))
     }
 
     it("should get actionValues") {

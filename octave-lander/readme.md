@@ -64,21 +64,22 @@ These features are defined to maneuver the shuttle jets:
 
 The trace file format is composed by:
 
-| Field              | Offset | Size   |
-|:-------------------|-------:|-------:|
-| EPISODE            |      1 |      1 |
-| STEP               |      2 |      1 |
-| ACTION             |      3 |     15 |
-| REWARD             |     18 |      1 |
-| ENDUP              |     19 |      1 |
-| PREV_POS           |     20 |      3 |
-| PREV_SPEED         |     23 |      3 |
-| RESULT_POS         |     26 |      3 |
-| RESULT_SPEED       |     29 |      3 |
-| PREV_Q             |     32 |     15 |
-| RESULT_Q           |     47 |     15 |
-| PREV_Q1            |     62 |     15 |
-| **Total size**     |        | **76** |
+| Field          | Offset | Size   |
+|:---------------|-------:|-------:|
+| EPISODE        |      1 |      1 |
+| STEP           |      2 |      1 |
+| ACTION         |      3 |     15 |
+| REWARD         |     18 |      1 |
+| ENDUP          |     19 |      1 |
+| POS_0          |     20 |      3 |
+| SPEED_0        |     23 |      3 |
+| POS_1          |     26 |      3 |
+| SPEED_1        |     29 |      3 |
+| AVG_REWARD     |     32 |      3 |
+| Q_0            |     35 |     15 |
+| Q_1            |     50 |     15 |
+| Q_01           |     65 |     15 |
+| **Total size** |        | **79** |
 
 ## Dump file format
 

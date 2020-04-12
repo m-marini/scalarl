@@ -38,7 +38,7 @@ import org.deeplearning4j.nn.conf.layers.{DenseLayer, OutputLayer}
 import org.deeplearning4j.nn.conf.{GradientNormalization, NeuralNetConfiguration}
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
-import org.mmarini.scalarl.ts.agents.DynaQPlusAgent
+import org.mmarini.scalarl.ts.agents.ExpSarsaAgent
 import org.mmarini.scalarl.ts.{Agent, DiscreteActionChannels, Session}
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.rng.Random
@@ -56,14 +56,13 @@ class TestEnvTest extends FunSpec with Matchers with LazyLogging {
   Nd4j.create()
 
   def agent: Agent =
-    DynaQPlusAgent(net = network,
+    ExpSarsaAgent(net = network,
       model = Seq(),
       config = DiscreteActionChannels(Array(2)),
       avgReward = Nd4j.ones(1).muli(-1),
       beta = 0.1,
       maxModelSize = 0,
       epsilon = 0.01,
-      gamma = 1,
       kappa = 1,
       kappaPlus = 0,
       planningStepsCounter = 0,
@@ -129,23 +128,23 @@ class TestEnvTest extends FunSpec with Matchers with LazyLogging {
     val firstEpisode = session.episodes.take(1)
     val lastEpisode = session.episodes.last
 
-    val x = firstEpisode.combineLatest(lastEpisode).doOnNext {
+    firstEpisode.combineLatest(lastEpisode).doOnNext {
       case (first, last) => Task.eval {
         logger.info("stepCount = {}/{}, score={}/{}",
           first.stepCount, last.stepCount, first.totalScore, last.totalScore)
         first.stepCount shouldBe >=(last.stepCount)
         first.totalScore shouldBe >=(last.totalScore)
       }
-    }.subscribe()(Scheduler.global);
+    }.subscribe()(Scheduler.global)
 
     val (_, agent1) = session.run(random)
 
     it("should have policy at state s0 with higher value on action 0 ") {
-      val p0 = agent1.asInstanceOf[DynaQPlusAgent].policy(s0.observation)
+      val p0 = agent1.asInstanceOf[ExpSarsaAgent].q(s0.observation)
       p0.getDouble(0L) shouldBe >(p0.getDouble(1L))
     }
     it("should have policy at state s1 with higher value on action 1 ") {
-      val p0 = agent1.asInstanceOf[DynaQPlusAgent].policy(s1.observation)
+      val p0 = agent1.asInstanceOf[ExpSarsaAgent].q(s1.observation)
       p0.getDouble(1L) shouldBe >(p0.getDouble(0L))
     }
   }

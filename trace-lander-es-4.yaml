@@ -2,9 +2,9 @@
 env:
   type: Lander
   dt: 0.25
-  h0Range: 5
-  z0: 1
-  fuel: 10
+  h0Range: 500
+  z0: 100
+  fuel: 1000
   zMax: 150
   z1: 5 # safe altitude 2.5 m sensor warning at 5 m
   hRange: 500
@@ -23,9 +23,8 @@ env:
   outOfFuelReward: -1
   rewardDistanceScale: 0.01
 agent:
-  type: DynaQ+Agent
+  type: ExpectedSarsaAgent
   epsilon: 0.01
-  gamma: 0.999
   kappa: 1
   maxModelSize: 1000
   kappaPlus: 0
@@ -46,7 +45,7 @@ agent:
 network:
   numHiddens:
     - 100
-    - 30
+    - 100
   seed: 1234
   #  learningRate about 100 / noParameters
   #  learningRate: 0.03 # for 100 hidden nodes
@@ -56,13 +55,14 @@ network:
   epsilonAdam: 0.1
   maxAbsGradients: 1
   maxAbsParameters: 10e3
-  dropOut: 0.8
-  #modelFile: lander.zip
+  modelFile: lander-3.zip
 session:
-  numSteps: 10000
+  numSteps: 3000
   seed: 1234
-  maxEpisodeLength: 100
-  trace: lander-trace-0.csv
-  dump: lander-dump-0.csv
+  maxEpisodeLength: 1000
+  sync: 0
+  mode: stats
+  trace: lander-trace.csv
+  dump: lander-dump.csv
   #  samples: lander-samples.csv
-  modelFile: lander-0.zip
+  modelFile: lander-4.zip

@@ -63,17 +63,17 @@ import org.nd4j.linalg.ops.transforms.Transforms._
  * @param kappaPlus            dyna+ model kappa parameter
  * @param tolerance            dyna+ model status tollerance
  */
-case class DynaQPlusAgent(net: MultiLayerNetwork,
-                          config: DiscreteActionChannels,
-                          avgReward: INDArray,
-                          epsilon: Double,
-                          kappa: Double,
-                          beta: Double,
-                          model: Seq[Feedback],
-                          maxModelSize: Int,
-                          planningStepsCounter: Int,
-                          kappaPlus: Double,
-                          tolerance: Option[INDArray]) extends Agent with LazyLogging {
+case class ExpSarsaAgent(net: MultiLayerNetwork,
+                         config: DiscreteActionChannels,
+                         avgReward: INDArray,
+                         epsilon: Double,
+                         kappa: Double,
+                         beta: Double,
+                         model: Seq[Feedback],
+                         maxModelSize: Int,
+                         planningStepsCounter: Int,
+                         kappaPlus: Double,
+                         tolerance: Option[INDArray]) extends Agent with LazyLogging {
   /**
    * Returns the new agent and the chosen action.
    * Chooses the action to be executed to the environment.
@@ -189,7 +189,7 @@ case class DynaQPlusAgent(net: MultiLayerNetwork,
       val q0 = q(obs0)
       val q1 = q(obs1)
       // Computes state values
-      val v1 = config.v(q1, obs1.actions)
+      val v1 = config.vExp(q1, obs1.actions, epsilon)
       val v0 = Utils.v(q0, action).transpose()
 
       // Compute new q0 = v1 - Rm + R and delta = v1 - Rm + R - v0
@@ -252,7 +252,7 @@ case class DynaQPlusAgent(net: MultiLayerNetwork,
 }
 
 /** The factory of [[ExpSarsaAgent]] */
-object DynaQPlusAgent {
+object ExpSarsaAgent {
 
   private case class Interval(interval: (Int, Int), value: Double) {
     require(interval._1 >= 0)

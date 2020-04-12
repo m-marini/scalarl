@@ -29,38 +29,51 @@
 
 package org.mmarini.scalarl.ts.envs
 
-import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.agents.AgentNetworkBuilder
-import org.mmarini.scalarl.ts.agents.{DynaQPlusAgent, ExpSarsaAgent}
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.indexing.NDArrayIndex
+import org.nd4j.linalg.ops.transforms.Transforms
 
-/**
- *
- */
-object Main extends LazyLogging {
+import scala.math._
+
+class Tiles(val offset: INDArray, val n: Int) {
+
+  def indices(point: INDArray): Seq[INDArray] = {
+    val tiles = for {
+      tile <- 0 until n
+    } yield {
+      val x1 = Transforms.floor(offset.mul(tile).addi(point))
+      x1
+    }
+    tiles
+  }
+}
+
+object Tiles {
+  val Primes = Nd4j.create(Array(1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 43, 47, 53, 59).map(_.toDouble))
+
+  def main(args: Array[String]): Unit = {
+    val t = Tiles(2)
+    println(t.offset)
+    println(t.n)
+    println(t.indices(Nd4j.create(Array(0.0, 0.0))))
+    println(t.indices(Nd4j.create(Array(0.2, 0.0))))
+    println(t.indices(Nd4j.create(Array(0.3, 0.0))))
+    println(t.indices(Nd4j.create(Array(0.6, 0.0))))
+    println(t.indices(Nd4j.create(Array(0.8, 0.0))))
+    println(t.indices(Nd4j.create(Array(1.0, 0.0))))
+  }
+
 
   /**
+   * Returns corse tile code
    *
-   * @param args the line command arguments
+   * @param k number of dimensions
    */
-  def main(args: Array[String]) {
-    val file = if (args.isEmpty) "maze.yaml" else args(0)
-    logger.info("File {}", file)
-
-    val jsonConf = Configuration.jsonFromFile(file)
-    val env = EnvBuilder(jsonConf.hcursor.downField("env")).build()
-    val net = AgentNetworkBuilder(jsonConf.hcursor.downField("network"),
-      env.signalSize,
-      env.actionConfig.size).build()
-    val agentConf = jsonConf.hcursor.downField("agent")
-    val agent = agentConf.get[String]("type").right.get match {
-      case "ExpectedSarsaAgent" => ExpSarsaAgent(agentConf, net, env.actionConfig)
-      case "DynaQ+Agent" => DynaQPlusAgent(agentConf, net, env.actionConfig)
-      case _ => throw new IllegalArgumentException("Wrong agent type")
-    }
-    val (session, random) = SessionBuilder(jsonConf.hcursor.downField("session")).
-      build(env = env, agent = agent)
-
-    session.run(random)
-    logger.info("Session completed.")
+  def apply(k: Int): Tiles = {
+    val ne = ceil(log(4 * k) / log(2)).toInt
+    val n = pow(2, ne).toInt
+    val strides = Primes.get(NDArrayIndex.interval(0, k))
+    new Tiles(strides, n)
   }
 }
