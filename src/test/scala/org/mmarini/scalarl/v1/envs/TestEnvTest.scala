@@ -62,6 +62,7 @@ class TestEnvTest extends FunSpec with Matchers with LazyLogging {
       avgReward = 0.25,
       beta = 0.5,
       maxModelSize = 0,
+      minModelSize = 1000,
       epsilon = 0.01,
       kappa = 1,
       kappaPlus = 0,
