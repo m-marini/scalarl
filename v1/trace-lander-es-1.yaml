@@ -1,0 +1,53 @@
+---
+env:
+  type: Lander
+  dt: 0.25
+  h0Range: 15
+  z0: 3
+  fuel: 30
+  zMax: 150
+  z1: 5 # safe altitude 2.5 m sensor warning at 5 m
+  hRange: 500
+  zRange: 150
+  vhRange: 24
+  vzRange: 12
+  landingRadius: 10
+  landingVH: 0.5
+  landingVZ: 4
+  g: 1.6
+  maxAH: 1
+  maxAZ: 3.2
+  landedReward: 100
+  crashReward: -100
+  outOfRangeReward: -100
+  outOfFuelReward: -100
+  rewardDistanceScale: 0.01
+agent:
+  type: ExpectedSarsaAgent
+  epsilon: 0.01
+  kappa: 1
+  maxModelSize: 1000
+  kappaPlus: 0
+  planningStepsCounter: 10
+  tolerance:
+    - interval: [0, 1]
+      value: 0.01 # 5m / 500 m
+    - interval: [2, 2]
+      value: 0.01 # 1.5m / 150 m
+    - interval: [3, 4]
+      value: 0.01 # 0.24 m/s / 24 m/s
+    - interval: [5, 5]
+      value: 0.2 # 2.4 m/s / 12 m/s
+    - interval: [6, 27]
+      value: 0.5 # binary features
+network:
+  modelFile: lander-0.zip
+session:
+  numSteps: 10000
+  seed: 1234
+  maxEpisodeLength: 100
+  sync: 0
+  trace: lander-trace.csv
+  dump: lander-dump.csv
+  #  samples: lander-samples.csv
+  modelFile: lander-1.zip

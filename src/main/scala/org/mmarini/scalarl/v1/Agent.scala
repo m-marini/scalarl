@@ -27,39 +27,58 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.ts.envs
+package org.mmarini.scalarl.v1
 
-import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.ts.agents.{DynaQPlusAgent, ExpSarsaAgent}
+import org.nd4j.linalg.api.rng.Random
 
 /**
+ * The agent acting in the environment
  *
+ * Generates actions to change the status of environment basing on observation of the environment
+ * and the internal strategy policy.
+ *
+ * Updates its strategy policy to optimize the return value (discount sum of rewards)
+ * and the observation of resulting environment
  */
-object Main extends LazyLogging {
+trait Agent {
 
   /**
+   * Returns the new agent and the chosen action.
+   * Chooses the action to be executed to the environment.
    *
-   * @param args the line command arguments
+   * @param observation the observation of environment
+   * @param random      the random generator
    */
-  def main(args: Array[String]) {
-    val file = if (args.isEmpty) "maze.yaml" else args(0)
-    logger.info("File {}", file)
+  def chooseAction(observation: Observation, random: Random): Action
 
-    val jsonConf = Configuration.jsonFromFile(file)
-    val env = EnvBuilder(jsonConf.hcursor.downField("env")).build()
-    val net = AgentNetworkBuilder(jsonConf.hcursor.downField("network"),
-      env.signalSize,
-      env.actionConfig.size).build()
-    val agentConf = jsonConf.hcursor.downField("agent")
-    val agent = agentConf.get[String]("type").right.get match {
-      case "ExpectedSarsaAgent" => ExpSarsaAgent(agentConf, net, env.actionConfig)
-      case "DynaQ+Agent" => DynaQPlusAgent(agentConf, net, env.actionConfig)
-      case _ => throw new IllegalArgumentException("Wrong agent type")
-    }
-    val (session, random) = SessionBuilder(jsonConf.hcursor.downField("session")).
-      build(env = env, agent = agent)
 
-    session.run(random)
-    logger.info("Session completed.")
-  }
+  /**
+   * Returns the fit agent by optimizing its strategy policy and the score
+   *
+   * @param feedback the feedback from the last step
+   * @param random   the random generator
+   */
+  def fit(feedback: Feedback, random: Random): (Agent, Double)
+
+  /**
+   * Returns the score for a feedback
+   *
+   * @param feedback the feedback from the last step
+   */
+  def score(feedback: Feedback): Double
+
+  /**
+   * Returns the reset agent
+   *
+   * @param random the random generator
+   */
+  def reset(random: Random): Agent
+
+  /**
+   * Writes the agent status to file
+   *
+   * @param file the filename
+   * @return the agents
+   */
+  def writeModel(file: String): Agent
 }

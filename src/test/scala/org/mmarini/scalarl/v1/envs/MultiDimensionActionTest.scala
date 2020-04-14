@@ -27,39 +27,50 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.ts.envs
+package org.mmarini.scalarl.v1.envs
 
-import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.ts.agents.{DynaQPlusAgent, ExpSarsaAgent}
+import org.nd4j.linalg.factory.Nd4j
+import org.scalatest.{FunSpec, Matchers}
 
-/**
- *
- */
-object Main extends LazyLogging {
+import scala.math._
 
-  /**
-   *
-   * @param args the line command arguments
-   */
-  def main(args: Array[String]) {
-    val file = if (args.isEmpty) "maze.yaml" else args(0)
-    logger.info("File {}", file)
+class MultiDimensionActionTest extends FunSpec with Matchers {
 
-    val jsonConf = Configuration.jsonFromFile(file)
-    val env = EnvBuilder(jsonConf.hcursor.downField("env")).build()
-    val net = AgentNetworkBuilder(jsonConf.hcursor.downField("network"),
-      env.signalSize,
-      env.actionConfig.size).build()
-    val agentConf = jsonConf.hcursor.downField("agent")
-    val agent = agentConf.get[String]("type").right.get match {
-      case "ExpectedSarsaAgent" => ExpSarsaAgent(agentConf, net, env.actionConfig)
-      case "DynaQ+Agent" => DynaQPlusAgent(agentConf, net, env.actionConfig)
-      case _ => throw new IllegalArgumentException("Wrong agent type")
+  Nd4j.create()
+
+  describe("MultiDimensionAction") {
+    val pr = Nd4j.create(Array(0.125, 0.25, 0.125, 0.5))
+    val cdf = Nd4j.create(Array(0.125, 0.375, 0.5, 1.0))
+    val softMax = Nd4j.create(Array(-log(2), 0.0, -log(2), log(2)))
+
+    val cfg = new MultiDimensionAction(5, 5, 5)
+
+    it("should get actions") {
+      cfg.actions shouldBe 125
     }
-    val (session, random) = SessionBuilder(jsonConf.hcursor.downField("session")).
-      build(env = env, agent = agent)
 
-    session.run(random)
-    logger.info("Session completed.")
+    it("should get strides") {
+      cfg.strides shouldBe Seq(1, 5, 25)
+    }
+
+    it("should get vector(0)") {
+      cfg.vector(0) shouldBe Nd4j.create(Array(0.0, 0.0, 0.0))
+    }
+
+    it("should get vector(1)") {
+      cfg.vector(1) shouldBe Nd4j.create(Array(1.0, 0.0, 0.0))
+    }
+
+    it("should get vector(5)") {
+      cfg.vector(5) shouldBe Nd4j.create(Array(0.0, 1.0, 0.0))
+    }
+
+    it("should get vector(25)") {
+      cfg.vector(25) shouldBe Nd4j.create(Array(0.0, 0.0, 1.0))
+    }
+
+    it("should get vector(124)") {
+      cfg.vector(124) shouldBe Nd4j.create(Array(4.0, 4.0, 4.0))
+    }
   }
 }

@@ -27,39 +27,26 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.ts.envs
+package org.mmarini.scalarl.v1.envs
 
 import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.ts.agents.{DynaQPlusAgent, ExpSarsaAgent}
+import io.circe.ACursor
+import org.mmarini.scalarl.v1.Env
 
-/**
- *
- */
-object Main extends LazyLogging {
-
+class EnvBuilder(conf: ACursor) extends LazyLogging {
   /**
    *
-   * @param args the line command arguments
    */
-  def main(args: Array[String]) {
-    val file = if (args.isEmpty) "maze.yaml" else args(0)
-    logger.info("File {}", file)
-
-    val jsonConf = Configuration.jsonFromFile(file)
-    val env = EnvBuilder(jsonConf.hcursor.downField("env")).build()
-    val net = AgentNetworkBuilder(jsonConf.hcursor.downField("network"),
-      env.signalSize,
-      env.actionConfig.size).build()
-    val agentConf = jsonConf.hcursor.downField("agent")
-    val agent = agentConf.get[String]("type").right.get match {
-      case "ExpectedSarsaAgent" => ExpSarsaAgent(agentConf, net, env.actionConfig)
-      case "DynaQ+Agent" => DynaQPlusAgent(agentConf, net, env.actionConfig)
-      case _ => throw new IllegalArgumentException("Wrong agent type")
+  def build(): Env =
+    conf.get[String]("type").toOption match {
+      case Some("Lander") =>
+        val landerConf = LanderConf(conf)
+        LanderStatus(conf = landerConf)
+      case Some(typ) => throw new IllegalArgumentException(s"Unreconginzed env type '$typ'")
+      case _ => throw new IllegalArgumentException("Missing env type")
     }
-    val (session, random) = SessionBuilder(jsonConf.hcursor.downField("session")).
-      build(env = env, agent = agent)
+}
 
-    session.run(random)
-    logger.info("Session completed.")
-  }
+object EnvBuilder {
+  def apply(conf: ACursor): EnvBuilder = new EnvBuilder(conf)
 }
