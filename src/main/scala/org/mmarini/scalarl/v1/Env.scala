@@ -27,39 +27,41 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.ts.envs
+package org.mmarini.scalarl.v1
 
-import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.ts.agents.{DynaQPlusAgent, ExpSarsaAgent}
+import org.nd4j.linalg.api.rng.Random
 
 /**
- *
+ * The environment simulates the environment changing the status by action chosen by an agent
+ * and notifying the reward to the agent.
+ * Checks for end of episode by identifing the final states.
  */
-object Main extends LazyLogging {
+trait Env {
 
   /**
+   * Returns the environment simulator in reset status
    *
-   * @param args the line command arguments
+   * @param random the random generator
    */
-  def main(args: Array[String]) {
-    val file = if (args.isEmpty) "maze.yaml" else args(0)
-    logger.info("File {}", file)
+  def reset(random: Random): Env
 
-    val jsonConf = Configuration.jsonFromFile(file)
-    val env = EnvBuilder(jsonConf.hcursor.downField("env")).build()
-    val net = AgentNetworkBuilder(jsonConf.hcursor.downField("network"),
-      env.signalSize,
-      env.actionConfig.size).build()
-    val agentConf = jsonConf.hcursor.downField("agent")
-    val agent = agentConf.get[String]("type").right.get match {
-      case "ExpectedSarsaAgent" => ExpSarsaAgent(agentConf, net, env.actionConfig)
-      case "DynaQ+Agent" => DynaQPlusAgent(agentConf, net, env.actionConfig)
-      case _ => throw new IllegalArgumentException("Wrong agent type")
-    }
-    val (session, random) = SessionBuilder(jsonConf.hcursor.downField("session")).
-      build(env = env, agent = agent)
+  /**
+   * Computes the next status of environment executing an action.
+   *
+   * @param action the executing action
+   * @param random the random generator
+   * @return a n-uple with:
+   *         - the environment in the next status,
+   *         - the reward for the action,
+   */
+  def change(action: Action, random: Random): (Env, Reward)
 
-    session.run(random)
-    logger.info("Session completed.")
-  }
+  /** Returns the action channel configuration of the environment */
+  def actionsSize: Int
+
+  /** Returns the number of signals */
+  def signalsSize: Int
+
+  /** Returns the [[Observation]] for the environment */
+  def observation: Observation
 }

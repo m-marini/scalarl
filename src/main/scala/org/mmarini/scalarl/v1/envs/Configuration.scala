@@ -27,39 +27,16 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.ts.envs
+package org.mmarini.scalarl.v1.envs
 
-import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.ts.agents.{DynaQPlusAgent, ExpSarsaAgent}
+import java.io.{FileReader, Reader}
 
-/**
- *
- */
-object Main extends LazyLogging {
+import io.circe.Json
+import io.circe.yaml.parser
 
-  /**
-   *
-   * @param args the line command arguments
-   */
-  def main(args: Array[String]) {
-    val file = if (args.isEmpty) "maze.yaml" else args(0)
-    logger.info("File {}", file)
+object Configuration {
 
-    val jsonConf = Configuration.jsonFromFile(file)
-    val env = EnvBuilder(jsonConf.hcursor.downField("env")).build()
-    val net = AgentNetworkBuilder(jsonConf.hcursor.downField("network"),
-      env.signalSize,
-      env.actionConfig.size).build()
-    val agentConf = jsonConf.hcursor.downField("agent")
-    val agent = agentConf.get[String]("type").right.get match {
-      case "ExpectedSarsaAgent" => ExpSarsaAgent(agentConf, net, env.actionConfig)
-      case "DynaQ+Agent" => DynaQPlusAgent(agentConf, net, env.actionConfig)
-      case _ => throw new IllegalArgumentException("Wrong agent type")
-    }
-    val (session, random) = SessionBuilder(jsonConf.hcursor.downField("session")).
-      build(env = env, agent = agent)
+  def jsonFromFile(file: String): Json = jsonFromReader(new FileReader(file))
 
-    session.run(random)
-    logger.info("Session completed.")
-  }
+  def jsonFromReader(reader: Reader): Json = parser.parse(reader).right.get
 }

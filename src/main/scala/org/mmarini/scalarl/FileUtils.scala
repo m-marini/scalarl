@@ -31,14 +31,15 @@ package org.mmarini.scalarl
 
 import java.io._
 
+import monix.eval.Task
+import monix.reactive.Observable
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
-import rx.lang.scala.Observable
 
 object FileUtils {
 
   def withFile(file: String, append: Boolean)(f: Writer => Unit) {
-    withWriter(new FileWriter(file, true))(f)
+    withWriter(new FileWriter(file, append))(f)
   }
 
   def withWriter(w: Writer)(f: Writer => Unit) {
@@ -60,30 +61,10 @@ object FileUtils {
   }
 
   def readINDArray(file: File): Observable[INDArray] =
-    readFile(file).map(_.split(",").map(_.toDouble)).toArray.map(
-      Nd4j.create)
+    readFile(file).map(_.split(",").map(_.toDouble)).foldLeft(Array[Array[Double]]()) {
+      case (s, v) => s :+ v
+    }.map(Nd4j.create)
 
   def readFile(file: File): Observable[String] =
-    Observable(s => {
-      try {
-        val br = new BufferedReader(new FileReader(file))
-        try {
-          var reading = true
-
-          do {
-            val line = Option(br.readLine())
-            if (line.isEmpty) {
-              s.onCompleted()
-              reading = false
-            } else {
-              s.onNext(line.get)
-            }
-          } while (reading)
-        } finally {
-          br.close()
-        }
-      } catch {
-        case ex: Throwable => s.onError(ex)
-      }
-    })
+    Observable.fromLinesReader(Task.eval(new BufferedReader(new FileReader(file))))
 }

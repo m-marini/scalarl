@@ -27,10 +27,10 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.ts.envs
+package org.mmarini.scalarl.v1.envs
 
 import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.ts.agents.{DynaQPlusAgent, ExpSarsaAgent}
+import org.mmarini.scalarl.v1.agents.ExpSarsaAgent
 
 /**
  *
@@ -48,12 +48,12 @@ object Main extends LazyLogging {
     val jsonConf = Configuration.jsonFromFile(file)
     val env = EnvBuilder(jsonConf.hcursor.downField("env")).build()
     val net = AgentNetworkBuilder(jsonConf.hcursor.downField("network"),
-      env.signalSize,
-      env.actionConfig.size).build()
+      env.signalsSize,
+      env.actionsSize).build()
     val agentConf = jsonConf.hcursor.downField("agent")
     val agent = agentConf.get[String]("type").right.get match {
-      case "ExpectedSarsaAgent" => ExpSarsaAgent(agentConf, net, env.actionConfig)
-      case "DynaQ+Agent" => DynaQPlusAgent(agentConf, net, env.actionConfig)
+      case "ExpectedSarsaAgent" => ExpSarsaAgent(agentConf, net, env.actionsSize)
+      //      case "DynaQ+Agent" => DynaQPlusAgent(agentConf, net, env.actionsSize)
       case _ => throw new IllegalArgumentException("Wrong agent type")
     }
     val (session, random) = SessionBuilder(jsonConf.hcursor.downField("session")).
