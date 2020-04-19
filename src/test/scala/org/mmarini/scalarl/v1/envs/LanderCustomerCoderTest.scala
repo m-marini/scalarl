@@ -34,20 +34,16 @@ import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.indexing.{INDArrayIndex, NDArrayIndex}
 import org.scalatest.{FunSpec, Matchers}
 
-class LanderConfTest2 extends FunSpec with Matchers {
+class LanderCustomerCoderTest extends FunSpec with Matchers {
   Nd4j.create()
   val DefaultFuel = 10
-  val conf: LanderConf = LanderConf(
+  val conf: LanderConf = new LanderConf(
     dt = 0.25,
     h0Range = 5.0,
     z0 = 1.0,
     fuel = DefaultFuel,
-    z1 = 10.0,
-    zMax = 100.0,
+    zMax = 150.0,
     hRange = 500.0,
-    zRange = 150.0,
-    vhRange = 24.0,
-    vzRange = 12.0,
     landingRadius = 10.0,
     landingVH = 0.5,
     landingVZ = 4.0,
@@ -59,6 +55,16 @@ class LanderConfTest2 extends FunSpec with Matchers {
     outOfRangeReward = -100.0,
     outOfFuelReward = -100.0,
     rewardDistanceScale = 0.01)
+
+  val coder: LanderEncoder = new LanderCustomCoder(
+    z1 = 10.0,
+    zMax = 150,
+    hRange = 500.0,
+    vhRange = 24.0,
+    landingVH = 0.5,
+    landingVZ = 4.0,
+    landingRadius = 10.0,
+    vzRange = 12.0)
 
   val PosSize = 10
   val HSpeedSize = 8
@@ -89,11 +95,14 @@ class LanderConfTest2 extends FunSpec with Matchers {
     f
   }
 
+  def status(pos: INDArray, speed: INDArray): LanderStatus =
+    LanderStatus(pos = pos, speed = speed, conf = conf, coder = coder, time = 0, fuel = DefaultFuel)
+
   describe("LanderConf pos signals") {
     val speed = Nd4j.zeros(3)
     describe("at (0,0,0)") {
       val pos = Nd4j.zeros(3)
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return pos signals (0,0,0)") {
         signals.get(Pos) shouldBe pos
       }
@@ -103,7 +112,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("at low SW") {
       val pos = Nd4j.create(Array(-250.0, -250.0, 5.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return pos signals (-0.5,-0.5,0)") {
         signals.get(Pos) shouldBe Nd4j.create(Array(-0.5, -0.5, 5.0 / 150.0))
       }
@@ -113,7 +122,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("at low NW") {
       val pos = Nd4j.create(Array(-250.0, 250.0, 5.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return pos signals (-0.5,0.5,0)") {
         signals.get(Pos) shouldBe Nd4j.create(Array(-0.5, 0.5, 5.0 / 150.0))
       }
@@ -123,7 +132,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("at low SE") {
       val pos = Nd4j.create(Array(250.0, -250.0, 5.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return pos signals (0.5,-0.5,0)") {
         signals.get(Pos) shouldBe Nd4j.create(Array(0.5, -0.5, 5.0 / 150.0))
       }
@@ -133,7 +142,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("at low NE") {
       val pos = Nd4j.create(Array(250.0, 250.0, 5.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return pos signals (0.5,0.5,0)") {
         signals.get(Pos) shouldBe Nd4j.create(Array(0.5, 0.5, 5.0 / 150.0))
       }
@@ -143,7 +152,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("at (0,0,11)") {
       val pos = Nd4j.create(Array(0.0, 0.0, 10.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return pos signals (0,0,1/15)") {
         signals.get(Pos) shouldBe Nd4j.create(Array(0.0, 0.0, 10.0 / 150.0))
       }
@@ -153,7 +162,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("at high SW") {
       val pos = Nd4j.create(Array(-250.0, -250.0, 10.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return pos signals (-0.5,-0.5,10/150)") {
         signals.get(Pos) shouldBe Nd4j.create(Array(-0.5, -0.5, 10.0 / 150.0))
       }
@@ -163,7 +172,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("at high NW") {
       val pos = Nd4j.create(Array(-250.0, 250.0, 10.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return pos signals (-0.5,0.5,1/15)") {
         signals.get(Pos) shouldBe Nd4j.create(Array(-0.5, 0.5, 10.0 / 150.0))
       }
@@ -173,7 +182,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("at high SE") {
       val pos = Nd4j.create(Array(250.0, -250.0, 10.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return pos signals (0.5,-0.5,1/15)") {
         signals.get(Pos) shouldBe Nd4j.create(Array(0.5, -0.5, 10.0 / 150.0))
       }
@@ -183,7 +192,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("at high NE") {
       val pos = Nd4j.create(Array(250.0, 250.0, 10.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return pos signals (0.5,0.5,1/15)") {
         signals.get(Pos) shouldBe Nd4j.create(Array(0.5, 0.5, 10.0 / 150.0))
       }
@@ -193,7 +202,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("border of low center") {
       val pos = Nd4j.create(Array(7.07, 7.07, 9.999))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return pos signals (7.07/500,7.07/500,1/15)") {
         signals.get(Pos) shouldBe Nd4j.create(Array(7.07 / 500, 7.07 / 500, 10.0 / 150.0))
       }
@@ -203,7 +212,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("border out low center") {
       val pos = Nd4j.create(Array(7.072, 7.072, 9.999))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return pos signals (7.072/500,7.072/500,1/15)") {
         signals.get(Pos) shouldBe Nd4j.create(Array(7.072 / 500, 7.072 / 500, 10.0 / 150.0))
       }
@@ -217,7 +226,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     val pos = Nd4j.zeros(3)
     describe("speed (0,0,0)") {
       val speed = Nd4j.zeros(3)
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0,0,0)") {
         signals.get(Speed) shouldBe speed
       }
@@ -227,7 +236,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("low speed SW") {
       val speed = Nd4j.create(Array(-0.176, -0.176, 0.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (-0.176,-0.176,0)") {
         signals.get(Speed) shouldBe Nd4j.create(Array(-0.176 / 24, -0.176 / 24, 0.0))
       }
@@ -237,7 +246,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("low speed centrer NW") {
       val speed = Nd4j.create(Array(-0.176, 0.176, 0.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (-0.176,0.176,0)") {
         signals.get(Speed) shouldBe Nd4j.create(Array(-0.176 / 24, 0.176 / 24, 0.0))
       }
@@ -247,7 +256,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("low speed SE") {
       val speed = Nd4j.create(Array(0.176, -0.176, 0.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.176,-0.176,0)") {
         signals.get(Speed) shouldBe Nd4j.create(Array(0.176 / 24, -0.176 / 24, 0.0))
       }
@@ -257,7 +266,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("low speed NE") {
       val speed = Nd4j.create(Array(0.176, 0.176, 0.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.176,0.176,0)") {
         signals.get(Speed) shouldBe Nd4j.create(Array(0.176 / 24, 0.176 / 24, 0.0))
       }
@@ -267,7 +276,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("high speed SW") {
       val speed = Nd4j.create(Array(-0.177, -0.177, 0.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (-0.177,-0.177,0)") {
         signals.get(Speed) shouldBe Nd4j.create(Array(-0.177 / 24, -0.177 / 24, 0.0))
       }
@@ -277,7 +286,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("high speed NW") {
       val speed = Nd4j.create(Array(-0.177, 0.177, 0.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (-0.177,0.177,0)") {
         signals.get(Speed) shouldBe Nd4j.create(Array(-0.177 / 24, 0.177 / 24, 0.0))
       }
@@ -287,7 +296,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("high speed SE") {
       val speed = Nd4j.create(Array(0.177, -0.177, 0.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.177,-0.177,0)") {
         signals.get(Speed) shouldBe Nd4j.create(Array(0.177 / 24, -0.177 / 24, 0.0))
       }
@@ -297,7 +306,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("high speed NE") {
       val speed = Nd4j.create(Array(0.177, 0.177, 0.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.177,0.177,0)") {
         signals.get(Speed) shouldBe Nd4j.create(Array(0.177 / 24, 0.177 / 24, 0.0))
       }
@@ -311,7 +320,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     val pos = Nd4j.zeros(3)
     describe("0 z speed") {
       val speed = Nd4j.zeros(3)
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0,0,0)") {
         signals.get(Speed) shouldBe Nd4j.create(Array(0.0, 0.0, 0.0))
       }
@@ -321,7 +330,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("very slow z speed") {
       val speed = Nd4j.create(Array(0.0, 0.0, -0.1))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.0,0.0,-0.1/12)") {
         signals.get(Speed) shouldBe Nd4j.create(Array(0.0, 0.0, -0.1 / 12))
       }
@@ -331,7 +340,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("slow z speed") {
       val speed = Nd4j.create(Array(0.0, 0.0, -1.9))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.0,0.0,-1.9/12)") {
         signals.get(Speed) shouldBe Nd4j.create(Array(0.0, 0.0, -1.9 / 12))
       }
@@ -341,7 +350,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("slow mid z speed") {
       val speed = Nd4j.create(Array(0.0, 0.0, -2.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.0,0.0,-2/12)") {
         signals.get(Speed) shouldBe Nd4j.create(Array(0.0, 0.0, -2.0 / 12))
       }
@@ -351,7 +360,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("fast mid z speed") {
       val speed = Nd4j.create(Array(0.0, 0.0, -3.9))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.0,0.0,-3.9/12)") {
         signals.get(Speed) shouldBe Nd4j.create(Array(0.0, 0.0, -3.9 / 12))
       }
@@ -361,7 +370,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("slow high z speed") {
       val speed = Nd4j.create(Array(0.0, 0.0, -4))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.0,0.0,-4/12)") {
         signals.get(Speed) shouldBe Nd4j.create(Array(0.0, 0.0, -4.0 / 12))
       }
@@ -371,7 +380,7 @@ class LanderConfTest2 extends FunSpec with Matchers {
     }
     describe("fast high z speed") {
       val speed = Nd4j.create(Array(0.0, 0.0, -12.0))
-      val signals = conf.signals(pos, speed)
+      val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.0,0.0,-12/12)") {
         signals.get(Speed) shouldBe Nd4j.create(Array(0.0, 0.0, -12.0 / 12))
       }

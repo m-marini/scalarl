@@ -110,5 +110,9 @@ class UtilsTest extends FunSpec with Matchers {
     it("should indexed a vector") {
       Utils.indexed(Nd4j.create(Array(1.0, 2.0, 3.0, 4.0, 5.0)), Seq(0L, 3L)) shouldBe Nd4j.create(Array(1.0, 4.0))
     }
+
+    it("should create features vector") {
+      Utils.features(Seq(0L, 3L), 5) shouldBe Nd4j.create(Array(1.0, 0.0, 0.0, 1.0, 0.0))
+    }
   }
 }

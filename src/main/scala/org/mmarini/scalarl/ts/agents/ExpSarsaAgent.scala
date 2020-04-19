@@ -89,6 +89,17 @@ case class ExpSarsaAgent(net: MultiLayerNetwork,
   }
 
   /**
+   * Returns the policy for an observation
+   *
+   * @param observation the observation
+   */
+  def q(observation: Observation): Policy = if (observation.endUp) {
+    config.zeroPolicy
+  } else {
+    net.output(observation.signals)
+  }
+
+  /**
    * Returns the fit agent by optimizing its strategy policy and the score
    *
    * @param feedback the feedback from the last step
@@ -103,6 +114,76 @@ case class ExpSarsaAgent(net: MultiLayerNetwork,
     val newAgent = copy(net = learntNet, model = newModel, avgReward = newAvg1)
     // logger.debug("  learnt = {}", newAgent.policy(feedback.s0))
     (newAgent, score)
+  }
+
+  /**
+   * Returns the score a feedback
+   *
+   * @param feedback the feedback from the last step
+   */
+  override def score(feedback: Feedback): Double =
+    createData(feedback, avgReward)._4
+
+  /**
+   * Returns the 3-upla with data for fit
+   *
+   * @param feedback the feedback
+   * @param avg      the average rewards
+   * @return the input signals, the output label, the new advantage reward, the score
+   */
+  private def createData(feedback: Feedback, avg: INDArray): (INDArray, INDArray, INDArray, Double) = feedback match {
+    case Feedback(obs0, action, reward, obs1) =>
+      val q0 = q(obs0)
+      val q1 = q(obs1)
+      // Computes state values
+      val v1 = config.vExp(q1, obs1.actions, epsilon)
+      val v0 = Utils.v(q0, action)
+
+      // Compute new q0 = v1 - Rm + R and delta = v1 - Rm + R - v0
+      val newQ0 = v1.sub(avg).addi(reward)
+      val delta = newQ0.sub(v0)
+      val score = delta.mul(delta).sumNumber().doubleValue()
+
+      // Update average rewards
+      val newAvg = avg.add(delta.mul(beta))
+      val idx = Utils.find(action)
+      // Computes labels
+      val labels = q0.dup()
+      for {(i, j) <- idx.zipWithIndex} {
+        labels.putScalar(i, newQ0.getDouble(j.toLong))
+      }
+      //      logger.debug("---------------------------------------------------------------")
+      //      logger.debug("  s0     = {}", obs0.signals)
+      //      logger.debug("  action = {}", action)
+      //      logger.debug("  reward = {}", reward)
+      //      logger.debug("  s1     = {}", obs1.signals)
+      //      logger.debug("  q0     = {}", q0)
+      //      logger.debug("  q1     = {}", q1)
+      //      logger.debug("  v0     = {}", v0)
+      //      logger.debug("  v1     = {}", v1)
+      //      logger.debug("  avg(R) = {}", avg)
+      //      logger.debug("  delta  = {}", delta)
+      //      logger.debug("  q0'    = {}", newQ0)
+      //      logger.debug("  labels = {}", labels)
+      (obs0.signals, labels, newAvg, score)
+  }
+
+  /**
+   * Returns the reset agent
+   *
+   * @param random the random generator
+   */
+  override def reset(random: Random): Agent = this
+
+  /**
+   * Writes the agent status to file
+   *
+   * @param file the filename
+   * @return the agents
+   */
+  override def writeModel(file: String): Agent = {
+    ModelSerializer.writeModel(net, new File(file), false)
+    this
   }
 
   /**
@@ -168,96 +249,10 @@ case class ExpSarsaAgent(net: MultiLayerNetwork,
     }
     (net, avg1)
   }
-
-  /**
-   * Returns the score a feedback
-   *
-   * @param feedback the feedback from the last step
-   */
-  override def score(feedback: Feedback): Double =
-    createData(feedback, avgReward)._4
-
-  /**
-   * Returns the 3-upla with data for fit
-   *
-   * @param feedback the feedback
-   * @param avg      the average rewards
-   * @return the input signals, the output label, the new advantage reward, the score
-   */
-  private def createData(feedback: Feedback, avg: INDArray): (INDArray, INDArray, INDArray, Double) = feedback match {
-    case Feedback(obs0, action, reward, obs1) =>
-      val q0 = q(obs0)
-      val q1 = q(obs1)
-      // Computes state values
-      val v1 = config.vExp(q1, obs1.actions, epsilon)
-      val v0 = Utils.v(q0, action).transpose()
-
-      // Compute new q0 = v1 - Rm + R and delta = v1 - Rm + R - v0
-      val newQ0 = v1.sub(avg).addi(reward)
-      val delta = newQ0.sub(v0)
-      val score = delta.mul(delta).sumNumber().doubleValue()
-
-      // Update average rewards
-      val newAvg = avg.add(delta.mul(beta))
-      val idx = Utils.find(action)
-      // Computes labels
-      val labels = q0.dup()
-      for {(i, j) <- idx.zipWithIndex} {
-        labels.putScalar(i, newQ0.getDouble(j.toLong))
-      }
-      //      logger.debug("---------------------------------------------------------------")
-      //      logger.debug("  s0     = {}", obs0.signals)
-      //      logger.debug("  action = {}", action)
-      //      logger.debug("  reward = {}", reward)
-      //      logger.debug("  s1     = {}", obs1.signals)
-      //      logger.debug("  q0     = {}", q0)
-      //      logger.debug("  q1     = {}", q1)
-      //      logger.debug("  v0     = {}", v0)
-      //      logger.debug("  v1     = {}", v1)
-      //      logger.debug("  avg(R) = {}", avg)
-      //      logger.debug("  delta  = {}", delta)
-      //      logger.debug("  q0'    = {}", newQ0)
-      //      logger.debug("  labels = {}", labels)
-      (obs0.signals, labels, newAvg, score)
-  }
-
-  /**
-   * Returns the policy for an observation
-   *
-   * @param observation the observation
-   */
-  def q(observation: Observation): Policy = if (observation.endUp) {
-    config.zeroPolicy
-  } else {
-    net.output(observation.signals)
-  }
-
-  /**
-   * Returns the reset agent
-   *
-   * @param random the random generator
-   */
-  override def reset(random: Random): Agent = this
-
-  /**
-   * Writes the agent status to file
-   *
-   * @param file the filename
-   * @return the agents
-   */
-  override def writeModel(file: String): Agent = {
-    ModelSerializer.writeModel(net, new File(file), false)
-    this
-  }
 }
 
 /** The factory of [[ExpSarsaAgent]] */
 object ExpSarsaAgent {
-
-  private case class Interval(interval: (Int, Int), value: Double) {
-    require(interval._1 >= 0)
-    require(interval._2 >= interval._1)
-  }
 
   /**
    * Returns the Dyna+Agent
@@ -310,5 +305,10 @@ object ExpSarsaAgent {
       tolerance
     })
     result
+  }
+
+  private case class Interval(interval: (Int, Int), value: Double) {
+    require(interval._1 >= 0)
+    require(interval._2 >= interval._1)
   }
 }

@@ -9,6 +9,20 @@ import org.nd4j.linalg.ops.transforms.Transforms
 object Utils {
 
   /**
+   * Returns random integer for a softMax distribution function
+   *
+   * @param x the softMax distribution function
+   */
+  def softMaxRandomInt(x: INDArray): Random => Int = randomInt(softMax(x))
+
+  /**
+   * Returns random integer for a distribution function
+   *
+   * @param x the distribution function
+   */
+  def randomInt(x: INDArray): Random => Int = cdfRandomInt(cdf(x))
+
+  /**
    * Returns the cumulative distribution function for the actions
    *
    * @param x the distributino function
@@ -40,20 +54,6 @@ object Utils {
   }
 
   /**
-   * Returns random integer for a distribution function
-   *
-   * @param x the distribution function
-   */
-  def randomInt(x: INDArray): Random => Int = cdfRandomInt(cdf(x))
-
-  /**
-   * Returns the distribution function for linear preferences
-   *
-   * @param x the preferences
-   */
-  def df(x: INDArray): INDArray = x.div(x.sumNumber().doubleValue())
-
-  /**
    * Returns the softMax distribution
    *
    * @param x the preferences
@@ -61,11 +61,11 @@ object Utils {
   def softMax(x: INDArray): INDArray = df(Transforms.exp(x))
 
   /**
-   * Returns random integer for a softMax distribution function
+   * Returns the distribution function for linear preferences
    *
-   * @param x the softMax distribution function
+   * @param x the preferences
    */
-  def softMaxRandomInt(x: INDArray): Random => Int = randomInt(softMax(x))
+  def df(x: INDArray): INDArray = x.div(x.sumNumber().doubleValue())
 
   /**
    * Returns the probabilities for the actions in egreedy policy
@@ -87,6 +87,19 @@ object Utils {
   }
 
   /**
+   * Returns the status value for the action and argMax
+   * The status value of a policy is the max value for the channel
+   *
+   * @param q      action value
+   * @param action mask of actions
+   * @return the array of values for each channel and the indices of max action features
+   */
+  def v(q: Policy, action: INDArray): INDArray = {
+    val idx = Utils.find(action)
+    Utils.indexed(q, idx)
+  }
+
+  /**
    * Returns the indices for not zero values
    *
    * @param x the values
@@ -105,18 +118,5 @@ object Utils {
   def indexed(x: INDArray, indices: Seq[Long]): INDArray = {
     val idx = NDArrayIndex.indices(indices.toArray: _*)
     x.get(idx)
-  }
-
-  /**
-   * Returns the status value for the action and argMax
-   * The status value of a policy is the max value for the channel
-   *
-   * @param q      action value
-   * @param action mask of actions
-   * @return the array of values for each channel and the indices of max action features
-   */
-  def v(q: Policy, action: INDArray): INDArray = {
-    val idx = Utils.find(action)
-    Utils.indexed(q, idx)
   }
 }

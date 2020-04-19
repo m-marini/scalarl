@@ -47,7 +47,7 @@ import org.nd4j.linalg.learning.config.Adam
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 import org.scalatest.{FunSpec, Matchers}
 
-class TestEnvTest extends FunSpec with Matchers with LazyLogging {
+class TestEnv1Test extends FunSpec with Matchers with LazyLogging {
   val Seed = 12345L
   val NoSteps = 1000
   val MaxEpisodeLength = 100
@@ -59,11 +59,11 @@ class TestEnvTest extends FunSpec with Matchers with LazyLogging {
     ExpSarsaAgent(net = network,
       model = Seq(),
       noActions = 2,
-      avgReward = 0.25,
+      avgReward = 1.0 / 3,
       beta = 0.1,
       maxModelSize = 0,
       minModelSize = 1000,
-      epsilon = 0.01,
+      epsilon = 0.1,
       kappa = 1,
       kappaPlus = 0,
       planningStepsCounter = 10,
@@ -107,14 +107,10 @@ class TestEnvTest extends FunSpec with Matchers with LazyLogging {
   describe("TestEnv") {
 
     val conf = TestEnvConfBuilder().numState(3).
-      p(0, 0, 0, 0, 2.0 / 3).
-      p(1, 0, 0, 0, 1.0 / 3).
-      p(0, 0, 0, 1, 1.0 / 3).
-      p(1, 0, 0, 1, 2.0 / 3).
-      p(1, 0, 1, 0, 2.0 / 3).
-      p(2, 1, 1, 0, 1.0 / 3).
-      p(1, 0, 1, 1, 1.0 / 3).
-      p(2, 1, 1, 1, 2.0 / 3).
+      p(0, 0, 0, 0, 1.0).
+      p(1, 0, 0, 1, 1.0).
+      p(1, 0, 1, 0, 1.0).
+      p(2, 1, 1, 1, 1.0).
       p(0, 0, 2, 0, 1.0).
       p(0, 0, 2, 1, 1.0).build
 

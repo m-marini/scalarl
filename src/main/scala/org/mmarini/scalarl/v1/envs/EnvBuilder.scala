@@ -37,14 +37,20 @@ class EnvBuilder(conf: ACursor) extends LazyLogging {
   /**
    *
    */
-  def build(): Env =
-    conf.get[String]("type").toOption match {
+  def build(): Env = {
+    val landerConf = LanderConf(conf)
+    val coder = conf.get[String]("type").toOption match {
       case Some("Lander") =>
-        val landerConf = LanderConf(conf)
-        LanderStatus(conf = landerConf)
-      case Some(typ) => throw new IllegalArgumentException(s"Unreconginzed env type '$typ'")
-      case _ => throw new IllegalArgumentException("Missing env type")
+        LanderCustomCoder(conf)
+      case Some("LanderTiles") =>
+        LanderTilesEncoder(conf)
+      case Some("LanderContinuous") =>
+        LanderContinuousEncoder(conf)
+      case Some(typ) => throw new IllegalArgumentException(s"Unreconginzed coder type '$typ'")
+      case _ => throw new IllegalArgumentException("Missing coder type")
     }
+    LanderStatus(landerConf, coder)
+  }
 }
 
 object EnvBuilder {

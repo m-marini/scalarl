@@ -43,23 +43,29 @@ object Main extends LazyLogging {
    */
   def main(args: Array[String]) {
     val file = if (args.isEmpty) "maze.yaml" else args(0)
-    logger.info("File {}", file)
+    val epoch = if (args.length >= 2) args(1).toInt else 0
+    logger.info("File {} epoch {}", file, epoch)
 
     val jsonConf = Configuration.jsonFromFile(file)
     val env = EnvBuilder(jsonConf.hcursor.downField("env")).build()
-    val net = AgentNetworkBuilder(jsonConf.hcursor.downField("network"),
-      env.signalsSize,
-      env.actionsSize).build()
-    val agentConf = jsonConf.hcursor.downField("agent")
-    val agent = agentConf.get[String]("type").right.get match {
-      case "ExpectedSarsaAgent" => ExpSarsaAgent(agentConf, net, env.actionsSize)
-      //      case "DynaQ+Agent" => DynaQPlusAgent(agentConf, net, env.actionsSize)
-      case _ => throw new IllegalArgumentException("Wrong agent type")
+
+    def agent = {
+      val net = AgentNetworkBuilder(jsonConf.hcursor.downField("network"),
+        env.signalsSize,
+        env.actionsSize).build()
+      val agentConf = jsonConf.hcursor.downField("agent")
+      agentConf.get[String]("type").right.get match {
+        case "ExpectedSarsaAgent" => ExpSarsaAgent(agentConf, net, env.actionsSize)
+        //      case "DynaQ+Agent" => DynaQPlusAgent(agentConf, net, env.actionsSize)
+        case _ => throw new IllegalArgumentException("Wrong agent type")
+      }
     }
-    val (session, random) = SessionBuilder(jsonConf.hcursor.downField("session")).
+
+    val (session, random) = SessionBuilder(jsonConf.hcursor.downField("session"), epoch).
       build(env = env, agent = agent)
 
     session.run(random)
+
     logger.info("Session completed.")
   }
 }

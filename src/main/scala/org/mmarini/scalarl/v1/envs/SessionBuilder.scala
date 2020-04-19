@@ -42,16 +42,20 @@ import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
 
-class SessionBuilder(sessionCursor: ACursor) extends LazyLogging {
+/**
+ *
+ * @param sessionCursor the session json configuration
+ * @param epoch         the epoch
+ */
+class SessionBuilder(sessionCursor: ACursor, epoch: Int) extends LazyLogging {
 
   /**
    *
    */
-  def build(env: Env, agent: Agent): (Session, Random) = {
-    val numSteps = sessionCursor.get[Int]("numSteps").right.get
+  def build(env: => Env, agent: => Agent): (Session, Random) = {
+    val numEpisodes = sessionCursor.get[Int]("numEpisodes").right.get
     val dump = sessionCursor.get[String]("dump").toOption
     val trace = sessionCursor.get[String]("trace").toOption
-    val samplesFile = sessionCursor.get[String]("samples").toOption
     val saveModel = sessionCursor.get[String]("modelFile").toOption
     val maxEpisodeLength = sessionCursor.get[Long]("maxEpisodeLength").getOrElse(Long.MaxValue)
     val random = sessionCursor.get[Long]("seed").map(
@@ -61,13 +65,16 @@ class SessionBuilder(sessionCursor: ACursor) extends LazyLogging {
     )
 
     // Clean up all files
-    (dump.toSeq ++ trace ++ saveModel).foreach(new File(_).delete())
+    if (epoch == 0) {
+      (dump.toSeq ++ trace ++ saveModel).foreach(new File(_).delete())
+    }
 
     // Create session
-    val session = Session(
-      noSteps = numSteps,
-      env0 = env,
-      agent0 = agent,
+    val session = new Session(
+      numEpisodes = numEpisodes,
+      env = env,
+      agent = agent,
+      epoch = epoch,
       maxEpisodeLength = maxEpisodeLength)
 
     // Create dump function
@@ -103,7 +110,7 @@ class SessionBuilder(sessionCursor: ACursor) extends LazyLogging {
    * - 10 x 10 x 8 of q action values for each state for each action
    */
   private def createLanderDump(episode: Episode): INDArray = {
-    val kpi = Nd4j.create(Array(Array(episode.stepCount, episode.returnValue, episode.totalScore)))
+    val kpi = Nd4j.create(Array(Array(episode.epoch, episode.episode, episode.stepCount, episode.returnValue, episode.totalScore)))
     Nd4j.hstack(kpi)
   }
 
@@ -125,13 +132,14 @@ class SessionBuilder(sessionCursor: ACursor) extends LazyLogging {
    * - prev q1
    */
   private def createLanderTrace(step: Step): INDArray = {
-    val env0 = step.env0.asInstanceOf[LanderStatus]
+    val env0 = step.env0.asInstanceOf[Lander]
     val pos0 = env0.pos
     val speed0 = env0.speed
-    val env1 = step.env1.asInstanceOf[LanderStatus]
+    val env1 = step.env1.asInstanceOf[Lander]
     val pos1 = env1.pos
     val speed1 = env1.speed
     val head = Nd4j.create(Array[Double](
+      step.epoch,
       step.episode,
       step.step))
     val mid = Nd4j.create(Array(
@@ -173,8 +181,8 @@ class SessionBuilder(sessionCursor: ACursor) extends LazyLogging {
       val data = createDump(episode)
       withFile(file, append = true)(writeINDArray(data))
     }
-    logger.info(f"SessionStep ${
-      episode.step
+    logger.info(f"Epoch ${
+      episode.epoch
     }%,6d Episode ${
       episode.episode
     }%,6d, Steps ${
@@ -212,7 +220,8 @@ object SessionBuilder {
   /**
    * Returns the session builder
    *
-   * @param conf the configuration
+   * @param conf  the configuration
+   * @param epoch the epoch
    */
-  def apply(conf: ACursor): SessionBuilder = new SessionBuilder(conf)
+  def apply(conf: ACursor, epoch: Int): SessionBuilder = new SessionBuilder(conf, epoch)
 }
