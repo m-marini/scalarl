@@ -1,8 +1,11 @@
 package org.mmarini.scalarl.v1.agents
 
+import java.io.File
+
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.ACursor
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
+import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.v1._
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
@@ -105,10 +108,14 @@ case class ACAgent(actor: MultiLayerNetwork,
   /**
    * Writes the agent status to file
    *
-   * @param file the filename
+   * @param file the model folder
    * @return the agents
    */
-  override def writeModel(file: String): Agent = ???
+  override def writeModel(file: String): Agent = {
+    ModelSerializer.writeModel(actor, new File(file, "actor.zip"), false)
+    ModelSerializer.writeModel(critic, new File(file, "critic.zip"), false)
+    this
+  }
 }
 
 object ACAgent {
