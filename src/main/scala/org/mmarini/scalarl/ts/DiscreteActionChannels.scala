@@ -62,23 +62,6 @@ case class DiscreteActionChannels(sizes: Array[Int]) {
   val zeroPolicy: INDArray = Nd4j.zeros(size)
 
   /**
-   * Returns the action signal
-   *
-   * @param actions the action indices of each channel
-   */
-  def action(actions: Int*): INDArray = {
-    require(actions.length == sizes.length)
-    for {(a, size) <- actions.zip(sizes)} {
-      require(a >= 0 && a < size)
-    }
-    val result = Nd4j.zeros(size)
-    for {(slice, value) <- intervals.zip(actions)} {
-      result.get(slice).putScalar(value, 1)
-    }
-    result
-  }
-
-  /**
    * Returns the state value for each channel
    *
    * @param q    the action values
@@ -94,6 +77,9 @@ case class DiscreteActionChannels(sizes: Array[Int]) {
     }
     result
   }
+
+  /** Returns the number of channels */
+  def noChannels: Int = sizes.length
 
   /**
    * Returns the expected value
@@ -129,9 +115,6 @@ case class DiscreteActionChannels(sizes: Array[Int]) {
     }
     for {(a, (from, _)) <- idx.zip(indices)} yield a - from
   }
-
-  /** Returns the number of channels */
-  def noChannels: Int = sizes.length
 
   /**
    * Returns the action value of the action
@@ -179,5 +162,22 @@ case class DiscreteActionChannels(sizes: Array[Int]) {
     val actions = for {chInt <- intervals} yield
       Utils.randomInt(p.get(chInt))(random)
     action(actions: _*)
+  }
+
+  /**
+   * Returns the action signal
+   *
+   * @param actions the action indices of each channel
+   */
+  def action(actions: Int*): INDArray = {
+    require(actions.length == sizes.length)
+    for {(a, size) <- actions.zip(sizes)} {
+      require(a >= 0 && a < size)
+    }
+    val result = Nd4j.zeros(size)
+    for {(slice, value) <- intervals.zip(actions)} {
+      result.get(slice).putScalar(value, 1)
+    }
+    result
   }
 }

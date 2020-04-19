@@ -39,17 +39,19 @@ import org.nd4j.linalg.factory.Nd4j
  * The LanderStatus with position and speed
  *
  * @constructor create a LanderStatus with position and speed
+ * @param coder the status coder
  * @param pos   the position
  * @param time  the time instant
  * @param speed the speed
  * @param fuel  the fuel stock
  * @param conf  the configuration
  */
-case class LanderStatus(pos: INDArray,
+case class LanderStatus(coder: LanderEncoder,
+                        pos: INDArray,
                         speed: INDArray,
                         time: Double,
                         fuel: Int,
-                        conf: LanderConf) extends Env with LazyLogging {
+                        conf: LanderConf) extends Lander with LazyLogging {
   /**
    * Return the observation of the current land status
    *
@@ -65,15 +67,11 @@ case class LanderStatus(pos: INDArray,
    *  - (17) 1 signal for horizontal no landing position 0, 1
    *  - (18) 3 signals for no land speed 0, 1 (vh high, vz low, vz high)
    */
-  override lazy val observation: Observation =
-    INDArrayObservation(
-      signals = conf.signals(pos, speed),
-      actions = LanderConf.ValidActions,
-      time = time,
-      endUp = isLanded || isCrashed || isOutOfRange || isOutOfFuel)
-
-  //  override def actionConfig: ActionChannelConfig = LanderConf.ActionChannels
-  private val SignalSize = 28
+  override lazy val observation: Observation = INDArrayObservation(
+    signals = coder.signals(this),
+    actions = LanderConf.ValidActions,
+    time = time,
+    endUp = isLanded || isCrashed || isOutOfRange || isOutOfFuel)
 
   override def reset(random: Random): Env = {
     val newEnv = copy(
@@ -126,7 +124,7 @@ case class LanderStatus(pos: INDArray,
   }
 
   /** Returns the number of signals */
-  override def signalsSize: Int = SignalSize
+  override def signalsSize: Int = coder.noSignals
 
   /** Returns the action channel configuration of the environment */
   override def actionsSize: Int = LanderConf.ActionConf.actions
@@ -140,7 +138,8 @@ object LanderStatus {
    *
    * @param conf the configuration
    */
-  def apply(conf: LanderConf): LanderStatus = LanderStatus(
+  def apply(conf: LanderConf, coder: LanderEncoder): LanderStatus = LanderStatus(
+    coder = coder,
     pos = Nd4j.zeros(3),
     speed = Nd4j.zeros(3),
     time = 0,

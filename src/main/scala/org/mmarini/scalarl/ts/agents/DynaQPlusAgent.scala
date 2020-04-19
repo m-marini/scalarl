@@ -170,14 +170,6 @@ case class DynaQPlusAgent(net: MultiLayerNetwork,
   }
 
   /**
-   * Returns the score a feedback
-   *
-   * @param feedback the feedback from the last step
-   */
-  override def score(feedback: Feedback): Double =
-    createData(feedback, avgReward)._4
-
-  /**
    * Returns the 3-upla with data for fit
    *
    * @param feedback the feedback
@@ -190,7 +182,7 @@ case class DynaQPlusAgent(net: MultiLayerNetwork,
       val q1 = q(obs1)
       // Computes state values
       val v1 = config.v(q1, obs1.actions)
-      val v0 = Utils.v(q0, action).transpose()
+      val v0 = Utils.v(q0, action)
 
       // Compute new q0 = v1 - Rm + R and delta = v1 - Rm + R - v0
       val newQ0 = v1.sub(avg).addi(reward)
@@ -233,6 +225,14 @@ case class DynaQPlusAgent(net: MultiLayerNetwork,
   }
 
   /**
+   * Returns the score a feedback
+   *
+   * @param feedback the feedback from the last step
+   */
+  override def score(feedback: Feedback): Double =
+    createData(feedback, avgReward)._4
+
+  /**
    * Returns the reset agent
    *
    * @param random the random generator
@@ -253,11 +253,6 @@ case class DynaQPlusAgent(net: MultiLayerNetwork,
 
 /** The factory of [[ExpSarsaAgent]] */
 object DynaQPlusAgent {
-
-  private case class Interval(interval: (Int, Int), value: Double) {
-    require(interval._1 >= 0)
-    require(interval._2 >= interval._1)
-  }
 
   /**
    * Returns the Dyna+Agent
@@ -310,5 +305,10 @@ object DynaQPlusAgent {
       tolerance
     })
     result
+  }
+
+  private case class Interval(interval: (Int, Int), value: Double) {
+    require(interval._1 >= 0)
+    require(interval._2 >= interval._1)
   }
 }

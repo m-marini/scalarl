@@ -34,18 +34,22 @@ import monix.reactive.Observable
 import monix.reactive.subjects.PublishSubject
 import org.nd4j.linalg.api.rng.Random
 
+import scala.annotation.tailrec
+
 /**
  * The session executes the interactions between the environment and the agent
  *
  * @constructor Creates a [[Session]]
  * @param env              the environment
  * @param agent            the agent
- * @param noSteps          the number of steps for the session
+ * @param epoch            the number of epochs
+ * @param numEpisodes      the number of episodes for the session
  * @param maxEpisodeLength the maximum number of steps per episode
  */
-class Session(env: Env,
-              agent: Agent,
-              noSteps: Int,
+class Session(env: => Env,
+              agent: => Agent,
+              epoch: Int,
+              numEpisodes: Int,
               maxEpisodeLength: Long) extends LazyLogging {
 
   private val stepsPub = PublishSubject[Step]()
@@ -76,13 +80,12 @@ class Session(env: Env,
   def run(random: Random): (Env, Agent) = {
     val env0 = env.reset(random)
     val obs0 = env0.observation
-    val agent0 = agent.reset(random)
     val context0 = SessionContext(
       env = env0,
-      agent = agent0,
+      agent = agent.reset(random),
       obs = obs0)
 
-    val context = (1 to noSteps).foldLeft(context0)(runStep(random))
+    val context = runSession(random, context0)
 
     stepsPub.onComplete()
     episodesPub.onComplete()
@@ -91,15 +94,30 @@ class Session(env: Env,
   }
 
   /**
+   *
+   * @param random  the random generator
+   * @param context the session context
+   * @return
+   */
+  @tailrec
+  private def runSession(random: Random, context: SessionContext): SessionContext = {
+    if (context.episode >= numEpisodes) {
+      context
+    } else {
+      val nextCtx = runStep(random, context)
+      runSession(random, nextCtx)
+    }
+  }
+
+  /**
    * Returns the context for a single step interation.
    *
-   * @param random      the random generator
-   * @param context     the sessin context
-   * @param sessionStep the session count
+   * @param random  the random generator
+   * @param context the sessin context
    */
-  private def runStep(random: Random)(context: SessionContext, sessionStep: Int): SessionContext = {
+  private def runStep(random: Random, context: SessionContext): SessionContext = {
     // unfold context data
-    val SessionContext(env0, agent0, obs0, step, episode, totalScore, returnValue) = context
+    val SessionContext(episode, step, env0, agent0, obs0, totalScore, returnValue) = context
 
     // Agent chooses the action
     val action = agent0.chooseAction(obs0, random)
@@ -112,28 +130,34 @@ class Session(env: Env,
 
     val returnValue1 = returnValue + reward
     val totalScore1 = totalScore + score * score
-    val step1 = step + 1
 
     // Generate step event
     val stepInfo = Step(
-      step = sessionStep,
+      epoch = epoch,
       episode = episode,
-      episodeStep = step1,
+      step = step,
       feedback = feedback,
       env0 = env0,
       agent0 = agent0,
       env1 = env1,
       agent1 = agent1,
       session = this)
+
     stepsPub.onNext(stepInfo)
 
-    if (obs1.endUp || step1 >= maxEpisodeLength) {
-      // Episode completed
+    val ctx0 = context.copy(env = env1,
+      agent = agent1,
+      obs = obs1,
+      step = step + 1,
+      totalScore = totalScore1,
+      returnValue = returnValue1)
 
+    val ctx1 = if (obs1.endUp || ctx0.step >= maxEpisodeLength) {
+      // Episode completed
       // Emits episode event
-      val episodeInfo = Episode(step = sessionStep,
+      val episodeInfo = Episode(epoch = epoch,
         episode = episode,
-        stepCount = step1,
+        stepCount = step + 1,
         returnValue = returnValue1,
         totalScore = totalScore1,
         env = env1,
@@ -143,63 +167,36 @@ class Session(env: Env,
 
       // Reinitialize session for next episode
       val initialEnv = env1.reset(random)
-      val initialObs = initialEnv.observation
-      SessionContext(
-        env = initialEnv,
+      ctx0.copy(env = initialEnv,
         agent = agent1.reset(random),
-        obs = initialObs,
-        episode = episode + 1)
+        obs = initialEnv.observation,
+        episode = episode + 1,
+        step = 0,
+        totalScore = 0,
+        returnValue = 0
+      )
     } else {
-      context.copy(
-        env = env1,
-        agent = agent1,
-        obs = obs1,
-        step = step1,
-        totalScore = totalScore1,
-        returnValue = returnValue1)
+      ctx0
     }
+    ctx1
   }
-}
-
-/**
- * A builder of [[Session]]
- */
-object Session {
-
-  /**
-   * Returns a [[Session]]
-   *
-   * @param noSteps          the number of steps
-   * @param env0             the initial environment
-   * @param agent0           the initial agent
-   * @param maxEpisodeLength the max number of steps per episode
-   */
-  def apply(noSteps: Int,
-            env0: Env,
-            agent0: Agent,
-            maxEpisodeLength: Long): Session =
-    new Session(
-      noSteps = noSteps,
-      env = env0,
-      agent = agent0,
-      maxEpisodeLength = maxEpisodeLength)
 }
 
 /**
  * The session context
  *
+ * @param episode     the episode counter
+ * @param step        the step counter
  * @param env         the environment
  * @param agent       the agent
  * @param obs         the observable
- * @param step        the step counter
- * @param episode     the episode counter
  * @param totalScore  the total loss
  * @param returnValue the return value
  */
-case class SessionContext(env: Env,
+case class SessionContext(episode: Int = 0,
+                          step: Int = 0,
+                          env: Env,
                           agent: Agent,
                           obs: Observation,
-                          step: Int = 0,
-                          episode: Int = 0,
                           totalScore: Double = 0,
-                          returnValue: Double = 0);
+                          returnValue: Double = 0)

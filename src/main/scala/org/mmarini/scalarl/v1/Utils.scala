@@ -9,6 +9,42 @@ import org.nd4j.linalg.ops.transforms.Transforms
 object Utils {
 
   /**
+   * Returns the features vector with ones at indices
+   *
+   * @param indices indices to set ones
+   * @param size    size of result
+   */
+  def features(indices: Seq[Long], size: Long): INDArray = {
+    require(size > 0)
+    indices.foreach(i => require(i >= 0 && i < size))
+    val result = Nd4j.zeros(1, size)
+    indices.foreach(result.putScalar(_, 1))
+    result
+  }
+
+  /**
+   * Returns
+   * /**
+   * * Returns the probabilities for the actions in egreedy policy
+   * * The probability for greedy action is 1 - epsilon
+   * * the probabilities for other actions are epsilon / (n - 1)
+   * *
+   * * @param q       the action values
+   * * @param epsilon the epsilon parameter
+   **/ random integer for a softMax distribution function
+   *
+   * @param x the softMax distribution function
+   */
+  def softMaxRandomInt(x: INDArray): Random => Int = randomInt(softMax(x))
+
+  /**
+   * Returns random integer for a distribution function
+   *
+   * @param x the distribution function
+   */
+  def randomInt(x: INDArray): Random => Int = cdfRandomInt(cdf(x))
+
+  /**
    * Returns the cumulative distribution function for the actions
    *
    * @param x the distributino function
@@ -40,11 +76,11 @@ object Utils {
   }
 
   /**
-   * Returns random integer for a distribution function
+   * Returns the softMax distribution
    *
-   * @param x the distribution function
+   * @param x the preferences
    */
-  def randomInt(x: INDArray): Random => Int = cdfRandomInt(cdf(x))
+  def softMax(x: INDArray): Policy = df(Transforms.exp(x))
 
   /**
    * Returns the distribution function for linear preferences
@@ -54,34 +90,19 @@ object Utils {
   def df(x: INDArray): Policy = x.div(x.sumNumber().doubleValue())
 
   /**
-   * Returns the softMax distribution
+   * Returns the egreedy policy for the given action values
    *
-   * @param x the preferences
+   * @param q       actions values
+   * @param epsilon epsilon
    */
-  def softMax(x: INDArray): Policy = df(Transforms.exp(x))
-
-  /**
-   * Returns
-   * /**
-   * * Returns the probabilities for the actions in egreedy policy
-   * * The probability for greedy action is 1 - epsilon
-   * * the probabilities for other actions are epsilon / (n - 1)
-   * *
-   * * @param q       the action values
-   * * @param epsilon the epsilon parameter
-   **/ random integer for a softMax distribution function
-   *
-   * @param x the softMax distribution function
-   */
-  def softMaxRandomInt(x: INDArray): Random => Int = randomInt(softMax(x))
   def egreedy(q: INDArray, epsilon: Double): Policy = {
     val n = q.length()
     if (n > 1) {
       val act = q.argMax().getInt(0)
-      val result = Nd4j.ones(n).muli(epsilon / (n - 1))
+      val result = Nd4j.ones(1, n).muli(epsilon / (n - 1))
       result.putScalar(act, 1 - epsilon)
     } else {
-      Nd4j.ones(1)
+      Nd4j.ones(1, 1)
     }
   }
 
@@ -103,7 +124,7 @@ object Utils {
    */
   def indexed(x: INDArray, indices: Seq[Long]): INDArray = {
     val idx = NDArrayIndex.indices(indices.toArray: _*)
-    x.get(idx)
+    x.get(NDArrayIndex.all(), idx)
   }
 
   /**
@@ -127,8 +148,7 @@ object Utils {
   /**
    * Returns the greedy status value
    *
-   * @param q       the actions values
-   * @param actions the valid actions
+   * @param q the actions values
    */
   def vStar(q: QValues): Double = q.maxNumber().doubleValue()
 }

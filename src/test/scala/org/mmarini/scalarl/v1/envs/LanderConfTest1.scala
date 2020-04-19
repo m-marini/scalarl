@@ -35,17 +35,13 @@ import org.scalatest.{FunSpec, Matchers}
 class LanderConfTest1 extends FunSpec with Matchers {
   Nd4j.create()
   val DefaultFuel = 10
-  val conf: LanderConf = LanderConf(
+  val conf: LanderConf = new LanderConf(
     dt = 0.25,
     h0Range = 5.0,
     z0 = 1.0,
     fuel = DefaultFuel,
-    z1 = 10.0,
     zMax = 100.0,
     hRange = 500.0,
-    zRange = 150.0,
-    vhRange = 24.0,
-    vzRange = 12.0,
     landingRadius = 10.0,
     landingVH = 0.5,
     landingVZ = 4.0,

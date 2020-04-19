@@ -27,53 +27,19 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.ts.envs
+package org.mmarini.scalarl.v1.envs
 
 import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.indexing.NDArrayIndex
-import org.nd4j.linalg.ops.transforms.Transforms
 
-import scala.math._
-
-class Tiles(val offset: INDArray, val n: Int) {
-
-  def indices(point: INDArray): Seq[INDArray] = {
-    val tiles = for {
-      tile <- 0 until n
-    } yield {
-      val x1 = Transforms.floor(offset.mul(tile).addi(point))
-      x1
-    }
-    tiles
-  }
-}
-
-object Tiles {
-  val Primes = Nd4j.create(Array(1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 43, 47, 53, 59).map(_.toDouble))
-
-  def main(args: Array[String]): Unit = {
-    val t = Tiles(2)
-    println(t.offset)
-    println(t.n)
-    println(t.indices(Nd4j.create(Array(0.0, 0.0))))
-    println(t.indices(Nd4j.create(Array(0.2, 0.0))))
-    println(t.indices(Nd4j.create(Array(0.3, 0.0))))
-    println(t.indices(Nd4j.create(Array(0.6, 0.0))))
-    println(t.indices(Nd4j.create(Array(0.8, 0.0))))
-    println(t.indices(Nd4j.create(Array(1.0, 0.0))))
-  }
-
-
+/** Encodes the status */
+trait LanderEncoder {
   /**
-   * Returns corse tile code
+   * Returns the input signals
    *
-   * @param k number of dimensions
+   * @param status the status
    */
-  def apply(k: Int): Tiles = {
-    val ne = ceil(log(4 * k) / log(2)).toInt
-    val n = pow(2, ne).toInt
-    val strides = Primes.get(NDArrayIndex.interval(0, k))
-    new Tiles(strides, n)
-  }
+  def signals(status: LanderStatus): INDArray
+
+  /** Returns the number of signals */
+  def noSignals: Int
 }

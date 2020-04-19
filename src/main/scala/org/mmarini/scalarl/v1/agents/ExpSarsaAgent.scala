@@ -91,6 +91,17 @@ case class ExpSarsaAgent(net: MultiLayerNetwork,
   }
 
   /**
+   * Returns the policy for an observation
+   *
+   * @param observation the observation
+   */
+  def q(observation: Observation): Policy = if (observation.endUp) {
+    Nd4j.zeros(noActions)
+  } else {
+    net.output(observation.signals)
+  }
+
+  /**
    * Returns the fit agent by optimizing its strategy policy and the score
    *
    * @param feedback the feedback from the last step
@@ -105,6 +116,73 @@ case class ExpSarsaAgent(net: MultiLayerNetwork,
     //val postPlan = newNet.output(feedback.s0.signals)
     val newAgent = copy(net = newNet, model = newModel, avgReward = newAvg1)
     (newAgent, score)
+  }
+
+  /**
+   * Returns the score a feedback
+   *
+   * @param feedback the feedback from the last step
+   */
+  override def score(feedback: Feedback): Double =
+    createData(feedback, avgReward)._4
+
+  /**
+   * Returns the 3-upla with data for fit
+   *
+   * @param feedback the feedback
+   * @param avg      the average rewards
+   * @return the input signals, the output label, the new advantage reward, the score
+   */
+  private def createData(feedback: Feedback, avg: Double): (INDArray, INDArray, Double, Double) = feedback match {
+    case Feedback(obs0, action, reward, obs1) =>
+      // Computes state values
+      val q0 = q(obs0)
+      val v0 = Utils.v(q0, action)
+
+      val q1 = Utils.indexed(q(obs1), obs1.actions)
+      val v1 = Utils.vExp(q1, Utils.egreedy(q1, epsilon))
+
+      // Compute new q0 = v1 - Rm + R and delta = v1 - Rm + R - v0
+      val newv0 = v1 + reward - avg
+      val delta = newv0 - v0
+      val score = delta * delta
+
+      // Update average rewards
+      val newAvg = avg + delta * beta
+
+      // Computes labels
+      val labels = q0.dup()
+      labels.putScalar(action, newv0)
+      //            logger.debug("---------------------------------------------------------------")
+      //            logger.debug("  s0     = {}", obs0.signals)
+      //            logger.debug("  action = {}", action)
+      //            logger.debug("  reward = {}", reward)
+      //            logger.debug("  s1     = {}", obs1.signals)
+      //            logger.debug("  q0     = {} -> q0'     = {}", q0, labels)
+      //            logger.debug("  q1     = {}", q1)
+      //            logger.debug("  v0     = {} -> v0'     = {}", v0, newv0)
+      //            logger.debug("  v1     = {}", v1)
+      //            logger.debug("  avg(R) = {} -> avg'(R) = {}", avg, newAvg)
+      //            logger.debug("  delta  = {}", delta)
+      (obs0.signals, labels, newAvg, score)
+  }
+
+  /**
+   * Returns the reset agent
+   *
+   * @param random the random generator
+   */
+  override def reset(random: Random): Agent = this
+
+  /**
+   * Writes the agent status to file
+   *
+   * @param file the filename
+   * @return the agents
+   */
+  override def writeModel(file: String): Agent = {
+    ModelSerializer.writeModel(net, new File(file), false)
+    this
   }
 
   /**
@@ -185,95 +263,10 @@ case class ExpSarsaAgent(net: MultiLayerNetwork,
     net.fit(inputs, labels)
     (newAvg, score)
   }
-
-  /**
-   * Returns the score a feedback
-   *
-   * @param feedback the feedback from the last step
-   */
-  override def score(feedback: Feedback): Double =
-    createData(feedback, avgReward)._4
-
-  /**
-   * Returns the 3-upla with data for fit
-   *
-   * @param feedback the feedback
-   * @param avg      the average rewards
-   * @return the input signals, the output label, the new advantage reward, the score
-   */
-  private def createData(feedback: Feedback, avg: Double): (INDArray, INDArray, Double, Double) = feedback match {
-    case Feedback(obs0, action, reward, obs1) =>
-      // Computes state values
-      val q0 = q(obs0)
-      val v0 = Utils.v(q0, action)
-
-      val q1 = Utils.indexed(q(obs1), obs1.actions).transpose()
-      val v1 = Utils.vExp(q1, Utils.egreedy(q1, epsilon))
-
-      // Compute new q0 = v1 - Rm + R and delta = v1 - Rm + R - v0
-      val newq0 = v1 + reward - avg
-      val delta = newq0 - v0
-      val score = delta * delta
-
-      // Update average rewards
-      val newAvg = avg + delta * beta
-
-      // Computes labels
-      val labels = q0.dup()
-      labels.putScalar(action, newq0)
-      //      logger.debug("---------------------------------------------------------------")
-      //      logger.debug("  s0     = {}", obs0.signals)
-      //      logger.debug("  action = {}", action)
-      //      logger.debug("  reward = {}", reward)
-      //      logger.debug("  s1     = {}", obs1.signals)
-      //      logger.debug("  q0     = {}", q0)
-      //      logger.debug("  q1     = {}", q1)
-      //      logger.debug("  v0     = {}", v0)
-      //      logger.debug("  v1     = {}", v1)
-      //      logger.debug("  avg(R) = {}", avg)
-      //      logger.debug("  delta  = {}", delta)
-      //      logger.debug("  q0'    = {}", newq0)
-      //      logger.debug("  labels = {}", labels)
-      (obs0.signals, labels, newAvg, score)
-  }
-
-  /**
-   * Returns the policy for an observation
-   *
-   * @param observation the observation
-   */
-  def q(observation: Observation): Policy = if (observation.endUp) {
-    Nd4j.zeros(noActions)
-  } else {
-    net.output(observation.signals)
-  }
-
-  /**
-   * Returns the reset agent
-   *
-   * @param random the random generator
-   */
-  override def reset(random: Random): Agent = this
-
-  /**
-   * Writes the agent status to file
-   *
-   * @param file the filename
-   * @return the agents
-   */
-  override def writeModel(file: String): Agent = {
-    ModelSerializer.writeModel(net, new File(file), false)
-    this
-  }
 }
 
 /** The factory of [[ExpSarsaAgent]] */
 object ExpSarsaAgent {
-
-  private case class Interval(interval: (Int, Int), value: Double) {
-    require(interval._1 >= 0)
-    require(interval._2 >= interval._1)
-  }
 
   /**
    * Returns the Dyna+Agent
@@ -328,4 +321,10 @@ object ExpSarsaAgent {
     })
     result
   }
+
+  private case class Interval(interval: (Int, Int), value: Double) {
+    require(interval._1 >= 0)
+    require(interval._2 >= interval._1)
+  }
+
 }

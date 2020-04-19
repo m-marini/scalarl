@@ -49,9 +49,6 @@ import scala.math._
  * @param landingVZ           the maximum vertical landing speed m/s
  * @param g                   the acceleration m/(s**2)
  * @param hRange              the maximum admitted horizontal range
- * @param zRange              the signal z range
- * @param vhRange             the horizontal speed scale
- * @param vzRange             the vertical speed scale
  * @param maxAH               the maximum horizontal acceleration reactor
  * @param maxAZ               the maximum vertical acceleration reactor
  * @param landedReward        the reward when landed
@@ -61,27 +58,23 @@ import scala.math._
  * @param rewardDistanceScale the reward by distance
  * @param fuel                the initial available fuel
  */
-case class LanderConf(dt: Double,
-                      h0Range: Double,
-                      z0: Double,
-                      zMax: Double,
-                      fuel: Int,
-                      landingRadius: Double,
-                      landingVH: Double,
-                      landingVZ: Double,
-                      g: Double,
-                      hRange: Double,
-                      zRange: Double,
-                      vhRange: Double,
-                      vzRange: Double,
-                      maxAH: Double,
-                      maxAZ: Double,
-                      z1: Double,
-                      landedReward: Double,
-                      crashReward: Double,
-                      outOfRangeReward: Double,
-                      outOfFuelReward: Double,
-                      rewardDistanceScale: Double) {
+class LanderConf(val dt: Double,
+                 val h0Range: Double,
+                 val z0: Double,
+                 val zMax: Double,
+                 val fuel: Int,
+                 val landingRadius: Double,
+                 val landingVH: Double,
+                 val landingVZ: Double,
+                 val g: Double,
+                 val hRange: Double,
+                 val maxAH: Double,
+                 val maxAZ: Double,
+                 val landedReward: Double,
+                 val crashReward: Double,
+                 val outOfRangeReward: Double,
+                 val outOfFuelReward: Double,
+                 val rewardDistanceScale: Double) {
 
   import LanderConf._
 
@@ -92,22 +85,6 @@ case class LanderConf(dt: Double,
     maxAZ / (NumDiscreteJet - 1)))
 
   private val gVect = Nd4j.create(Array[Double](0, 0, -g))
-
-  private val signalsFromPos = {
-    val result = Nd4j.zeros(3L, 3L)
-    result.put(0, 0, 1 / hRange)
-    result.put(1, 1, 1 / hRange)
-    result.put(2, 2, 1 / zRange)
-    result
-  }
-
-  private val signalsFromSpeed = {
-    val result = Nd4j.zeros(3L, 3L)
-    result.put(0, 0, 1 / vhRange)
-    result.put(1, 1, 1 / vhRange)
-    result.put(2, 2, 1 / vzRange)
-    result
-  }
 
   /**
    * Returns a random initial position
@@ -183,28 +160,6 @@ case class LanderConf(dt: Double,
   }
 
   /**
-   * Returns true if the shuttle is in land location
-   *
-   * @param pos the shuttle position (x,y,z)
-   */
-  private def isLandPosition(pos: INDArray): Boolean = {
-    val x = pos.getDouble(0L)
-    val y = pos.getDouble(1L)
-    val squareR = x * x + y * y
-    val landPosition = squareR <= squaredRadius &&
-      hasTouchedGround(pos)
-    landPosition
-  }
-
-  /**
-   * Returns true is the shuttle has touched the ground
-   *
-   * @param pos the shuttle position (x,y,z)
-   */
-  private def hasTouchedGround(pos: INDArray): Boolean =
-    pos.getDouble(2L) < 0
-
-  /**
    * Returns true is the shuttle crush
    *
    * @param pos   the shuttle position (x,y,z)
@@ -225,6 +180,28 @@ case class LanderConf(dt: Double,
 
     crashed
   }
+
+  /**
+   * Returns true if the shuttle is in land location
+   *
+   * @param pos the shuttle position (x,y,z)
+   */
+  private def isLandPosition(pos: INDArray): Boolean = {
+    val x = pos.getDouble(0L)
+    val y = pos.getDouble(1L)
+    val squareR = x * x + y * y
+    val landPosition = squareR <= squaredRadius &&
+      hasTouchedGround(pos)
+    landPosition
+  }
+
+  /**
+   * Returns true is the shuttle has touched the ground
+   *
+   * @param pos the shuttle position (x,y,z)
+   */
+  private def hasTouchedGround(pos: INDArray): Boolean =
+    pos.getDouble(2L) < 0
 
   /**
    * Returns the new status by driving with action
@@ -254,77 +231,6 @@ case class LanderConf(dt: Double,
     val result = j1.muli(jetScale)
     result
   }
-
-  /**
-   * Returns the input signals as a vector
-   *
-   * @param pos   the shuttle position (x,y,z)
-   * @param speed the speed the shuttle speed (x,y,z)
-   */
-  def signals(pos: INDArray, speed: INDArray): INDArray = {
-    val x = pos.getDouble(0L)
-    val y = pos.getDouble(1L)
-    val z = pos.getDouble(2L)
-
-    val vx = speed.getDouble(0L)
-    val vy = speed.getDouble(1L)
-    val vz = speed.getDouble(2L)
-
-    val posSignals: INDArray = pos.mmul(signalsFromPos)
-    val speedSignals: INDArray = speed.mmul(signalsFromSpeed)
-
-    // Computes the position feature index
-    val radius2 = x * x + y * y
-    val xIdx = if (x > 0) 1 else 0
-    val yIdx = if (y > 0) 1 else 0
-    val zIdx = if (z >= z1) 1 else 0
-    val posIdx = if (radius2 >= squaredRadius) {
-      yIdx + 2 * xIdx + 4 * zIdx
-    } else {
-      8 + zIdx
-    }
-    val posFeatures = Nd4j.zeros(10)
-    posFeatures.put(0, posIdx, 1)
-
-    // Computes the horizontal speed feature index
-    val vh = vx * vx + vy * vy
-    val vxIdx = if (vx > 0) 1 else 0
-    val vyIdx = if (vy > 0) 1 else 0
-    val v02 = v0 * v0
-    val vhhIdx = if (vh >= v02) 1 else 0
-    val vhIdx = vyIdx + 2 * vxIdx + 4 * vhhIdx
-    val vhFeatures = Nd4j.zeros(8)
-    vhFeatures.put(0, vhIdx, 1)
-
-    // Computes the vertical speed features
-    val vzFeatures = Nd4j.zeros(4)
-    if (vz >= 0) {
-      vzFeatures.put(0, 0, 1)
-    } else if (vz > v1) {
-      vzFeatures.put(0, 1, 1)
-    } else if (vz > v2) {
-      vzFeatures.put(0, 2, 1)
-    } else {
-      vzFeatures.put(0, 3, 1)
-    }
-
-    val signals = Nd4j.hstack(
-      posSignals,
-      speedSignals,
-      posFeatures,
-      vhFeatures,
-      vzFeatures)
-    signals
-  }
-
-  /** Returns the feature safe horizontal speed */
-  private def v0 = landingVH / 2
-
-  /** Returns the feature safe vertical speed */
-  private def v1 = -landingVZ / 2
-
-  /** Returns the feature max vertical speed */
-  private def v2 = -landingVZ
 }
 
 /** Factory for [[LanderConf]] instances */
@@ -338,28 +244,22 @@ object LanderConf {
    *
    * @param conf the json configuration
    */
-  def apply(conf: ACursor): LanderConf = {
-    LanderConf(
-      h0Range = conf.get[Double]("h0Range").right.get,
-      z0 = conf.get[Double]("z0").right.get,
-      z1 = conf.get[Double]("z1").right.get,
-      hRange = conf.get[Double]("hRange").right.get,
-      zRange = conf.get[Double]("zRange").right.get,
-      zMax = conf.get[Double]("zMax").right.get,
-      landingRadius = conf.get[Double]("landingRadius").right.get,
-      landingVH = conf.get[Double]("landingVH").right.get,
-      landingVZ = conf.get[Double]("landingVZ").right.get,
-      dt = conf.get[Double]("dt").right.get,
-      g = conf.get[Double]("g").right.get,
-      maxAH = conf.get[Double]("maxAH").right.get,
-      maxAZ = conf.get[Double]("maxAZ").right.get,
-      vhRange = conf.get[Double]("vhRange").right.get,
-      vzRange = conf.get[Double]("vzRange").right.get,
-      landedReward = conf.get[Double]("landedReward").right.get,
-      crashReward = conf.get[Double]("crashReward").right.get,
-      outOfRangeReward = conf.get[Double]("outOfRangeReward").right.get,
-      outOfFuelReward = conf.get[Double]("outOfFuelReward").right.get,
-      rewardDistanceScale = conf.get[Double]("rewardDistanceScale").right.get,
-      fuel = conf.get[Int]("fuel").right.get)
-  }
+  def apply(conf: ACursor): LanderConf = new LanderConf(
+    dt = conf.get[Double]("dt").right.get,
+    h0Range = conf.get[Double]("h0Range").right.get,
+    z0 = conf.get[Double]("z0").right.get,
+    hRange = conf.get[Double]("hRange").right.get,
+    zMax = conf.get[Double]("zMax").right.get,
+    landingRadius = conf.get[Double]("landingRadius").right.get,
+    landingVH = conf.get[Double]("landingVH").right.get,
+    landingVZ = conf.get[Double]("landingVZ").right.get,
+    g = conf.get[Double]("g").right.get,
+    maxAH = conf.get[Double]("maxAH").right.get,
+    maxAZ = conf.get[Double]("maxAZ").right.get,
+    landedReward = conf.get[Double]("landedReward").right.get,
+    crashReward = conf.get[Double]("crashReward").right.get,
+    outOfRangeReward = conf.get[Double]("outOfRangeReward").right.get,
+    outOfFuelReward = conf.get[Double]("outOfFuelReward").right.get,
+    rewardDistanceScale = conf.get[Double]("rewardDistanceScale").right.get,
+    fuel = conf.get[Int]("fuel").right.get)
 }
