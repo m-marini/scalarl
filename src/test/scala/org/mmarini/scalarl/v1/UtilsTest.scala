@@ -56,6 +56,10 @@ class UtilsTest extends FunSpec with Matchers {
       Utils.softMax(softMax) shouldBe pr
     }
 
+    it("should get softMax with mask") {
+      Utils.softMax(softMax, Seq(0L, 3L)) shouldBe Nd4j.create(Array(1.0 / 5, 0.0, 0.0, 4.0 / 5))
+    }
+
     it("should generate random with cdf") {
       val random = Nd4j.randomFactory.getNewRandomInstance(100)
       val samples = for {i <- 1 to 800} yield {
@@ -73,19 +77,6 @@ class UtilsTest extends FunSpec with Matchers {
       val random = Nd4j.randomFactory.getNewRandomInstance(100)
       val samples = for {i <- 1 to 800} yield {
         Utils.randomInt(pr)(random)
-      }
-      val result = samples.groupBy(k => k).mapValues[Int](v => v.length)
-
-      result(0) should (be >= 80 and be <= 120)
-      result(1) should (be >= 180 and be <= 220)
-      result(2) should (be >= 80 and be <= 120)
-      result(3) should (be >= 380 and be <= 420)
-    }
-
-    it("should generate random with softMax") {
-      val random = Nd4j.randomFactory.getNewRandomInstance(100)
-      val samples = for {i <- 1 to 800} yield {
-        Utils.softMaxRandomInt(softMax)(random)
       }
       val result = samples.groupBy(k => k).mapValues[Int](v => v.length)
 
