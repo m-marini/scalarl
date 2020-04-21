@@ -1,9 +1,8 @@
-package org.mmarini.scalarl.v1.agents
+package org.mmarini.scalarl.v2.agents
 
 import java.io.File
 
 import com.typesafe.scalalogging.LazyLogging
-import io.circe.ACursor
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.v1._

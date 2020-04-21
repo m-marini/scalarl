@@ -27,31 +27,33 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.v1.envs
+package org.mmarini.scalarl.v2.envs
 
 import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.v1.agents.AgentBuilder
+import io.circe.ACursor
+import org.mmarini.scalarl.v1.Env
 
 /**
  *
  */
-object Main extends LazyLogging {
-
+object EnvBuilder extends LazyLogging {
   /**
    *
-   * @param args the line command arguments
+   * @param conf
+   * @return
    */
-  def main(args: Array[String]) {
-    val file = if (args.isEmpty) "maze.yaml" else args(0)
-    val epoch = if (args.length >= 2) args(1).toInt else 0
-    logger.info("File {} epoch {}", file, epoch)
-
-    val jsonConf = Configuration.jsonFromFile(file)
-    val env = EnvBuilder.fromJson(jsonConf.hcursor.downField("env"))
-    val agent = AgentBuilder.fromJson(jsonConf.hcursor.downField("agent"))(env.signalsSize, env.actionsSize)
-    val (session, random) = SessionBuilder.fromJson(jsonConf.hcursor.downField("session"))(epoch, env = env, agent = agent)
-
-    session.run(random)
-    logger.info("Session completed.")
+  def fromJson(conf: ACursor): Env = {
+    val landerConf = LanderConf(conf)
+    val coder = conf.get[String]("type").toOption match {
+      case Some("Lander") =>
+        LanderCustomCoder(conf)
+      case Some("LanderTiles") =>
+        LanderTilesEncoder(conf)
+      case Some("LanderContinuous") =>
+        LanderContinuousEncoder(conf)
+      case Some(typ) => throw new IllegalArgumentException(s"Unreconginzed coder type '$typ'")
+      case _ => throw new IllegalArgumentException("Missing coder type")
+    }
+    LanderStatus(landerConf, coder)
   }
 }

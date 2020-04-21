@@ -33,11 +33,16 @@ import com.typesafe.scalalogging.LazyLogging
 import io.circe.ACursor
 import org.mmarini.scalarl.v1.Env
 
-class EnvBuilder(conf: ACursor) extends LazyLogging {
+/**
+ *
+ */
+object EnvBuilder extends LazyLogging {
   /**
    *
+   * @param conf
+   * @return
    */
-  def build(): Env = {
+  def fromJson(conf: ACursor): Env = {
     val landerConf = LanderConf(conf)
     val coder = conf.get[String]("type").toOption match {
       case Some("Lander") =>
@@ -51,8 +56,4 @@ class EnvBuilder(conf: ACursor) extends LazyLogging {
     }
     LanderStatus(landerConf, coder)
   }
-}
-
-object EnvBuilder {
-  def apply(conf: ACursor): EnvBuilder = new EnvBuilder(conf)
 }

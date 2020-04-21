@@ -33,9 +33,9 @@ import com.typesafe.scalalogging.LazyLogging
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.deeplearning4j.nn.api.OptimizationAlgorithm
+import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
 import org.deeplearning4j.nn.conf.layers.{DenseLayer, OutputLayer}
-import org.deeplearning4j.nn.conf.{GradientNormalization, NeuralNetConfiguration}
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
 import org.mmarini.scalarl.v1.agents.ACAgent
@@ -43,7 +43,7 @@ import org.mmarini.scalarl.v1.{Agent, Session}
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.learning.config.Adam
+import org.nd4j.linalg.learning.config.{Adam, Sgd}
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 import org.scalatest.{FunSpec, Matchers}
 
@@ -59,7 +59,7 @@ class TestEnvACAgentTest extends FunSpec with Matchers with LazyLogging {
     actor = actor,
     critic = critic,
     actorRatio = 5.0,
-    criticRatio = 10,
+    criticRatio = 20,
     alpha = 0.3,
     beta = 0.03,
     avg = 0
@@ -74,21 +74,24 @@ class TestEnvACAgentTest extends FunSpec with Matchers with LazyLogging {
       build()
 
     val outLayer = new OutputLayer.Builder().
-      nIn(Hiddens).
+      nIn(3).
       nOut(1).
       lossFunction(LossFunction.MSE).
-      activation(Activation.TANH).
+      activation(Activation.IDENTITY).
       build()
 
     val conf = new NeuralNetConfiguration.Builder().
       seed(Seed).
       weightInit(WeightInit.XAVIER).
-      updater(new Adam(10.0 / (4 * Hiddens + (Hiddens + 1)), 0.9, 0.999, 0.1)).
+      updater(new Sgd(1.0 / 4)).
+      //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
+      //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
-      constrainAllParameters(new MinMaxNormConstraint(-10e3, 10e3, 1)).
-      gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue).
-      gradientNormalizationThreshold(1).
-      list(hidden, outLayer)
+      miniBatch(false).
+      //      constrainAllParameters(new MinMaxNormConstraint(-10e3, 10e3, 1)).
+      //      gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue).
+      //      gradientNormalizationThreshold(100).
+      list(outLayer)
       .build()
 
     val net = new MultiLayerNetwork(conf)
@@ -105,7 +108,7 @@ class TestEnvACAgentTest extends FunSpec with Matchers with LazyLogging {
       build()
 
     val outLayer = new OutputLayer.Builder().
-      nIn(Hiddens).
+      nIn(3).
       nOut(2).
       lossFunction(LossFunction.MSE).
       activation(Activation.TANH).
@@ -114,12 +117,14 @@ class TestEnvACAgentTest extends FunSpec with Matchers with LazyLogging {
     val conf = new NeuralNetConfiguration.Builder().
       seed(Seed).
       weightInit(WeightInit.XAVIER).
-      updater(new Adam(10.0 / (4 * Hiddens + (Hiddens + 1) * 2), 0.9, 0.999, 0.1)).
+      //      updater(new Adam(10.0 / (4 * Hiddens + (Hiddens + 1) * 2), 0.9, 0.999, 0.1)).
+      //updater(new Adam(1.0 / (4 * 2), 0.9, 0.999, 0.1)).
+      updater(new Sgd(1.0 / (4 * 2))).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
       constrainAllParameters(new MinMaxNormConstraint(-10e3, 10e3, 1)).
-      gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue).
-      gradientNormalizationThreshold(1).
-      list(hidden, outLayer)
+      //    gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue).
+      //      gradientNormalizationThreshold(1).
+      list(outLayer)
       .build()
 
     val net = new MultiLayerNetwork(conf)
