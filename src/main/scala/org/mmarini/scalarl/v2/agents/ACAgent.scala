@@ -5,7 +5,7 @@ import java.io.File
 import com.typesafe.scalalogging.LazyLogging
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.util.ModelSerializer
-import org.mmarini.scalarl.v1._
+import org.mmarini.scalarl.v2._
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.indexing.NDArrayIndex
@@ -114,11 +114,8 @@ case class ACAgent(actor: MultiLayerNetwork,
    * @param criticRatio the ratio of critic
    * @param obs         the observation
    */
-  private def v(critic: MultiLayerNetwork, criticRatio: Double, obs: Observation): Double = if (obs.endUp) {
-    0
-  } else {
+  private def v(critic: MultiLayerNetwork, criticRatio: Double, obs: Observation): Double =
     critic.output(obs.signals).getDouble(0L) * criticRatio
-  }
 
   /**
    * Returns the score for a feedback
@@ -133,13 +130,6 @@ case class ACAgent(actor: MultiLayerNetwork,
     val score = delta * delta
     score
   }
-
-  /**
-   * Returns the reset agent
-   *
-   * @param random the random generator
-   */
-  override def reset(random: Random): Agent = this
 
   /**
    * Writes the agent status to file

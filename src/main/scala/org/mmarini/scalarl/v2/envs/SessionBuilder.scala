@@ -36,8 +36,8 @@ import io.circe.ACursor
 import monix.eval.Task
 import monix.execution.Scheduler
 import org.mmarini.scalarl.FileUtils.{withFile, writeINDArray}
-import org.mmarini.scalarl.v1._
-import org.mmarini.scalarl.v1.agents.ExpSarsaAgent
+import org.mmarini.scalarl.v2._
+import org.mmarini.scalarl.v2.agents.ExpSarsaAgent
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
@@ -56,11 +56,10 @@ object SessionBuilder extends LazyLogging {
    * @param agent the agent
    */
   def fromJson(conf: ACursor)(epoch: Int, env: => Env, agent: => Agent): (Session, Random) = {
-    val numEpisodes = conf.get[Int]("numEpisodes").right.get
+    val numSteps = conf.get[Int]("numSteps").right.get
     val dump = conf.get[String]("dump").toOption
     val trace = conf.get[String]("trace").toOption
     val saveModel = conf.get[String]("modelFile").toOption
-    val maxEpisodeLength = conf.get[Long]("maxEpisodeLength").getOrElse(Long.MaxValue)
     val random = conf.get[Long]("seed").map(
       Nd4j.getRandomFactory.getNewRandomInstance
     ).getOrElse(
@@ -74,21 +73,13 @@ object SessionBuilder extends LazyLogging {
 
     // Create session
     val session = new Session(
-      numEpisodes = numEpisodes,
+      numSteps = numSteps,
       env = env,
       agent = agent,
-      epoch = epoch,
-      maxEpisodeLength = maxEpisodeLength)
+      epoch = epoch)
 
     // Create dump function
-    val createDump: Episode => INDArray = createLanderDump
-
-    // Subscribe on episode observable
-    session.episodes.doOnNext(episode => Task.eval {
-      onEpisode(saveModel, dump, createDump)(episode)
-    }).doOnError(ex => Task.eval {
-      logger.error(ex.getMessage, ex)
-    }).subscribe()(Scheduler.global)
+    val createDump: Step => INDArray = createLanderDump
 
     // Create tracing function
     val createTrace: Step => INDArray = createLanderTrace
@@ -96,6 +87,7 @@ object SessionBuilder extends LazyLogging {
     // Subscribe on step observable
     session.steps.doOnNext(step => Task.eval {
       onStep(trace, createTrace)(step)
+      onStep(dump, createDump)(step)
     }).doOnError(ex => Task.eval {
       logger.error(ex.getMessage, ex)
     }).subscribe()(Scheduler.global)
@@ -112,8 +104,8 @@ object SessionBuilder extends LazyLogging {
    * - average loss
    * - 10 x 10 x 8 of q action values for each state for each action
    */
-  private def createLanderDump(episode: Episode): INDArray = {
-    val kpi = Nd4j.create(Array(Array(episode.epoch, episode.episode, episode.stepCount, episode.returnValue, episode.totalScore)))
+  private def createLanderDump(episode: Step): INDArray = {
+    val kpi = Nd4j.create(Array[Double](episode.epoch, episode.step)).transpose()
     Nd4j.hstack(kpi)
   }
 
@@ -143,11 +135,8 @@ object SessionBuilder extends LazyLogging {
     val speed1 = env1.speed
     val head = Nd4j.create(Array[Double](
       step.epoch,
-      step.episode,
       step.step))
-    val mid = Nd4j.create(Array(
-      step.feedback.reward,
-      if (step.feedback.s1.endUp) 1 else 0))
+    val mid = Nd4j.create(Array(step.feedback.reward))
     val agent0 = step.agent0.asInstanceOf[ExpSarsaAgent]
     val agent1 = step.agent1.asInstanceOf[ExpSarsaAgent]
     val q0 = agent0.q(env0.observation)
@@ -170,42 +159,7 @@ object SessionBuilder extends LazyLogging {
   /**
    *
    */
-  def onEpisode(saveModel: Option[String],
-                dump: Option[String],
-                createDump: Episode => INDArray)(episode: Episode) {
-    for {
-      file <- saveModel
-    } {
-      episode.agent.writeModel(file)
-    }
-    for {
-      file <- dump
-    } {
-      val data = createDump(episode)
-      withFile(file, append = true)(writeINDArray(data))
-    }
-    logger.info(f"Epoch ${
-      episode.epoch
-    }%,6d Episode ${
-      episode.episode
-    }%,6d, Steps ${
-      episode.stepCount
-    }%6d ,returns=${
-      episode.returnValue
-    }%12g ,avg rewards=${
-      if (episode.stepCount != 0) episode.returnValue / episode.stepCount else 0.0
-    }%,12g, totalScore=${
-      episode.totalScore
-    }%,12g, avgScore=${
-      if (episode.stepCount != 0) episode.totalScore / episode.stepCount else 0.0
-    }%12g")
-  }
-
-  /**
-   *
-   */
-  def onStep(trace: Option[String],
-             createTrace: Step => INDArray)(step: Step) {
+  def onStep(trace: Option[String], createTrace: Step => INDArray)(step: Step) {
     for {
       file <- trace
     } {

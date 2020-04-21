@@ -31,7 +31,7 @@ package org.mmarini.scalarl.v2.envs
 
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.ACursor
-import org.mmarini.scalarl.v1.Env
+import org.mmarini.scalarl.v2.Env
 
 /**
  *
@@ -39,8 +39,7 @@ import org.mmarini.scalarl.v1.Env
 object EnvBuilder extends LazyLogging {
   /**
    *
-   * @param conf
-   * @return
+   * @param conf the json configuration
    */
   def fromJson(conf: ACursor): Env = {
     val landerConf = LanderConf(conf)

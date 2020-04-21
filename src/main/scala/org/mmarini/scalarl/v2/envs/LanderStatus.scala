@@ -30,7 +30,7 @@
 package org.mmarini.scalarl.v2.envs
 
 import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.v1._
+import org.mmarini.scalarl.v2._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
@@ -70,10 +70,13 @@ case class LanderStatus(coder: LanderEncoder,
   override lazy val observation: Observation = INDArrayObservation(
     signals = coder.signals(this),
     actions = LanderConf.ValidActions,
-    time = time,
-    endUp = isLanded || isCrashed || isOutOfRange || isOutOfFuel)
+    time = time)
 
-  override def reset(random: Random): Env = {
+  /**
+   *
+   * @param random the random generator
+   */
+  private def initial(random: Random): Env = {
     val newEnv = copy(
       pos = conf.initialPos(random),
       speed = Nd4j.zeros(3),
@@ -98,7 +101,11 @@ case class LanderStatus(coder: LanderEncoder,
     } else {
       conf.rewardFromMovement(pos, newEnv.pos)
     }
-    (newEnv, reward)
+    if (isLanded || isCrashed || isOutOfRange || isOutOfFuel) {
+      (newEnv.initial(random), reward)
+    } else {
+      (newEnv, reward)
+    }
   }
 
   /** Returns trueh is out of fuel */

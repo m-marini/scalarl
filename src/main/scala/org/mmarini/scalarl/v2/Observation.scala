@@ -34,9 +34,6 @@ import org.nd4j.linalg.api.ndarray.INDArray
 /** The observation of the environment status. */
 trait Observation {
 
-  /** Returns true if the observation is a final state */
-  def endUp: EndUp
-
   /** Returns the tensor of status of environment */
   def signals: INDArray
 

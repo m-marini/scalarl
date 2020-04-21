@@ -40,26 +40,20 @@ import scala.annotation.tailrec
  * The session executes the interactions between the environment and the agent
  *
  * @constructor Creates a [[Session]]
- * @param env              the environment
- * @param agent            the agent
- * @param epoch            the number of epochs
- * @param numEpisodes      the number of episodes for the session
- * @param maxEpisodeLength the maximum number of steps per episode
+ * @param env      the environment
+ * @param agent    the agent
+ * @param epoch    the number of epochs
+ * @param numSteps the number of steps for the session
  */
 class Session(env: => Env,
               agent: => Agent,
               epoch: Int,
-              numEpisodes: Int,
-              maxEpisodeLength: Long) extends LazyLogging {
+              numSteps: Int) extends LazyLogging {
 
   private val stepsPub = PublishSubject[Step]()
-  private val episodesPub = PublishSubject[Episode]()
 
   /** Returns the observable of steps */
   def steps: Observable[Step] = stepsPub
-
-  /** Returns the observable of episodes */
-  def episodes: Observable[Episode] = episodesPub
 
   /**
    * Runs the interactions for a number of episodes
@@ -78,18 +72,16 @@ class Session(env: => Env,
    * @return the environment and agent after the interaction session
    */
   def run(random: Random): (Env, Agent) = {
-    val env0 = env.reset(random)
+    val env0 = env
     val obs0 = env0.observation
     val context0 = SessionContext(
       env = env0,
-      agent = agent.reset(random),
+      agent = agent,
       obs = obs0)
 
     val context = runSession(random, context0)
 
     stepsPub.onComplete()
-    episodesPub.onComplete()
-
     (context.env, context.agent)
   }
 
@@ -101,7 +93,7 @@ class Session(env: => Env,
    */
   @tailrec
   private def runSession(random: Random, context: SessionContext): SessionContext = {
-    if (context.episode >= numEpisodes) {
+    if (context.step >= numSteps) {
       context
     } else {
       val nextCtx = runStep(random, context)
@@ -117,7 +109,7 @@ class Session(env: => Env,
    */
   private def runStep(random: Random, context: SessionContext): SessionContext = {
     // unfold context data
-    val SessionContext(episode, step, env0, agent0, obs0, totalScore, returnValue) = context
+    val SessionContext(step, env0, agent0, obs0, totalScore, returnValue) = context
 
     // Agent chooses the action
     val action = agent0.chooseAction(obs0, random)
@@ -134,7 +126,6 @@ class Session(env: => Env,
     // Generate step event
     val stepInfo = Step(
       epoch = epoch,
-      episode = episode,
       step = step,
       feedback = feedback,
       env0 = env0,
@@ -152,40 +143,13 @@ class Session(env: => Env,
       totalScore = totalScore1,
       returnValue = returnValue1)
 
-    val ctx1 = if (obs1.endUp || ctx0.step >= maxEpisodeLength) {
-      // Episode completed
-      // Emits episode event
-      val episodeInfo = Episode(epoch = epoch,
-        episode = episode,
-        stepCount = step + 1,
-        returnValue = returnValue1,
-        totalScore = totalScore1,
-        env = env1,
-        agent = agent1,
-        session = this)
-      episodesPub.onNext(episodeInfo)
-
-      // Reinitialize session for next episode
-      val initialEnv = env1.reset(random)
-      ctx0.copy(env = initialEnv,
-        agent = agent1.reset(random),
-        obs = initialEnv.observation,
-        episode = episode + 1,
-        step = 0,
-        totalScore = 0,
-        returnValue = 0
-      )
-    } else {
-      ctx0
-    }
-    ctx1
+    ctx0
   }
 }
 
 /**
  * The session context
  *
- * @param episode     the episode counter
  * @param step        the step counter
  * @param env         the environment
  * @param agent       the agent
@@ -193,8 +157,7 @@ class Session(env: => Env,
  * @param totalScore  the total loss
  * @param returnValue the return value
  */
-case class SessionContext(episode: Int = 0,
-                          step: Int = 0,
+case class SessionContext(step: Int = 0,
                           env: Env,
                           agent: Agent,
                           obs: Observation,

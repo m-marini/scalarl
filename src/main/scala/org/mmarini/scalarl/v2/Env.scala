@@ -39,13 +39,6 @@ import org.nd4j.linalg.api.rng.Random
 trait Env {
 
   /**
-   * Returns the environment simulator in reset status
-   *
-   * @param random the random generator
-   */
-  def reset(random: Random): Env
-
-  /**
    * Computes the next status of environment executing an action.
    *
    * @param action the executing action

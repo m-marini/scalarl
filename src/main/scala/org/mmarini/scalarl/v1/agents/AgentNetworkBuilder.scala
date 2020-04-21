@@ -40,7 +40,6 @@ import org.deeplearning4j.nn.conf.{GradientNormalization, NeuralNetConfiguration
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
 import org.deeplearning4j.util.ModelSerializer
-import org.mmarini.scalarl.v1.envs.AgentNetworkBuilder.DefaultSeed
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 
@@ -69,7 +68,7 @@ object AgentNetworkBuilder extends LazyLogging {
    * @param noOutputs the number of outputs
    */
   def create(conf: ACursor)(noInputs: Int, noOutputs: Int): MultiLayerNetwork = {
-    val seed = conf.get[Long]("seed").getOrElse(DefaultSeed)
+    val seed = conf.get[Long]("seed").toOption
     val numHiddens = conf.get[List[Int]]("numHiddens").right.get
     val maxAbsGradient = conf.get[Double]("maxAbsGradients").right.get
     val maxAbsParams = conf.get[Double]("maxAbsParameters").right.get
@@ -104,8 +103,9 @@ object AgentNetworkBuilder extends LazyLogging {
 
     val updater = UpdaterBuilder.fromJson(conf)(noParms)
 
-    val annConf = new NeuralNetConfiguration.Builder().
-      seed(seed).
+    val annConf = seed.map(seed =>
+      new NeuralNetConfiguration.Builder().seed(seed)
+    ).getOrElse(new NeuralNetConfiguration.Builder()).
       weightInit(WeightInit.XAVIER).
       updater(updater).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).

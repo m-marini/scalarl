@@ -68,7 +68,7 @@ object AgentNetworkBuilder extends LazyLogging {
    * @param noOutputs the number of outputs
    */
   def create(conf: ACursor)(noInputs: Int, noOutputs: Int): MultiLayerNetwork = {
-    val seed = conf.get[Long]("seed").getOrElse(DefaultSeed)
+    val seed = conf.get[Long]("seed").toOption
     val numHiddens = conf.get[List[Int]]("numHiddens").right.get
     val maxAbsGradient = conf.get[Double]("maxAbsGradients").right.get
     val maxAbsParams = conf.get[Double]("maxAbsParameters").right.get
@@ -103,8 +103,9 @@ object AgentNetworkBuilder extends LazyLogging {
 
     val updater = UpdaterBuilder.fromJson(conf)(noParms)
 
-    val annConf = new NeuralNetConfiguration.Builder().
-      seed(seed).
+    val annConf = seed.map(seed =>
+      new NeuralNetConfiguration.Builder().seed(seed)
+    ).getOrElse(new NeuralNetConfiguration.Builder()).
       weightInit(WeightInit.XAVIER).
       updater(updater).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).

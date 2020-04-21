@@ -30,8 +30,8 @@
 package org.mmarini.scalarl.v2.envs
 
 import io.circe.ACursor
-import org.mmarini.scalarl.v1.Utils
-import org.mmarini.scalarl.v1.envs.LanderTilesEncoder.{HPrecision, VHPrecision, VZPrecision, ZPrecision}
+import org.mmarini.scalarl.v2.Utils
+import org.mmarini.scalarl.v2.envs.LanderTilesEncoder.{HPrecision, VHPrecision, VZPrecision, ZPrecision}
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
 

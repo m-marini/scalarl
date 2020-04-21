@@ -37,10 +37,8 @@ import org.nd4j.linalg.api.ndarray.INDArray
  * @param time    the instant
  * @param signals the environment status observation
  * @param actions the valid action for the current environment status
- * @param endUp   true if end status observation
  */
 case class INDArrayObservation(time: Double,
                                signals: INDArray,
-                               actions: ActionMask,
-                               endUp: EndUp) extends Observation {
+                               actions: ActionMask) extends Observation {
 }

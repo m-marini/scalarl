@@ -29,7 +29,7 @@
 
 package org.mmarini.scalarl.v2.envs
 
-import org.mmarini.scalarl.v1.{Action, Env, INDArrayObservation, Reward}
+import org.mmarini.scalarl.v2.{Action, Env, INDArrayObservation, Reward}
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
 
@@ -49,17 +49,9 @@ case class TestEnv(time: Double, status: Int, conf: TestEnvConf) extends Env {
     val endUp = status >= conf.numState - 1
     val o = INDArrayObservation(time = time,
       signals = signals,
-      actions = actions,
-      endUp = endUp)
+      actions = actions)
     o
   }
-
-  /**
-   * Returns the environment simulator in reset status and the [Observation] of the reset status
-   *
-   * @param random the random generator
-   */
-  override def reset(random: Random): Env = copy(status = 0)
 
   /**
    * Computes the next status of environment executing an action.

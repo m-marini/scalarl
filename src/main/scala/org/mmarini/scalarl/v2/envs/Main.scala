@@ -30,7 +30,7 @@
 package org.mmarini.scalarl.v2.envs
 
 import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.v1.agents.AgentBuilder
+import org.mmarini.scalarl.v2.agents.AgentBuilder
 
 /**
  *

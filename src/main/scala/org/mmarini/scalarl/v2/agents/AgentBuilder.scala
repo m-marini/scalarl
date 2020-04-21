@@ -30,7 +30,7 @@
 package org.mmarini.scalarl.v2.agents
 
 import io.circe.ACursor
-import org.mmarini.scalarl.v1.Agent
+import org.mmarini.scalarl.v2.Agent
 
 /**
  *

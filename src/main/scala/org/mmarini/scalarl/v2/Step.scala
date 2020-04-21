@@ -35,7 +35,6 @@ package org.mmarini.scalarl.v2
  * @Constructor creates a [Step]
  * @param epoch   the epoch number
  * @param step    the session step number
- * @param episode the episode number
  * @param env0    the environment before step
  * @param agent0  the agent before the step
  * @param env1    the environment after the step
@@ -44,7 +43,6 @@ package org.mmarini.scalarl.v2
  */
 case class Step(epoch: Int,
                 step: Int,
-                episode: Int,
                 feedback: Feedback,
                 env0: Env,
                 agent0: Agent,

@@ -68,13 +68,6 @@ trait Agent {
   def score(feedback: Feedback): Double
 
   /**
-   * Returns the reset agent
-   *
-   * @param random the random generator
-   */
-  def reset(random: Random): Agent
-
-  /**
    * Writes the agent status to file
    *
    * @param file the filename

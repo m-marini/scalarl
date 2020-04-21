@@ -29,7 +29,7 @@
 
 package org.mmarini.scalarl.v2.envs
 
-import org.mmarini.scalarl.v1.Env
+import org.mmarini.scalarl.v2.Env
 import org.nd4j.linalg.api.ndarray.INDArray
 
 trait Lander extends Env {

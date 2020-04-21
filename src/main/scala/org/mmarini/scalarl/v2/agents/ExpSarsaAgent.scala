@@ -35,7 +35,7 @@ import com.typesafe.scalalogging.LazyLogging
 import io.circe.ACursor
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.util.ModelSerializer
-import org.mmarini.scalarl.v1._
+import org.mmarini.scalarl.v2._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
@@ -95,11 +95,7 @@ case class ExpSarsaAgent(net: MultiLayerNetwork,
    *
    * @param observation the observation
    */
-  def q(observation: Observation): Policy = if (observation.endUp) {
-    Nd4j.zeros(noActions)
-  } else {
-    net.output(observation.signals)
-  }
+  def q(observation: Observation): Policy = net.output(observation.signals)
 
   /**
    * Returns the fit agent by optimizing its strategy policy and the score
@@ -166,13 +162,6 @@ case class ExpSarsaAgent(net: MultiLayerNetwork,
       //            logger.debug("  delta  = {}", delta)
       (obs0.signals, labels, newAvg, score)
   }
-
-  /**
-   * Returns the reset agent
-   *
-   * @param random the random generator
-   */
-  override def reset(random: Random): Agent = this
 
   /**
    * Writes the agent status to file
