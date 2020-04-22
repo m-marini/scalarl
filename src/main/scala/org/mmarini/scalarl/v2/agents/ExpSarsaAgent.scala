@@ -36,6 +36,7 @@ import io.circe.ACursor
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.v2._
+import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
@@ -267,7 +268,7 @@ object ExpSarsaAgent {
   def fromJson(conf: ACursor)(noInputs: Int, noActions: Int): ExpSarsaAgent = {
     val tolerance = loadTolerance(conf.downField("tolerance"))
     val avgReward = conf.get[Double]("avgReward").right.get
-    val net = AgentNetworkBuilder.fromJson(conf.downField("network"))(noInputs, noActions)
+    val net = AgentNetworkBuilder.fromJson(conf.downField("network"))(noInputs, noActions, Activation.IDENTITY)
     ExpSarsaAgent(net = net,
       noActions = noActions,
       model = Seq(),

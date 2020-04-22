@@ -51,30 +51,32 @@ object AgentNetworkBuilder extends LazyLogging {
   /**
    * Returns the [[MultiLayerNetwork]] builder for an actor
    *
-   * @param conf      the json configuration
-   * @param noInputs  the number of inputs
-   * @param noOutputs the number of outputs
+   * @param conf       the json configuration
+   * @param noInputs   the number of inputs
+   * @param noOutputs  the number of outputs
+   * @param activation the output nodes activation function
    */
-  def fromJson(conf: ACursor)(noInputs: Int, noOutputs: Int): MultiLayerNetwork = conf.get[String]("modelFile").toOption.
+  def fromJson(conf: ACursor)(noInputs: Int, noOutputs: Int, activation: Activation): MultiLayerNetwork = conf.get[String]("modelFile").toOption.
     map(load).getOrElse {
-    create(conf)(noInputs, noOutputs)
+    create(conf)(noInputs, noOutputs, activation)
   }
 
   /**
    * Returns the [[MultiLayerNetwork]] builder for an actor
    *
-   * @param conf      the json configuration
-   * @param noInputs  the number of inputs
-   * @param noOutputs the number of outputs
+   * @param conf       the json configuration
+   * @param noInputs   the number of inputs
+   * @param noOutputs  the number of outputs
+   * @param activation the output nodes activation function
    */
-  def create(conf: ACursor)(noInputs: Int, noOutputs: Int): MultiLayerNetwork = {
+  def create(conf: ACursor)(noInputs: Int, noOutputs: Int, activation: Activation): MultiLayerNetwork = {
     val seed = conf.get[Long]("seed").toOption
     val numHiddens = conf.get[List[Int]]("numHiddens").right.get
     val maxAbsGradient = conf.get[Double]("maxAbsGradients").right.get
     val maxAbsParams = conf.get[Double]("maxAbsParameters").right.get
     val dropOut = conf.get[Double]("dropOut").right.get
     val bias = conf.get[Double]("bias").toOption
-    // Computes the number of nodes of initial layers
+    // Computes the number of nodes of initial layerst
     val initialNodes = noInputs +: numHiddens
     // Creates the hidden layers
     val hiddenLayers = for {
@@ -89,7 +91,7 @@ object AgentNetworkBuilder extends LazyLogging {
       nIn(initialNodes.last).
       nOut(noOutputs).
       lossFunction(LossFunction.MSE).
-      activation(Activation.TANH)
+      activation(activation)
     val outLayerBuilder = bias.map(outLayerBuilder0.biasInit).getOrElse(outLayerBuilder0)
     val outLayer = outLayerBuilder.build()
 

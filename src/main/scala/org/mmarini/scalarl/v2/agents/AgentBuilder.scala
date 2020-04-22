@@ -31,6 +31,7 @@ package org.mmarini.scalarl.v2.agents
 
 import io.circe.ACursor
 import org.mmarini.scalarl.v2.Agent
+import org.nd4j.linalg.activations.Activation
 
 /**
  *
@@ -57,8 +58,8 @@ object AgentBuilder {
   def acAgent(conf: ACursor)(noInputs: Int, noOutputs: Int): ACAgent = {
     val netConf = conf.downField("network")
     ACAgent(
-      actor = AgentNetworkBuilder.fromJson(netConf)(noInputs, noOutputs),
-      critic = AgentNetworkBuilder.fromJson(netConf)(noInputs, 1),
+      actor = AgentNetworkBuilder.fromJson(netConf)(noInputs, noOutputs, Activation.HARDTANH),
+      critic = AgentNetworkBuilder.fromJson(netConf)(noInputs, 1,Activation.HARDTANH),
       alpha = conf.get[Double]("alpha").right.get,
       beta = conf.get[Double]("beta").right.get,
       actorRatio = conf.get[Double]("actorRatio").right.get,
