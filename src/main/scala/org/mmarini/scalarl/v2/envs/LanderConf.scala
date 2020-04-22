@@ -244,22 +244,22 @@ object LanderConf {
    *
    * @param conf the json configuration
    */
-  def apply(conf: ACursor): LanderConf = new LanderConf(
-    dt = conf.get[Double]("dt").right.get,
-    h0Range = conf.get[Double]("h0Range").right.get,
-    z0 = conf.get[Double]("z0").right.get,
-    hRange = conf.get[Double]("hRange").right.get,
-    zMax = conf.get[Double]("zMax").right.get,
-    landingRadius = conf.get[Double]("landingRadius").right.get,
-    landingVH = conf.get[Double]("landingVH").right.get,
-    landingVZ = conf.get[Double]("landingVZ").right.get,
-    g = conf.get[Double]("g").right.get,
-    maxAH = conf.get[Double]("maxAH").right.get,
-    maxAZ = conf.get[Double]("maxAZ").right.get,
-    landedReward = conf.get[Double]("landedReward").right.get,
-    crashReward = conf.get[Double]("crashReward").right.get,
-    outOfRangeReward = conf.get[Double]("outOfRangeReward").right.get,
-    outOfFuelReward = conf.get[Double]("outOfFuelReward").right.get,
-    rewardDistanceScale = conf.get[Double]("rewardDistanceScale").right.get,
-    fuel = conf.get[Int]("fuel").right.get)
+  def fromJson(conf: ACursor): LanderConf = new LanderConf(
+    dt = conf.get[Double]("dt").toTry.get,
+    h0Range = conf.get[Double]("h0Range").toTry.get,
+    z0 = conf.get[Double]("z0").toTry.get,
+    hRange = conf.get[Double]("hRange").toTry.get,
+    zMax = conf.get[Double]("zMax").toTry.get,
+    landingRadius = conf.get[Double]("landingRadius").toTry.get,
+    landingVH = conf.get[Double]("landingVH").toTry.get,
+    landingVZ = conf.get[Double]("landingVZ").toTry.get,
+    g = conf.get[Double]("g").toTry.get,
+    maxAH = conf.get[Double]("maxAH").toTry.get,
+    maxAZ = conf.get[Double]("maxAZ").toTry.get,
+    landedReward = conf.get[Double]("landedReward").toTry.get,
+    crashReward = conf.get[Double]("crashReward").toTry.get,
+    outOfRangeReward = conf.get[Double]("outOfRangeReward").toTry.get,
+    outOfFuelReward = conf.get[Double]("outOfFuelReward").toTry.get,
+    rewardDistanceScale = conf.get[Double]("rewardDistanceScale").toTry.get,
+    fuel = conf.get[Int]("fuel").toTry.get)
 }

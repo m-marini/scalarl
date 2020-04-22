@@ -151,15 +151,15 @@ object LanderCustomCoder {
    *
    * @param conf the json configuration
    */
-  def apply(conf: ACursor): LanderCustomCoder = {
-    new LanderCustomCoder(z1 = conf.get[Double]("z1").right.get,
-      hRange = conf.get[Double]("hRange").right.get,
-      zMax = conf.get[Double]("zMax").right.get,
-      landingRadius = conf.get[Double]("landingRadius").right.get,
-      landingVH = conf.get[Double]("landingVH").right.get,
-      landingVZ = conf.get[Double]("landingVZ").right.get,
-      vhRange = conf.get[Double]("vhRange").right.get,
-      vzRange = conf.get[Double]("vzRange").right.get
+  def fromJson(conf: ACursor): LanderCustomCoder = {
+    new LanderCustomCoder(z1 = conf.get[Double]("z1").toTry.get,
+      hRange = conf.get[Double]("hRange").toTry.get,
+      zMax = conf.get[Double]("zMax").toTry.get,
+      landingRadius = conf.get[Double]("landingRadius").toTry.get,
+      landingVH = conf.get[Double]("landingVH").toTry.get,
+      landingVZ = conf.get[Double]("landingVZ").toTry.get,
+      vhRange = conf.get[Double]("vhRange").toTry.get,
+      vzRange = conf.get[Double]("vzRange").toTry.get
     )
   }
 }

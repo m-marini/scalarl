@@ -52,12 +52,13 @@ object AgentNetworkBuilder extends LazyLogging {
    * Returns the [[MultiLayerNetwork]] builder for an actor
    *
    * @param conf       the json configuration
+   * @param filename   file name of model
    * @param noInputs   the number of inputs
    * @param noOutputs  the number of outputs
    * @param activation the output nodes activation function
    */
-  def fromJson(conf: ACursor)(noInputs: Int, noOutputs: Int, activation: Activation): MultiLayerNetwork = conf.get[String]("modelFile").toOption.
-    map(load).getOrElse {
+  def fromJson( conf: ACursor, filename: String)(noInputs: Int, noOutputs: Int, activation: Activation): MultiLayerNetwork = conf.get[String]("modelFile").toOption.
+    map(load(filename)).getOrElse {
     create(conf)(noInputs, noOutputs, activation)
   }
 
@@ -127,8 +128,8 @@ object AgentNetworkBuilder extends LazyLogging {
    *
    * @param path the path of loading model
    */
-  def load(path: String): MultiLayerNetwork = {
-    val file = new File(path, "actor.zip")
+  def load(filename:String)(path: String): MultiLayerNetwork = {
+    val file = new File(path, filename)
     logger.info("Loading {} ...", file)
     ModelSerializer.restoreMultiLayerNetwork(file, true)
   }

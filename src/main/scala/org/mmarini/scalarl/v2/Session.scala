@@ -123,6 +123,13 @@ class Session(env: => Env,
     val returnValue1 = returnValue + reward
     val totalScore1 = totalScore + score * score
 
+    val ctx0 = context.copy(env = env1,
+      agent = agent1,
+      obs = obs1,
+      step = step + 1,
+      totalScore = totalScore1,
+      returnValue = returnValue1)
+
     // Generate step event
     val stepInfo = Step(
       epoch = epoch,
@@ -132,16 +139,12 @@ class Session(env: => Env,
       agent0 = agent0,
       env1 = env1,
       agent1 = agent1,
-      session = this)
+      score,
+      session = this,
+      context=ctx0)
 
     stepsPub.onNext(stepInfo)
 
-    val ctx0 = context.copy(env = env1,
-      agent = agent1,
-      obs = obs1,
-      step = step + 1,
-      totalScore = totalScore1,
-      returnValue = returnValue1)
 
     ctx0
   }

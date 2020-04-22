@@ -171,7 +171,7 @@ case class ExpSarsaAgent(net: MultiLayerNetwork,
    * @return the agents
    */
   override def writeModel(file: String): Agent = {
-    ModelSerializer.writeModel(net, new File(file), false)
+    ModelSerializer.writeModel(net, new File(file, "network.zip"), false)
     this
   }
 
@@ -268,18 +268,18 @@ object ExpSarsaAgent {
   def fromJson(conf: ACursor)(noInputs: Int, noActions: Int): ExpSarsaAgent = {
     val tolerance = loadTolerance(conf.downField("tolerance"))
     val avgReward = conf.get[Double]("avgReward").right.get
-    val net = AgentNetworkBuilder.fromJson(conf.downField("network"))(noInputs, noActions, Activation.IDENTITY)
+    val net = AgentNetworkBuilder.fromJson(conf.downField("network"), "network.zip")(noInputs, noActions, Activation.IDENTITY)
     ExpSarsaAgent(net = net,
       noActions = noActions,
       model = Seq(),
-      beta = conf.get[Double]("beta").right.get,
+      beta = conf.get[Double]("beta").toTry.get,
       avgReward = avgReward,
-      maxModelSize = conf.get[Int]("maxModelSize").right.get,
-      minModelSize = conf.get[Int]("minModelSize").right.get,
-      epsilon = conf.get[Double]("epsilon").right.get,
-      kappa = conf.get[Double]("kappa").right.get,
-      kappaPlus = conf.get[Double]("kappaPlus").right.get,
-      planningStepsCounter = conf.get[Int]("planningStepsCounter").right.get,
+      maxModelSize = conf.get[Int]("maxModelSize").toTry.get,
+      minModelSize = conf.get[Int]("minModelSize").toTry.get,
+      epsilon = conf.get[Double]("epsilon").toTry.get,
+      kappa = conf.get[Double]("kappa").toTry.get,
+      kappaPlus = conf.get[Double]("kappaPlus").toTry.get,
+      planningStepsCounter = conf.get[Int]("planningStepsCounter").toTry.get,
       tolerance = tolerance)
   }
 
@@ -291,11 +291,11 @@ object ExpSarsaAgent {
   private def loadTolerance(cursor: ACursor): Option[INDArray] = {
     val intervals = cursor.values.map(list => {
       list.map(item => {
-        val interval = item.hcursor.get[List[Int]]("interval").right.get
+        val interval = item.hcursor.get[List[Int]]("interval").toTry.get
         if (interval.size != 2) {
           throw new IllegalArgumentException("Wrong interval")
         }
-        val value = item.hcursor.get[Double]("value").right.get
+        val value = item.hcursor.get[Double]("value").toTry.get
         Interval((interval.head, interval(1)), value)
       })
     })

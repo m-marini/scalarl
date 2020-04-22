@@ -11,6 +11,8 @@
         </encoder>
     </appender>
 
+    <logger name="org.mmarini.scalarl.v2.agents.ACAgent" level="INFO"/>
+
     <root level="debug">
         <appender-ref ref="STDOUT"/>
     </root>

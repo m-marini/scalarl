@@ -76,34 +76,35 @@ case class LanderStatus(coder: LanderEncoder,
    *
    * @param random the random generator
    */
-  private def initial(random: Random): Env = {
+  private def initial(random: Random): LanderStatus = {
     val newEnv = copy(
       pos = conf.initialPos(random),
       speed = Nd4j.zeros(3),
-      fuel = conf.fuel)
+      fuel = conf.fuel,
+      time = time + conf.dt)
     newEnv
   }
 
   override def change(action: Action, random: Random): (Env, Reward) = {
-    val newEnv = drive(action)
-    val reward = if (newEnv.isOutOfRange) {
-      logger.info("Shuttle out of range")
-      conf.outOfRangeReward
-    } else if (newEnv.isCrashed) {
-      logger.info("Shuttle crashed")
-      conf.crashReward
-    } else if (newEnv.isLanded) {
-      logger.info("Shuttle landed")
-      conf.landedReward
-    } else if (newEnv.isOutOfFuel) {
-      logger.info("Shuttle out of fuel")
-      conf.outOfFuelReward
+    if (isFinal) {
+      (initial(random), 0)
     } else {
-      conf.rewardFromMovement(pos, newEnv.pos)
-    }
-    if (isLanded || isCrashed || isOutOfRange || isOutOfFuel) {
-      (newEnv.initial(random), reward)
-    } else {
+      val newEnv = drive(action)
+      val reward = if (newEnv.isOutOfRange) {
+        logger.info("Shuttle out of range")
+        conf.outOfRangeReward
+      } else if (newEnv.isCrashed) {
+        logger.info("Shuttle crashed")
+        conf.crashReward
+      } else if (newEnv.isLanded) {
+        logger.info("Shuttle landed")
+        conf.landedReward
+      } else if (newEnv.isOutOfFuel) {
+        logger.info("Shuttle out of fuel")
+        conf.outOfFuelReward
+      } else {
+        conf.rewardFromMovement(pos, newEnv.pos)
+      }
       (newEnv, reward)
     }
   }
@@ -117,8 +118,11 @@ case class LanderStatus(coder: LanderEncoder,
   /** Returns true if the shuttle has landed */
   def isLanded: Boolean = conf.isLanded(pos, speed)
 
-  /** Returns true is the shuttle crush */
+  /** Returns true if the shuttle crush */
   def isCrashed: Boolean = conf.isCrashed(pos, speed)
+
+  /** Returns true if final status */
+  def isFinal: Boolean = isOutOfFuel || isCrashed || isOutOfRange || isLanded
 
   /**
    * Returns the new status by driving with actions
@@ -145,11 +149,11 @@ object LanderStatus {
    *
    * @param conf the configuration
    */
-  def apply(conf: LanderConf, coder: LanderEncoder): LanderStatus = LanderStatus(
+  def apply(conf: LanderConf, coder: LanderEncoder, random: Random): LanderStatus = LanderStatus(
     coder = coder,
     pos = Nd4j.zeros(3),
     speed = Nd4j.zeros(3),
     time = 0,
     conf = conf,
-    fuel = conf.fuel)
+    fuel = conf.fuel).initial(random).copy(time = 0)
 }

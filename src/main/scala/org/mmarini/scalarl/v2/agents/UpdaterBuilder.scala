@@ -45,9 +45,9 @@ object UpdaterBuilder {
    */
   def adam(conf: ACursor)(noParms: => Int): Adam = {
     val eta = learningRate(conf)(noParms)
-    val beta1 = conf.get[Double]("beta1").right.get
-    val beta2 = conf.get[Double]("beta2").right.get
-    val epsilon = conf.get[Double]("epsilonAdam").right.get
+    val beta1 = conf.get[Double]("beta1").toTry.get
+    val beta2 = conf.get[Double]("beta2").toTry.get
+    val epsilon = conf.get[Double]("epsilonAdam").toTry.get
     new Adam(eta, beta1, beta2, epsilon)
   }
 
@@ -57,7 +57,7 @@ object UpdaterBuilder {
    * @param conf    the json configuration
    * @param noParms the number of parameters
    */
-  def fromJson(conf: ACursor)(noParms: => Int): IUpdater = conf.get[String]("updater").right.get match {
+  def fromJson(conf: ACursor)(noParms: => Int): IUpdater = conf.get[String]("updater").toTry.get match {
     case "Adam" => adam(conf)(noParms)
     case "Sgd" => sgd(conf)(noParms)
     case x => throw new IllegalArgumentException(s"unrecognized updater $x")
@@ -71,7 +71,7 @@ object UpdaterBuilder {
    */
   def learningRate(conf: ACursor)(noParms: => Int): Double =
     conf.get[Double]("learningRate").toOption.getOrElse {
-      val eta = conf.get[Double]("autoScaleLearningRate").right.get
+      val eta = conf.get[Double]("autoScaleLearningRate").toTry.get
       eta / noParms
     }
 

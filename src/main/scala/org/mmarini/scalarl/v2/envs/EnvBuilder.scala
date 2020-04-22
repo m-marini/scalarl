@@ -32,6 +32,7 @@ package org.mmarini.scalarl.v2.envs
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.ACursor
 import org.mmarini.scalarl.v2.Env
+import org.nd4j.linalg.api.rng.Random
 
 /**
  *
@@ -41,18 +42,14 @@ object EnvBuilder extends LazyLogging {
    *
    * @param conf the json configuration
    */
-  def fromJson(conf: ACursor): Env = {
-    val landerConf = LanderConf(conf)
-    val coder = conf.get[String]("type").toOption match {
-      case Some("Lander") =>
-        LanderCustomCoder(conf)
-      case Some("LanderTiles") =>
-        LanderTilesEncoder(conf)
-      case Some("LanderContinuous") =>
-        LanderContinuousEncoder(conf)
-      case Some(typ) => throw new IllegalArgumentException(s"Unreconginzed coder type '$typ'")
-      case _ => throw new IllegalArgumentException("Missing coder type")
+  def fromJson(conf: ACursor)(random: Random): Env = {
+    val landerConf = LanderConf.fromJson(conf)
+    val coder = conf.get[String]("type").toTry.get match {
+      case "Lander" => LanderCustomCoder.fromJson(conf)
+      case "LanderTiles" => LanderTilesEncoder.fromJson(conf)
+      case "LanderContinuous" => LanderContinuousEncoder.fromJson(conf)
+      case typ => throw new IllegalArgumentException(s"Unreconginzed coder type '$typ'")
     }
-    LanderStatus(landerConf, coder)
+    LanderStatus(landerConf, coder, random)
   }
 }

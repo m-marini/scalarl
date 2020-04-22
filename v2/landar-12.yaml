@@ -1,0 +1,56 @@
+---
+version: "2"
+env:
+  type: LanderTiles
+  dt: 0.25
+  h0Range: 5
+  z0: 1
+  fuel: 10
+  zMax: 150
+  hRange: 500
+  zRange: 150
+  vhRange: 24
+  vzRange: 12
+  landingRadius: 10
+  landingVH: 0.5
+  landingVZ: 4
+  g: 1.6
+  maxAH: 1
+  maxAZ: 3.2
+  landedReward: 10
+  crashReward: -10
+  outOfRangeReward: -10
+  outOfFuelReward: -10
+  rewardDistanceScale: 1
+agent:
+  type: ActorCriticAgent
+  actorRatio: 5
+  criticRatio: 20
+#  kappa: 1
+#  maxModelSize: 0
+#  minModelSize: 100
+#  kappaPlus: 0
+#  planningStepsCounter: 0
+  avgReward: 0
+  alpha: 0.1
+  beta: 0.01
+  network:
+    numHiddens: 
+      - 30
+      - 30
+    updater: Sgd
+    autoScaleLearningRate: 1.0
+    #beta1: 0.9
+    #beta2: 0.999
+    #epsilonAdam: 0.1
+    maxAbsGradients: 10
+    maxAbsParameters: 10e3
+    dropOut: 0.8
+    #bias: 10
+    #modelFile: lander.zip
+session:
+  numSteps: 3000
+  #seed: 1234
+  # trace: lander-trace-0.csv
+  dump: v2/lander-dump-12.csv
+  #modelFile: lander-0.zip

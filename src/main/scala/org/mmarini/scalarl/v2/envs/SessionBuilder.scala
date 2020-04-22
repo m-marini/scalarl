@@ -39,8 +39,9 @@ import org.mmarini.scalarl.FileUtils.{withFile, writeINDArray}
 import org.mmarini.scalarl.v2._
 import org.mmarini.scalarl.v2.agents.ExpSarsaAgent
 import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
+
+import scala.concurrent.duration.DurationInt
 
 /**
  *
@@ -55,21 +56,20 @@ object SessionBuilder extends LazyLogging {
    * @param env   the environment
    * @param agent the agent
    */
-  def fromJson(conf: ACursor)(epoch: Int, env: => Env, agent: => Agent): (Session, Random) = {
-    val numSteps = conf.get[Int]("numSteps").right.get
+  def fromJson(conf: ACursor)(epoch: Int, env: => Env, agent: => Agent): Session = {
+    val numSteps = conf.get[Int]("numSteps").toTry.get
     val dump = conf.get[String]("dump").toOption
     val trace = conf.get[String]("trace").toOption
     val saveModel = conf.get[String]("modelFile").toOption
-    val random = conf.get[Long]("seed").map(
-      Nd4j.getRandomFactory.getNewRandomInstance
-    ).getOrElse(
-      Nd4j.getRandom
-    )
 
     // Clean up all files
     if (epoch == 0) {
       (dump.toSeq ++ trace ++ saveModel).foreach(new File(_).delete())
     }
+    saveModel.foreach(f => {
+      new File(f).mkdirs()
+    })
+
 
     // Create session
     val session = new Session(
@@ -92,7 +92,34 @@ object SessionBuilder extends LazyLogging {
       logger.error(ex.getMessage, ex)
     }).subscribe()(Scheduler.global)
 
-    (session, random)
+    // log data every 2 seconds
+    session.steps.sample(2 seconds).doOnNext(step => Task.eval {
+      logger.info(f"Epoch ${
+        step.epoch
+      }%,3d, Steps ${
+        step.step
+      }%6d ,avg rewards=${
+        if (step.step != 0) step.context.returnValue / step.step else 0.0
+      }%,12g, avgScore=${
+        if (step.step != 0) step.context.totalScore / step.step else 0.0
+      }%12g")
+    }).subscribe()(Scheduler.global)
+
+    // Save model every 10 steps
+    session.steps.takeEveryNth(10).doOnNext(step => Task.eval {
+      saveModel.foreach(step.context.agent.writeModel)
+    }).doOnError(ex => Task.eval {
+      logger.error(ex.getMessage, ex)
+    }).subscribe()(Scheduler.global)
+
+    // Save at the end
+    session.steps.last.doOnNext(step => Task.eval {
+      saveModel.foreach(step.context.agent.writeModel)
+    }).doOnError(ex => Task.eval {
+      logger.error(ex.getMessage, ex)
+    }).subscribe()(Scheduler.global)
+
+    session
   }
 
   /**
@@ -104,10 +131,22 @@ object SessionBuilder extends LazyLogging {
    * - average loss
    * - 10 x 10 x 8 of q action values for each state for each action
    */
-  private def createLanderDump(episode: Step): INDArray = {
-    val kpi = Nd4j.create(Array[Double](episode.epoch, episode.step)).transpose()
-    Nd4j.hstack(kpi)
-  }
+  private def createLanderDump(step: Step): INDArray =
+    Nd4j.hstack(Nd4j.create(Array[Double](
+      step.epoch,
+      step.step,
+      step.feedback.reward,
+      step.score,
+      step.env0.asInstanceOf[LanderStatus].time,
+      step.env0.asInstanceOf[LanderStatus].fuel)),
+      step.env0.asInstanceOf[LanderStatus].pos,
+      step.env0.asInstanceOf[LanderStatus].speed,
+      Nd4j.create(Array[Double](
+        step.feedback.action,
+        if (step.env1.asInstanceOf[LanderStatus].isFinal) 1.0 else 0.0)),
+      step.env1.asInstanceOf[LanderStatus].pos,
+      step.env1.asInstanceOf[LanderStatus].speed,
+    )
 
   /**
    * Returns the trace data array of the step

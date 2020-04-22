@@ -78,5 +78,5 @@ object LanderTilesEncoder {
    *
    * @param conf the json configuration
    */
-  def apply(conf: ACursor): LanderTilesEncoder = new LanderTilesEncoder(hash = conf.get[Int]("hash").toOption)
+  def fromJson(conf: ACursor): LanderTilesEncoder = new LanderTilesEncoder(hash = conf.get[Int]("hash").toOption)
 }

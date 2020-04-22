@@ -39,7 +39,9 @@ package org.mmarini.scalarl.v2
  * @param agent0  the agent before the step
  * @param env1    the environment after the step
  * @param agent1  the agent after the step
+ * @param score   the score
  * @param session the session
+ * @param context the session context
  */
 case class Step(epoch: Int,
                 step: Int,
@@ -48,4 +50,6 @@ case class Step(epoch: Int,
                 agent0: Agent,
                 env1: Env,
                 agent1: Agent,
-                session: Session)
+                score: Double,
+                session: Session,
+                context: SessionContext)

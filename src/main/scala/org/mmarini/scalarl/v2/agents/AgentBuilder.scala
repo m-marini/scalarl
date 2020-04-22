@@ -44,10 +44,10 @@ object AgentBuilder {
    * @param noInputs  the number ofr inputs
    * @param noOutputs the number of outpus
    */
-  def fromJson(conf: ACursor)(noInputs: Int, noOutputs: Int): Agent = conf.get[String]("type").right.get match {
+  def fromJson(conf: ACursor)(noInputs: Int, noOutputs: Int): Agent = conf.get[String]("type").toTry.get match {
     case "ExpectedSarsaAgent" => ExpSarsaAgent.fromJson(conf)(noInputs, noOutputs)
     case "ActorCriticAgent" => acAgent(conf)(noInputs, noOutputs)
-    case _ => throw new IllegalArgumentException("Wrong agent type")
+    case typ => throw new IllegalArgumentException(s"Wrong agent type '$typ'")
   }
 
   /**
@@ -58,12 +58,12 @@ object AgentBuilder {
   def acAgent(conf: ACursor)(noInputs: Int, noOutputs: Int): ACAgent = {
     val netConf = conf.downField("network")
     ACAgent(
-      actor = AgentNetworkBuilder.fromJson(netConf)(noInputs, noOutputs, Activation.HARDTANH),
-      critic = AgentNetworkBuilder.fromJson(netConf)(noInputs, 1,Activation.HARDTANH),
-      alpha = conf.get[Double]("alpha").right.get,
-      beta = conf.get[Double]("beta").right.get,
-      actorRatio = conf.get[Double]("actorRatio").right.get,
-      criticRatio = conf.get[Double]("criticRatio").right.get,
-      avg = conf.get[Double]("avgReward").right.get)
+      actor = AgentNetworkBuilder.fromJson(netConf, "actor.zip")(noInputs, noOutputs, Activation.HARDTANH),
+      critic = AgentNetworkBuilder.fromJson(netConf,"critic.zip")(noInputs, 1,Activation.HARDTANH),
+      alpha = conf.get[Double]("alpha").toTry.get,
+      beta = conf.get[Double]("beta").toTry.get,
+      actorRatio = conf.get[Double]("actorRatio").toTry.get,
+      criticRatio = conf.get[Double]("criticRatio").toTry.get,
+      avg = conf.get[Double]("avgReward").toTry.get)
   }
 }

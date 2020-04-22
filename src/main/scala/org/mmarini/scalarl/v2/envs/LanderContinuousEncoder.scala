@@ -85,9 +85,9 @@ object LanderContinuousEncoder {
    *
    * @param conf the json configuration
    */
-  def apply(conf: ACursor): LanderContinuousEncoder = new LanderContinuousEncoder(
-    hRange = conf.get[Double]("hRange").right.get,
-    zMax = conf.get[Double]("zMax").right.get,
-    vhRange = conf.get[Double]("vhRange").right.get,
-    vzRange = conf.get[Double]("vzRange").right.get)
+  def fromJson(conf: ACursor): LanderContinuousEncoder = new LanderContinuousEncoder(
+    hRange = conf.get[Double]("hRange").toTry.get,
+    zMax = conf.get[Double]("zMax").toTry.get,
+    vhRange = conf.get[Double]("vhRange").toTry.get,
+    vzRange = conf.get[Double]("vzRange").toTry.get)
 }
