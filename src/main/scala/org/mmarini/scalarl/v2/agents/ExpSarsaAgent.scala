@@ -27,7 +27,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.v1.agents
+package org.mmarini.scalarl.v2.agents
 
 import java.io.File
 
@@ -35,7 +35,8 @@ import com.typesafe.scalalogging.LazyLogging
 import io.circe.ACursor
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.util.ModelSerializer
-import org.mmarini.scalarl.v1._
+import org.mmarini.scalarl.v2._
+import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
@@ -95,11 +96,7 @@ case class ExpSarsaAgent(net: MultiLayerNetwork,
    *
    * @param observation the observation
    */
-  def q(observation: Observation): Policy = if (observation.endUp) {
-    Nd4j.zeros(noActions)
-  } else {
-    net.output(observation.signals)
-  }
+  def q(observation: Observation): Policy = net.output(observation.signals)
 
   /**
    * Returns the fit agent by optimizing its strategy policy and the score
@@ -168,20 +165,13 @@ case class ExpSarsaAgent(net: MultiLayerNetwork,
   }
 
   /**
-   * Returns the reset agent
-   *
-   * @param random the random generator
-   */
-  override def reset(random: Random): Agent = this
-
-  /**
    * Writes the agent status to file
    *
    * @param file the filename
    * @return the agents
    */
   override def writeModel(file: String): Agent = {
-    ModelSerializer.writeModel(net, new File(file), false)
+    ModelSerializer.writeModel(net, new File(file, "network.zip"), false)
     this
   }
 
@@ -278,18 +268,18 @@ object ExpSarsaAgent {
   def fromJson(conf: ACursor)(noInputs: Int, noActions: Int): ExpSarsaAgent = {
     val tolerance = loadTolerance(conf.downField("tolerance"))
     val avgReward = conf.get[Double]("avgReward").right.get
-    val net = AgentNetworkBuilder.fromJson(conf.downField("network"))(noInputs, noActions)
+    val net = AgentNetworkBuilder.fromJson(conf.downField("network"), "network.zip")(noInputs, noActions, Activation.IDENTITY)
     ExpSarsaAgent(net = net,
       noActions = noActions,
       model = Seq(),
-      beta = conf.get[Double]("beta").right.get,
+      beta = conf.get[Double]("beta").toTry.get,
       avgReward = avgReward,
-      maxModelSize = conf.get[Int]("maxModelSize").right.get,
-      minModelSize = conf.get[Int]("minModelSize").right.get,
-      epsilon = conf.get[Double]("epsilon").right.get,
-      kappa = conf.get[Double]("kappa").right.get,
-      kappaPlus = conf.get[Double]("kappaPlus").right.get,
-      planningStepsCounter = conf.get[Int]("planningStepsCounter").right.get,
+      maxModelSize = conf.get[Int]("maxModelSize").toTry.get,
+      minModelSize = conf.get[Int]("minModelSize").toTry.get,
+      epsilon = conf.get[Double]("epsilon").toTry.get,
+      kappa = conf.get[Double]("kappa").toTry.get,
+      kappaPlus = conf.get[Double]("kappaPlus").toTry.get,
+      planningStepsCounter = conf.get[Int]("planningStepsCounter").toTry.get,
       tolerance = tolerance)
   }
 
@@ -301,11 +291,11 @@ object ExpSarsaAgent {
   private def loadTolerance(cursor: ACursor): Option[INDArray] = {
     val intervals = cursor.values.map(list => {
       list.map(item => {
-        val interval = item.hcursor.get[List[Int]]("interval").right.get
+        val interval = item.hcursor.get[List[Int]]("interval").toTry.get
         if (interval.size != 2) {
           throw new IllegalArgumentException("Wrong interval")
         }
-        val value = item.hcursor.get[Double]("value").right.get
+        val value = item.hcursor.get[Double]("value").toTry.get
         Interval((interval.head, interval(1)), value)
       })
     })

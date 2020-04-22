@@ -27,7 +27,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.v1
+package org.mmarini.scalarl.v2
 
 import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FunSpec, Matchers}

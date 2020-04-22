@@ -1,0 +1,54 @@
+---
+version: "2"
+env:
+  type: LanderTiles
+  dt: 0.25
+  h0Range: 5
+  z0: 1
+  fuel: 10
+  zMax: 150
+  hRange: 500
+  zRange: 150
+  vhRange: 24
+  vzRange: 12
+  landingRadius: 10
+  landingVH: 0.5
+  landingVZ: 4
+  g: 1.6
+  maxAH: 1
+  maxAZ: 3.2
+  landedReward: 10
+  crashReward: -10
+  outOfRangeReward: -10
+  outOfFuelReward: -10
+  rewardDistanceScale: 1
+agent:
+  type: ExpectedSarsaAgent
+  epsilon: 0.01
+  kappa: 1
+  maxModelSize: 0
+  minModelSize: 100
+  kappaPlus: 0
+  planningStepsCounter: 0
+  avgReward: 0
+  beta: 0.5
+  network:
+    #  layers 2048 125 125
+    numHiddens: [15]
+    #seed: 1234
+    updater: Adam
+    autoScaleLearningRate: 1.0
+    beta1: 0.9
+    beta2: 0.999
+    epsilonAdam: 0.1
+    maxAbsGradients: 1
+    maxAbsParameters: 10e3
+    dropOut: 0.8
+    bias: 10
+    #modelFile: lander.zip
+session:
+  numSteps: 3000
+  #seed: 1234
+  # trace: lander-trace-0.csv
+  dump: lander-dump-0.csv
+  modelFile: lander-0.zip

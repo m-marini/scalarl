@@ -27,10 +27,11 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.v1.envs
+package org.mmarini.scalarl.v2.envs
 
 import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.v1.agents.AgentBuilder
+import org.mmarini.scalarl.v2.agents.AgentBuilder
+import org.nd4j.linalg.factory.Nd4j
 
 /**
  *
@@ -47,11 +48,19 @@ object Main extends LazyLogging {
     logger.info("File {} epoch {}", file, epoch)
 
     val jsonConf = Configuration.jsonFromFile(file)
-    val env = EnvBuilder.fromJson(jsonConf.hcursor.downField("env"))
+    require(jsonConf.hcursor.get[String]("version").toTry.get == "2")
+
+    val random = jsonConf.hcursor.get[Long]("seed").map(
+      Nd4j.getRandomFactory.getNewRandomInstance
+    ).getOrElse(
+      Nd4j.getRandom
+    )
+    val env = EnvBuilder.fromJson(jsonConf.hcursor.downField("env"))(random)
     val agent = AgentBuilder.fromJson(jsonConf.hcursor.downField("agent"))(env.signalsSize, env.actionsSize)
-    val (session, random) = SessionBuilder.fromJson(jsonConf.hcursor.downField("session"))(epoch, env = env, agent = agent)
+    val session = SessionBuilder.fromJson(jsonConf.hcursor.downField("session"))(epoch, env = env, agent = agent)
 
     session.run(random)
+
     logger.info("Session completed.")
   }
 }

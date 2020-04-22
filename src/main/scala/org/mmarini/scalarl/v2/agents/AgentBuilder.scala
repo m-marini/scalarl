@@ -27,31 +27,43 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.v1.envs
+package org.mmarini.scalarl.v2.agents
 
-import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.v1.agents.AgentBuilder
+import io.circe.ACursor
+import org.mmarini.scalarl.v2.Agent
+import org.nd4j.linalg.activations.Activation
 
 /**
  *
  */
-object Main extends LazyLogging {
+object AgentBuilder {
+  /**
+   * Returns the agent
+   *
+   * @param conf      the json configuration
+   * @param noInputs  the number ofr inputs
+   * @param noOutputs the number of outpus
+   */
+  def fromJson(conf: ACursor)(noInputs: Int, noOutputs: Int): Agent = conf.get[String]("type").toTry.get match {
+    case "ExpectedSarsaAgent" => ExpSarsaAgent.fromJson(conf)(noInputs, noOutputs)
+    case "ActorCriticAgent" => acAgent(conf)(noInputs, noOutputs)
+    case typ => throw new IllegalArgumentException(s"Wrong agent type '$typ'")
+  }
 
   /**
+   * Returns the Dyna+Agent
    *
-   * @param args the line command arguments
+   * @param conf the configuration element
    */
-  def main(args: Array[String]) {
-    val file = if (args.isEmpty) "maze.yaml" else args(0)
-    val epoch = if (args.length >= 2) args(1).toInt else 0
-    logger.info("File {} epoch {}", file, epoch)
-
-    val jsonConf = Configuration.jsonFromFile(file)
-    val env = EnvBuilder.fromJson(jsonConf.hcursor.downField("env"))
-    val agent = AgentBuilder.fromJson(jsonConf.hcursor.downField("agent"))(env.signalsSize, env.actionsSize)
-    val (session, random) = SessionBuilder.fromJson(jsonConf.hcursor.downField("session"))(epoch, env = env, agent = agent)
-
-    session.run(random)
-    logger.info("Session completed.")
+  def acAgent(conf: ACursor)(noInputs: Int, noOutputs: Int): ACAgent = {
+    val netConf = conf.downField("network")
+    ACAgent(
+      actor = AgentNetworkBuilder.fromJson(netConf, "actor.zip")(noInputs, noOutputs, Activation.HARDTANH),
+      critic = AgentNetworkBuilder.fromJson(netConf,"critic.zip")(noInputs, 1,Activation.HARDTANH),
+      alpha = conf.get[Double]("alpha").toTry.get,
+      beta = conf.get[Double]("beta").toTry.get,
+      actorRatio = conf.get[Double]("actorRatio").toTry.get,
+      criticRatio = conf.get[Double]("criticRatio").toTry.get,
+      avg = conf.get[Double]("avgReward").toTry.get)
   }
 }

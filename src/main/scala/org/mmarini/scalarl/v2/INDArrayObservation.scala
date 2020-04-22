@@ -27,31 +27,18 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.v1.envs
+package org.mmarini.scalarl.v2
 
-import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.v1.agents.AgentBuilder
+import org.nd4j.linalg.api.ndarray.INDArray
 
 /**
+ * The concrete observation of the environment status.
  *
+ * @param time    the instant
+ * @param signals the environment status observation
+ * @param actions the valid action for the current environment status
  */
-object Main extends LazyLogging {
-
-  /**
-   *
-   * @param args the line command arguments
-   */
-  def main(args: Array[String]) {
-    val file = if (args.isEmpty) "maze.yaml" else args(0)
-    val epoch = if (args.length >= 2) args(1).toInt else 0
-    logger.info("File {} epoch {}", file, epoch)
-
-    val jsonConf = Configuration.jsonFromFile(file)
-    val env = EnvBuilder.fromJson(jsonConf.hcursor.downField("env"))
-    val agent = AgentBuilder.fromJson(jsonConf.hcursor.downField("agent"))(env.signalsSize, env.actionsSize)
-    val (session, random) = SessionBuilder.fromJson(jsonConf.hcursor.downField("session"))(epoch, env = env, agent = agent)
-
-    session.run(random)
-    logger.info("Session completed.")
-  }
+case class INDArrayObservation(time: Double,
+                               signals: INDArray,
+                               actions: ActionMask) extends Observation {
 }

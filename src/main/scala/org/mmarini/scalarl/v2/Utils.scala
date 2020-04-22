@@ -1,4 +1,4 @@
-package org.mmarini.scalarl.v1
+package org.mmarini.scalarl.v2
 
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
