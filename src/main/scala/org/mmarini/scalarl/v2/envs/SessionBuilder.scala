@@ -37,7 +37,6 @@ import monix.eval.Task
 import monix.execution.Scheduler
 import org.mmarini.scalarl.FileUtils.{withFile, writeINDArray}
 import org.mmarini.scalarl.v2._
-import org.mmarini.scalarl.v2.agents.ExpSarsaAgent
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
 
@@ -132,21 +131,11 @@ object SessionBuilder extends LazyLogging {
    * - 10 x 10 x 8 of q action values for each state for each action
    */
   private def createLanderDump(step: Step): INDArray =
-    Nd4j.hstack(Nd4j.create(Array[Double](
+    Nd4j.create(Array[Double](
       step.epoch,
       step.step,
       step.feedback.reward,
-      step.score,
-      step.env0.asInstanceOf[LanderStatus].time,
-      step.env0.asInstanceOf[LanderStatus].fuel)),
-      step.env0.asInstanceOf[LanderStatus].pos,
-      step.env0.asInstanceOf[LanderStatus].speed,
-      Nd4j.create(Array[Double](
-        step.feedback.action,
-        if (step.env1.asInstanceOf[LanderStatus].isFinal) 1.0 else 0.0)),
-      step.env1.asInstanceOf[LanderStatus].pos,
-      step.env1.asInstanceOf[LanderStatus].speed,
-    )
+      step.score))
 
   /**
    * Returns the trace data array of the step
@@ -166,33 +155,28 @@ object SessionBuilder extends LazyLogging {
    * - prev q1
    */
   private def createLanderTrace(step: Step): INDArray = {
-    val env0 = step.env0.asInstanceOf[Lander]
-    val pos0 = env0.pos
-    val speed0 = env0.speed
-    val env1 = step.env1.asInstanceOf[Lander]
-    val pos1 = env1.pos
-    val speed1 = env1.speed
-    val head = Nd4j.create(Array[Double](
-      step.epoch,
-      step.step))
-    val mid = Nd4j.create(Array(step.feedback.reward))
-    val agent0 = step.agent0.asInstanceOf[ExpSarsaAgent]
-    val agent1 = step.agent1.asInstanceOf[ExpSarsaAgent]
-    val q0 = agent0.q(env0.observation)
-    val q1 = agent0.q(env1.observation)
-    val q01 = agent1.q(env0.observation)
-    Nd4j.hstack(
-      head,
-      Nd4j.create(Array(step.feedback.action.toDouble)),
-      mid,
+    val Step(epoch, stepCount, feedback, env0, _, env1, _, score, _, _) = step
+    val LanderStatus(_, pos0, speed0, t0, fuel0, _) = env0
+    val LanderStatus(_, pos1, speed1, _, _, _) = env1
+    val isFinal = if (env1.asInstanceOf[LanderStatus].isFinal) 1.0 else 0.0
+    val Feedback(_, action, reward, _) = feedback
+
+    val result = Nd4j.hstack(
+      Nd4j.create(Array[Double](
+        epoch,
+        stepCount,
+        reward,
+        score,
+        t0,
+        fuel0)),
       pos0,
       speed0,
+      Nd4j.create(Array[Double](
+        action,
+        isFinal)),
       pos1,
-      speed1,
-      Nd4j.create(Array(agent0.avgReward)),
-      q0,
-      q1,
-      q01)
+      speed1)
+    result
   }
 
   /**

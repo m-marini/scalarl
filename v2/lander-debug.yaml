@@ -24,21 +24,14 @@ env:
   rewardDistanceScale: 1
 agent:
   type: ActorCriticAgent
-  actorRatio: 5
-  criticRatio: 20
-#  kappa: 1
-#  maxModelSize: 0
-#  minModelSize: 100
-#  kappaPlus: 0
-#  planningStepsCounter: 0
   avgReward: 0
-  alpha: 0.1
-  beta: 0.01
+  alpha: 3
+  rewardDecay: 0.99
+  valueDecay: 0.99
   network:
-    #  layers 2048 125 125
     numHiddens: [15]
-    #seed: 1234
-    updater: Adam
+    seed: 1234
+    updater: Sgd
     autoScaleLearningRate: 1.0
     beta1: 0.9
     beta2: 0.999
@@ -50,7 +43,7 @@ agent:
     #modelFile: lander.zip
 session:
   numSteps: 3000
-  #seed: 1234
+  seed: 1234
   # trace: lander-trace-0.csv
   dump: lander-dump-0.csv
   modelFile: lander-model

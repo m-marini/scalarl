@@ -47,8 +47,7 @@ import org.scalatest.{FunSpec, Matchers}
 
 class TestEnvACAgentTest extends FunSpec with Matchers with LazyLogging {
   val Seed = 12345L
-  val NoSteps = 1000
-  val MaxEpisodeLength = 100
+  val NoSteps = 30000
   val Hiddens = 10
 
   Nd4j.create()
@@ -56,12 +55,10 @@ class TestEnvACAgentTest extends FunSpec with Matchers with LazyLogging {
   def agent: Agent = ACAgent(
     actor = actor,
     critic = critic,
-    actorRatio = 5.0,
-    criticRatio = 20,
-    alpha = 0.3,
-    beta = 0.03,
-    avg = 0
-  )
+    avg = 0,
+    alpha = 3,
+    rewardDecay = 0.97,
+    valueDecay = 0.99)
 
   def critic: MultiLayerNetwork = {
     val hidden = new DenseLayer.Builder().
@@ -109,7 +106,7 @@ class TestEnvACAgentTest extends FunSpec with Matchers with LazyLogging {
       nIn(3).
       nOut(2).
       lossFunction(LossFunction.MSE).
-      activation(Activation.TANH).
+      activation(Activation.IDENTITY).
       build()
 
     val conf = new NeuralNetConfiguration.Builder().
@@ -130,7 +127,7 @@ class TestEnvACAgentTest extends FunSpec with Matchers with LazyLogging {
     net
   }
 
-  def random: Random =
+  val random: Random =
     Nd4j.getRandomFactory.getNewRandomInstance(Seed)
 
   describe("TestEnv") {

@@ -30,7 +30,7 @@
 package org.mmarini.scalarl.ts.envs
 
 import com.typesafe.scalalogging.LazyLogging
-import org.mmarini.scalarl.ts.agents.{DynaQPlusAgent, ExpSarsaAgent}
+import org.mmarini.scalarl.ts.agents.{DynaQPlusAgent}
 
 /**
  *
@@ -52,7 +52,6 @@ object Main extends LazyLogging {
       env.actionConfig.size).build()
     val agentConf = jsonConf.hcursor.downField("agent")
     val agent = agentConf.get[String]("type").right.get match {
-      case "ExpectedSarsaAgent" => ExpSarsaAgent(agentConf, net, env.actionConfig)
       case "DynaQ+Agent" => DynaQPlusAgent(agentConf, net, env.actionConfig)
       case _ => throw new IllegalArgumentException("Wrong agent type")
     }

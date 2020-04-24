@@ -11,6 +11,7 @@
 /.cache-tests
 /data*
 /maze.zip
+/v2/*.csv
 /*.csv
 /octave/octave-workspace
 /analysis/*.aux
