@@ -8,26 +8,24 @@ import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.v2._
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.indexing.NDArrayIndex
+import org.nd4j.linalg.ops.transforms.Transforms
 
 /**
  * Actor critic agent
  *
  * @param actor       the actor network
  * @param critic      the critic network
- * @param actorRatio  the actor output ratio
- * @param criticRatio the critic output ratio
- * @param alpha       the alpha parameter
  * @param avg         the average rewards
- * @param beta        the beta parameter
+ * @param alpha       the alpha parameter
+ * @param rewardDecay the beta parameter
+ * @param valueDecay  the value decay
  */
 case class ACAgent(actor: MultiLayerNetwork,
                    critic: MultiLayerNetwork,
-                   actorRatio: Double,
-                   criticRatio: Double,
-                   alpha: Double,
                    avg: Double,
-                   beta: Double) extends Agent with LazyLogging {
+                   alpha: Double,
+                   rewardDecay: Double,
+                   valueDecay: Double) extends Agent with LazyLogging {
 
   /**
    * Returns the new agent and the chosen action.
@@ -37,7 +35,7 @@ case class ACAgent(actor: MultiLayerNetwork,
    * @param random      the random generator
    */
   override def chooseAction(observation: Observation, random: Random): Action = {
-    val prefs = actor.output(observation.signals).mul(actorRatio)
+    val prefs = actor.output(observation.signals)
     val pi = Utils.softMax(prefs, observation.actions)
     Utils.randomInt(pi)(random)
   }
@@ -52,29 +50,33 @@ case class ACAgent(actor: MultiLayerNetwork,
     val Feedback(s0, action, reward, s1) = feedback
     val v0 = v(s0)
     val v1 = v(s1)
-    val newv0 = v1 + reward - avg
+    val newv0 = (v1 + reward - avg) * valueDecay + (1 - valueDecay) * avg
     val delta = newv0 - v0
-    val newAvg = avg + delta * beta
+    val newAvg = rewardDecay * avg + (1 - rewardDecay) * reward
 
     // Critic update
     val criticLabel = Nd4j.create(Array(newv0))
     val newCritic = critic.clone()
-    newCritic.fit(s0.signals, criticLabel.div(criticRatio))
+    newCritic.fit(s0.signals, criticLabel)
     val score = delta * delta
 
     // Actor update
-    val prefs = actor.output(s0.signals).mul(actorRatio)
+    val prefs = actor.output(s0.signals)
     val pi = Utils.softMax(prefs, s0.actions)
-    val actorLabel = prefs.dup().subi(pi)
-    actorLabel.get(NDArrayIndex.point(action)).addi(1)
-    actorLabel.muli(delta * alpha)
+    val expTot = Transforms.exp(Utils.indexed(prefs, s0.actions)).sumNumber().doubleValue()
+    val deltaPref = Nd4j.zeros(prefs.shape(): _*)
+    deltaPref.putScalar(action, 1 / expTot)
+    deltaPref.subi(pi).muli(alpha * delta)
+    val actorLabel = prefs.add(deltaPref)
+    // normalize
     val actorLabel1 = actorLabel.sub(actorLabel.mean())
     val newActor = actor.clone()
-    newActor.fit(s0.signals, actorLabel1.div(actorRatio))
+    newActor.fit(s0.signals, actorLabel1)
     logger.whenDebugEnabled {
-      val v2 = v(newCritic, criticRatio, s0)
+      val npr = prefs.sub(prefs.mean())
+      val v2 = v(newCritic, s0)
       val pi1 = Utils.softMax(actorLabel1, s0.actions)
-      val pr2 = newActor.output(s0.signals).mul(actorRatio)
+      val pr2 = newActor.output(s0.signals)
       val pi2 = Utils.softMax(pr2, s0.actions)
       logger.debug("---------------------------------------------------------------")
       logger.debug("  s0      = {}", s0.signals)
@@ -89,6 +91,7 @@ case class ACAgent(actor: MultiLayerNetwork,
       logger.debug("  avg(R)  = {}", avg)
       logger.debug("  avg'(R) = {}", newAvg)
       logger.debug("  pr      = {} ", prefs)
+      logger.debug("  npr     = {} ", npr)
       logger.debug("  pr'     = {}", actorLabel)
       logger.debug("  npr'    = {}", actorLabel1)
       logger.debug("  pr\"     = {}", pr2)
@@ -105,17 +108,16 @@ case class ACAgent(actor: MultiLayerNetwork,
    * Returns the value of a state
    *
    */
-  private def v(obs: Observation): Double = v(critic, criticRatio, obs)
+  private def v(obs: Observation): Double = v(critic, obs)
 
   /**
    * Returns the value of a state
    *
-   * @param critic      the critic
-   * @param criticRatio the ratio of critic
-   * @param obs         the observation
+   * @param critic the critic
+   * @param obs    the observation
    */
-  private def v(critic: MultiLayerNetwork, criticRatio: Double, obs: Observation): Double =
-    critic.output(obs.signals).getDouble(0L) * criticRatio
+  private def v(critic: MultiLayerNetwork, obs: Observation): Double =
+    critic.output(obs.signals).getDouble(0L)
 
   /**
    * Returns the score for a feedback
@@ -123,7 +125,7 @@ case class ACAgent(actor: MultiLayerNetwork,
    * @param feedback the feedback from the last step
    */
   override def score(feedback: Feedback): Double = {
-    val Feedback(s0, action, reward, s1) = feedback
+    val Feedback(s0, _, reward, s1) = feedback
     val v0 = v(s0)
     val v1 = v(s1)
     val delta = v1 + reward - avg - v0

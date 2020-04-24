@@ -59,11 +59,10 @@ object AgentBuilder {
     val netConf = conf.downField("network")
     ACAgent(
       actor = AgentNetworkBuilder.fromJson(netConf, "actor.zip")(noInputs, noOutputs, Activation.HARDTANH),
-      critic = AgentNetworkBuilder.fromJson(netConf,"critic.zip")(noInputs, 1,Activation.HARDTANH),
+      critic = AgentNetworkBuilder.fromJson(netConf, "critic.zip")(noInputs, 1, Activation.HARDTANH),
+      avg = conf.get[Double]("avgReward").toTry.get,
       alpha = conf.get[Double]("alpha").toTry.get,
-      beta = conf.get[Double]("beta").toTry.get,
-      actorRatio = conf.get[Double]("actorRatio").toTry.get,
-      criticRatio = conf.get[Double]("criticRatio").toTry.get,
-      avg = conf.get[Double]("avgReward").toTry.get)
+      rewardDecay = conf.get[Double]("rewardDecay").toTry.get,
+      valueDecay = conf.get[Double]("valueDecay").toTry.get)
   }
 }

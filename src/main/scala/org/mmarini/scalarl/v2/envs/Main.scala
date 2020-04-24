@@ -30,6 +30,7 @@
 package org.mmarini.scalarl.v2.envs
 
 import com.typesafe.scalalogging.LazyLogging
+import io.circe.DecodingFailure
 import org.mmarini.scalarl.v2.agents.AgentBuilder
 import org.nd4j.linalg.factory.Nd4j
 
@@ -43,24 +44,32 @@ object Main extends LazyLogging {
    * @param args the line command arguments
    */
   def main(args: Array[String]) {
-    val file = if (args.isEmpty) "maze.yaml" else args(0)
-    val epoch = if (args.length >= 2) args(1).toInt else 0
-    logger.info("File {} epoch {}", file, epoch)
+    Nd4j.create()
 
-    val jsonConf = Configuration.jsonFromFile(file)
-    require(jsonConf.hcursor.get[String]("version").toTry.get == "2")
+    try {
+      val file = if (args.isEmpty) "maze.yaml" else args(0)
+      val epoch = if (args.length >= 2) args(1).toInt else 0
+      logger.info("File {} epoch {}", file, epoch)
 
-    val random = jsonConf.hcursor.get[Long]("seed").map(
-      Nd4j.getRandomFactory.getNewRandomInstance
-    ).getOrElse(
-      Nd4j.getRandom
-    )
-    val env = EnvBuilder.fromJson(jsonConf.hcursor.downField("env"))(random)
-    val agent = AgentBuilder.fromJson(jsonConf.hcursor.downField("agent"))(env.signalsSize, env.actionsSize)
-    val session = SessionBuilder.fromJson(jsonConf.hcursor.downField("session"))(epoch, env = env, agent = agent)
+      val jsonConf = Configuration.jsonFromFile(file)
+      require(jsonConf.hcursor.get[String]("version").toTry.get == "2")
 
-    session.run(random)
+      val random = jsonConf.hcursor.get[Long]("seed").map(
+        Nd4j.getRandomFactory.getNewRandomInstance
+      ).getOrElse(
+        Nd4j.getRandom
+      )
+      val env = EnvBuilder.fromJson(jsonConf.hcursor.downField("env"))(random)
+      val agent = AgentBuilder.fromJson(jsonConf.hcursor.downField("agent"))(env.signalsSize, env.actionsSize)
+      val session = SessionBuilder.fromJson(jsonConf.hcursor.downField("session"))(epoch, env = env, agent = agent)
 
-    logger.info("Session completed.")
+      session.run(random)
+
+      logger.info("Session completed.")
+    } catch {
+      case ex: Throwable =>
+        logger.error(ex.getMessage, ex)
+        throw ex
+    }
   }
 }

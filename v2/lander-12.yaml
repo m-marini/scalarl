@@ -24,16 +24,10 @@ env:
   rewardDistanceScale: 1
 agent:
   type: ActorCriticAgent
-  actorRatio: 5
-  criticRatio: 20
-#  kappa: 1
-#  maxModelSize: 0
-#  minModelSize: 100
-#  kappaPlus: 0
-#  planningStepsCounter: 0
   avgReward: 0
-  alpha: 0.1
-  beta: 0.01
+  alpha: 3
+  rewardDecay: 0.99
+  valueDecay: 0.99
   network:
     numHiddens: 
       - 30

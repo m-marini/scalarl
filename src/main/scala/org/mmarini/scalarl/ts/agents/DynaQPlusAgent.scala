@@ -261,10 +261,10 @@ object DynaQPlusAgent {
    * @param net    the neural network
    * @param config the action channel configuration
    */
-  def apply(conf: ACursor, net: MultiLayerNetwork, config: DiscreteActionChannels): ExpSarsaAgent = {
+  def apply(conf: ACursor, net: MultiLayerNetwork, config: DiscreteActionChannels): DynaQPlusAgent = {
     val tolerance = loadTolerance(conf.downField("tolerance"))
     val avgReward = Nd4j.ones(config.noChannels).mul(conf.get[Double]("avgReward").right.get)
-    ExpSarsaAgent(net = net,
+    DynaQPlusAgent(net = net,
       model = Seq(),
       config = config,
       beta = conf.get[Double]("beta").right.get,
