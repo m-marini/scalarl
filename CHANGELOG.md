@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #36: Batch optimization
 - Issue #38: DynaQ+ Agent
 - Issue #39: Model tolerance
+- Issue #43: Tile coarse code
+- Issue #44: Actor Critic and sofmax policy
+- Issue #48: Simplify without multiple actions
 
 ## [0.1.0] - 2019-01-28
 
