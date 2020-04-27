@@ -33,46 +33,26 @@ import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 
 /**
- * The agent acting in the environment
- *
- * Generates actions to change the status of environment basing on observation of the environment
- * and the internal strategy policy.
- *
- * Updates its strategy policy to optimize the return value (discount sum of rewards)
- * and the observation of resulting environment
+ * The environment simulates the environment changing the status by action chosen by an agent
+ * and notifying the reward to the agent.
+ * Checks for end of episode by identifing the final states.
  */
-trait Agent {
+trait EnvContinuousAction {
 
   /**
-   * Returns the new agent and the chosen action.
-   * Chooses the action to be executed to the environment.
+   * Computes the next status of environment executing an action.
    *
-   * @param observation the observation of environment
-   * @param random      the random generator
+   * @param action the executing action
+   * @param random the random generator
+   * @return a n-uple with:
+   *         - the environment in the next status,
+   *         - the reward for the action,
    */
-  def chooseAction(observation: Observation, random: Random): Action
+  def change(action: INDArray, random: Random): (EnvContinuousAction, INDArray)
 
+  /** Returns the number of signals */
+  def signalsSize: Int
 
-  /**
-   * Returns the fit agent by optimizing its strategy policy and the score
-   *
-   * @param feedback the feedback from the last step
-   * @param random   the random generator
-   */
-  def fit(feedback: Feedback, random: Random): (Agent, INDArray)
-
-  /**
-   * Returns the score for a feedback
-   *
-   * @param feedback the feedback from the last step
-   */
-  def score(feedback: Feedback): INDArray
-
-  /**
-   * Writes the agent status to file
-   *
-   * @param file the filename
-   * @return the agents
-   */
-  def writeModel(file: String): Agent
+  /** Returns the [[Observation]] for the environment */
+  def observation: Observation
 }

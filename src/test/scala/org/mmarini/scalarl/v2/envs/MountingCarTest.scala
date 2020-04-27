@@ -36,33 +36,34 @@ import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
 import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
-import org.mmarini.scalarl.v2.agents.ACAgent
-import org.mmarini.scalarl.v2.{Agent, Session}
+import org.mmarini.scalarl.v2.agents.ACContinuousActionAgent
+import org.mmarini.scalarl.v2.{AgentContinuousAction, SessionContinuousAction}
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.rng.Random
-import org.nd4j.linalg.factory.Nd4j._
+import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.learning.config.Sgd
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 import org.scalatest.{FunSpec, Matchers}
 
-class TestEnvACAgentTest extends FunSpec with Matchers with LazyLogging {
+class MountingCarTest extends FunSpec with Matchers with LazyLogging {
   val Seed = 12345L
-  val NoSteps = 3000
+  val NoSteps = 1000
   val Hiddens = 10
+  val NoInputs: Long = Tiles(1, 1).noFeatures
 
-  create()
+  Nd4j.create()
 
-  def agent: Agent = ACAgent(
+  def agent: AgentContinuousAction = ACContinuousActionAgent(
     actor = actor,
     critic = critic,
-    avg = zeros(1),
-    alpha = ones(1).mul(3),
-    rewardDecay = ones(1).mul(0.97),
-    valueDecay = ones(1).mul(0.99))
+    avg = 0.0,
+    alpha = 0.1,
+    rewardDecay = 0.97,
+    valueDecay = 0.99)
 
   def critic: MultiLayerNetwork = {
     val outLayer = new OutputLayer.Builder().
-      nIn(3).
+      nIn(NoInputs).
       nOut(1).
       lossFunction(LossFunction.MSE).
       activation(Activation.IDENTITY).
@@ -71,7 +72,7 @@ class TestEnvACAgentTest extends FunSpec with Matchers with LazyLogging {
     val conf = new NeuralNetConfiguration.Builder().
       seed(Seed).
       weightInit(WeightInit.XAVIER).
-      updater(new Sgd(1.0 / 4)).
+      updater(new Sgd(1.0e-3)).
       //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
       //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
@@ -89,7 +90,7 @@ class TestEnvACAgentTest extends FunSpec with Matchers with LazyLogging {
 
   def actor: MultiLayerNetwork = {
     val outLayer = new OutputLayer.Builder().
-      nIn(3).
+      nIn(NoInputs).
       nOut(2).
       lossFunction(LossFunction.MSE).
       activation(Activation.IDENTITY).
@@ -100,7 +101,7 @@ class TestEnvACAgentTest extends FunSpec with Matchers with LazyLogging {
       weightInit(WeightInit.XAVIER).
       //      updater(new Adam(10.0 / (4 * Hiddens + (Hiddens + 1) * 2), 0.9, 0.999, 0.1)).
       //updater(new Adam(1.0 / (4 * 2), 0.9, 0.999, 0.1)).
-      updater(new Sgd(1.0 / (4 * 2))).
+      updater(new Sgd(1e-3)).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
       constrainAllParameters(new MinMaxNormConstraint(-10e3, 10e3, 1)).
       //    gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue).
@@ -113,41 +114,31 @@ class TestEnvACAgentTest extends FunSpec with Matchers with LazyLogging {
     net
   }
 
-  val random: Random = getRandomFactory.getNewRandomInstance(Seed)
+  val random: Random =
+    Nd4j.getRandomFactory.getNewRandomInstance(Seed)
 
   describe("TestEnv") {
 
-    val conf = TestEnvConfBuilder().numState(3).
-      p(0, 0, 0, 0, 1.0).
-      p(1, 0, 0, 1, 1.0).
-      p(1, 0, 1, 0, 1.0).
-      p(2, 1, 1, 1, 1.0).
-      p(0, 0, 2, 0, 1.0).
-      p(0, 0, 2, 1, 1.0).build
 
-    val s0 = TestEnv(zeros(1), 0, conf)
-    val s1 = TestEnv(zeros(1), 1, conf)
-    //  val s2 = TestEnv(0, 2, conf)
+    val s0 = MountingCarEnv.initial(random)
 
-    val session = new Session(numSteps = NoSteps,
+    val session = new SessionContinuousAction(numSteps = NoSteps,
       epoch = 0,
       env = s0,
       agent = agent)
 
-    it("should compare first with last episode") {
-      val (_, agent1) = session.run(random)
+    val (_, agent1) = session.run(random)
 
-      //t1.asInstanceOf[ExpSarsaAgent].avgReward shouldBe 0.25 +- 0.25
+    it("should accelerate left when going to left") {
+      val s = MountingCarEnv(Nd4j.zeros(1), Nd4j.ones(1).muli(-0.07), Nd4j.zeros(1))
+      val (mu, _, sigma) = agent1.asInstanceOf[ACContinuousActionAgent].muHSigma(s.observation)
+      mu.getDouble(0L) should be < 0.0
+    }
 
-      val q0 = agent1.asInstanceOf[ACAgent].actor.output(s0.observation.signals)
-      q0.getDouble(1L) shouldBe > (q0.getDouble(0L))
-      //      q0.getDouble(0L) shouldBe 0.125 +- 0.05
-      //      q0.getDouble(1L) shouldBe 0.25 +- 0.05
-
-      val q1 = agent1.asInstanceOf[ACAgent].actor.output(s1.observation.signals)
-      q1.getDouble(1L) shouldBe >(q1.getDouble(0L))
-      //      q1.getDouble(0L) shouldBe 0.5 +- 0.05
-      //      q1.getDouble(1L) shouldBe 0.625 +- 0.05
+    it("should accelerate right when going to right") {
+      val s = MountingCarEnv(Nd4j.zeros(1), Nd4j.ones(1).muli(0.07), Nd4j.zeros(1))
+      val (mu, _, sigma) = agent1.asInstanceOf[ACContinuousActionAgent].muHSigma(s.observation)
+      mu.getDouble(0L) should be > 0.0
     }
   }
 }

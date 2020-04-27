@@ -69,7 +69,7 @@ class LanderContinuousEncoder(zMax: Double,
    *
    * @param status the status
    */
-  override def signals(status: LanderStatus): QValues = {
+  override def signals(status: LanderStatus): INDArray = {
     val posSignals: INDArray = status.pos.mmul(signalsFromPos)
     val speedSignals: INDArray = status.speed.mmul(signalsFromSpeed)
     val signals = Nd4j.hstack(

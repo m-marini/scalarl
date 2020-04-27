@@ -37,12 +37,6 @@ trait Observation {
   /** Returns the tensor of status of environment */
   def signals: INDArray
 
-  /** Returns the obervation time instant */
-  def time: Double
-
-  /**
-   * Returns the valid actions vector.
-   * The vector contains the value 1 at valid action indices
-   */
-  def actions: ActionMask
+  /** Returns the observation time instant */
+  def time: INDArray
 }

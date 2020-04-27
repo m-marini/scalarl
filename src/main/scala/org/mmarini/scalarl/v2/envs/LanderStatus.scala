@@ -31,9 +31,10 @@ package org.mmarini.scalarl.v2.envs
 
 import com.typesafe.scalalogging.LazyLogging
 import org.mmarini.scalarl.v2._
+import org.mmarini.scalarl.v2.envs.StatusCode._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
-import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.factory.Nd4j._
 
 /**
  * The LanderStatus with position and speed
@@ -49,8 +50,8 @@ import org.nd4j.linalg.factory.Nd4j
 case class LanderStatus(coder: LanderEncoder,
                         pos: INDArray,
                         speed: INDArray,
-                        time: Double,
-                        fuel: Int,
+                        time: INDArray,
+                        fuel: INDArray,
                         conf: LanderConf) extends Lander with LazyLogging {
   /**
    * Return the observation of the current land status
@@ -69,8 +70,13 @@ case class LanderStatus(coder: LanderEncoder,
    */
   override lazy val observation: Observation = INDArrayObservation(
     signals = coder.signals(this),
-    actions = LanderConf.ValidActions,
     time = time)
+
+  /** Returns true if the status is final */
+  def isFinal: Boolean = status != Flying
+
+  /** Returns the status code */
+  def status: StatusCode.Value = conf.status(pos, speed, fuel)
 
   /**
    *
@@ -79,50 +85,40 @@ case class LanderStatus(coder: LanderEncoder,
   private def initial(random: Random): LanderStatus = {
     val newEnv = copy(
       pos = conf.initialPos(random),
-      speed = Nd4j.zeros(3),
+      speed = zeros(3),
       fuel = conf.fuel,
-      time = time + conf.dt)
+      time = time.add(conf.dt))
     newEnv
   }
 
-  override def change(action: Action, random: Random): (Env, Reward) = {
-    if (isFinal) {
-      (initial(random), 0)
-    } else {
-      val newEnv = drive(action)
-      val reward = if (newEnv.isOutOfRange) {
-        logger.info("Shuttle out of range")
-        conf.outOfRangeReward
-      } else if (newEnv.isCrashed) {
-        logger.info("Shuttle crashed")
-        conf.crashReward
-      } else if (newEnv.isLanded) {
-        logger.info("Shuttle landed")
-        conf.landedReward
-      } else if (newEnv.isOutOfFuel) {
-        logger.info("Shuttle out of fuel")
-        conf.outOfFuelReward
-      } else {
-        conf.rewardFromMovement(pos, newEnv.pos)
-      }
-      (newEnv, reward)
+  override def change(action: Action, random: Random): (Env, INDArray) = {
+    status match {
+      case Flying =>
+        val newEnv = drive(action)
+        val reward = newEnv.status match {
+          case OutOfRange =>
+            logger.info("Shuttle out of range")
+            conf.outOfRangeReward
+          case Crashed =>
+            logger.info("Shuttle crashed")
+            conf.crashReward
+          case Landed =>
+            logger.info("Shuttle landed")
+            conf.landedReward
+          case OutOfPlatform =>
+            logger.info("Shuttle landed out of platform")
+            conf.crashReward
+          case OutOfFuel =>
+            logger.info("Shuttle out of fuel")
+            conf.outOfFuelReward
+          case Flying =>
+            conf.rewardFromMovement(pos, newEnv.pos)
+        }
+        (newEnv, reward)
+      case _ =>
+        (initial(random), zeros(1))
     }
   }
-
-  /** Returns trueh is out of fuel */
-  def isOutOfFuel: Boolean = fuel <= 0
-
-  /** Returns true if the shuttle is out of range */
-  def isOutOfRange: Boolean = conf.isOutOfRange(pos)
-
-  /** Returns true if the shuttle has landed */
-  def isLanded: Boolean = conf.isLanded(pos, speed)
-
-  /** Returns true if the shuttle crush */
-  def isCrashed: Boolean = conf.isCrashed(pos, speed)
-
-  /** Returns true if final status */
-  def isFinal: Boolean = isOutOfFuel || isCrashed || isOutOfRange || isLanded
 
   /**
    * Returns the new status by driving with actions
@@ -131,7 +127,7 @@ case class LanderStatus(coder: LanderEncoder,
    */
   def drive(action: Action): LanderStatus = {
     val (p, v) = conf.drive(action, pos, speed)
-    copy(pos = p, speed = v, fuel = fuel - 1, time = time + conf.dt)
+    copy(pos = p, speed = v, fuel = fuel.sub(1), time = time.add(conf.dt))
   }
 
   /** Returns the number of signals */
@@ -145,15 +141,15 @@ case class LanderStatus(coder: LanderEncoder,
 object LanderStatus {
 
   /**
-   * Returns the initial environent
+   * Returns the initial environment
    *
    * @param conf the configuration
    */
   def apply(conf: LanderConf, coder: LanderEncoder, random: Random): LanderStatus = LanderStatus(
-    coder = coder,
-    pos = Nd4j.zeros(3),
-    speed = Nd4j.zeros(3),
-    time = 0,
     conf = conf,
-    fuel = conf.fuel).initial(random).copy(time = 0)
+    coder = coder,
+    pos = conf.initialPos(random),
+    speed = zeros(3),
+    time = zeros(1),
+    fuel = conf.fuel)
 }

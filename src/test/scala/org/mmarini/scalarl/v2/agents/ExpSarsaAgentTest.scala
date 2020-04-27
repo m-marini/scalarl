@@ -27,52 +27,45 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.v2
+package org.mmarini.scalarl.v2.agents
 
-import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.api.rng.Random
+import org.nd4j.linalg.factory.Nd4j._
+import org.scalatest.{FunSpec, Matchers}
 
-/**
- * The agent acting in the environment
- *
- * Generates actions to change the status of environment basing on observation of the environment
- * and the internal strategy policy.
- *
- * Updates its strategy policy to optimize the return value (discount sum of rewards)
- * and the observation of resulting environment
- */
-trait Agent {
+class ExpSarsaAgentTest extends FunSpec with Matchers {
 
-  /**
-   * Returns the new agent and the chosen action.
-   * Chooses the action to be executed to the environment.
-   *
-   * @param observation the observation of environment
-   * @param random      the random generator
-   */
-  def chooseAction(observation: Observation, random: Random): Action
+  create()
 
+  describe("ExpSarsaAgentTest") {
+    describe("when create data") {
+      val q0 = create(Array[Double](1, 2))
+      val q1 = create(Array[Double](1.5, 2.0))
+      val reward = ones(1).mul(2)
+      val avg = ones(1)
+      val action = 0
+      val beta = ones(1).muli(0.9)
+      val epsilon = ones(1).muli(0.1)
 
-  /**
-   * Returns the fit agent by optimizing its strategy policy and the score
-   *
-   * @param feedback the feedback from the last step
-   * @param random   the random generator
-   */
-  def fit(feedback: Feedback, random: Random): (Agent, INDArray)
+      val (labels, newAvg, score) = ExpSarsaAgent.createData(q0, q1, action, reward, beta, epsilon, avg)
 
-  /**
-   * Returns the score for a feedback
-   *
-   * @param feedback the feedback from the last step
-   */
-  def score(feedback: Feedback): INDArray
+      val v0 = 1.0
+      val v1 = 1.5 * 0.1 + 2.0 * 0.9
+      val newv0 = v1 + 2 - 1
+      val delta = newv0 - v0
+      val ExpScore = delta * delta
+      val ExpAvg = 0.9 * 2 + 0.1 * 1
+      val ExpLabels = q0.dup()
+      ExpLabels.putScalar(action, newv0)
 
-  /**
-   * Writes the agent status to file
-   *
-   * @param file the filename
-   * @return the agents
-   */
-  def writeModel(file: String): Agent
+      it("should return labels") {
+        labels shouldBe ExpLabels
+      }
+      it("should return new average") {
+        newAvg shouldBe ones(1).muli(ExpAvg)
+      }
+      it("should return score") {
+        score shouldBe ones(1).muli(ExpScore)
+      }
+    }
+  }
 }

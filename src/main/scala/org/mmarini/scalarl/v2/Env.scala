@@ -29,6 +29,7 @@
 
 package org.mmarini.scalarl.v2
 
+import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 
 /**
@@ -47,7 +48,7 @@ trait Env {
    *         - the environment in the next status,
    *         - the reward for the action,
    */
-  def change(action: Action, random: Random): (Env, Reward)
+  def change(action: Action, random: Random): (Env, INDArray)
 
   /** Returns the action channel configuration of the environment */
   def actionsSize: Int

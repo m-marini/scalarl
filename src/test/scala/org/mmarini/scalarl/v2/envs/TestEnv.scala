@@ -29,9 +29,11 @@
 
 package org.mmarini.scalarl.v2.envs
 
-import org.mmarini.scalarl.v2.{Action, Env, INDArrayObservation, Reward}
+import org.mmarini.scalarl.v2.Utils._
+import org.mmarini.scalarl.v2._
+import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
-import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.factory.Nd4j._
 
 /**
  *
@@ -39,17 +41,14 @@ import org.nd4j.linalg.factory.Nd4j
  * @param status the status
  * @param conf   the configuration
  */
-case class TestEnv(time: Double, status: Int, conf: TestEnvConf) extends Env {
+case class TestEnv(time: INDArray, status: Int, conf: TestEnvConf) extends Env {
 
-  /** Returns the [[org.mmarini.scalarl.v1.Observation]] for the environment */
-  override lazy val observation: INDArrayObservation = {
-    val signals = Nd4j.zeros(conf.numState)
+  /** Returns the [[org.mmarini.scalarl.v2.Observation]] for the environment */
+  override lazy val observation: Observation = {
+    val signals = zeros(conf.numState)
     signals.putScalar(status, 1)
-    val actions = 0L to 1L
-    val endUp = status >= conf.numState - 1
     val o = INDArrayObservation(time = time,
-      signals = signals,
-      actions = actions)
+      signals = signals)
     o
   }
 
@@ -63,14 +62,11 @@ case class TestEnv(time: Double, status: Int, conf: TestEnvConf) extends Env {
    *         - the resulting observation,
    *         - the reward for the action,
    */
-  override def change(action: Action, random: Random): (Env, Reward) = {
+  override def change(action: Action, random: Random): (Env, INDArray) = {
     val txs = conf.pi((status, action))
-    val pi = random.nextDouble()
-    val tx = txs.zipWithIndex.find(pi < _._1._1).get
-    val result = tx match {
-      case ((_, reward), status) => (copy(time = time + 1, status = status), reward)
-    }
-    result
+    val s1 = randomInt(df(txs.getColumns(0).transpose()))(random)
+    val reward = txs.getScalar(s1, 1L)
+    (copy(time = time.add(1), status = s1), reward)
   }
 
   /** Returns the number of signals */
@@ -83,16 +79,16 @@ case class TestEnv(time: Double, status: Int, conf: TestEnvConf) extends Env {
 /**
  *
  * @param numState number of states
- * @param pi       Map of (status, action)->(cumulative probability, reward)
+ * @param pi       Map of (status, action)->(preference, reward)
  */
-case class TestEnvConf(numState: Int, pi: Map[(Int, Int), Seq[(Double, Double)]])
+case class TestEnvConf(numState: Int, pi: Map[(Int, Int), INDArray])
 
 /**
  *
  * @param numState number of state
  * @param pi       Map of (status, action, status + 1) -> (likely, reward),
  */
-case class TestEnvConfBuilder(numState: Int, pi: Map[(Int, Int, Int), (Double, Double)]) {
+case class TestEnvConfBuilder(numState: Int, pi: Map[(Int, Int, Int), INDArray]) {
   def numState(numState: Int): TestEnvConfBuilder = copy(numState = numState)
 
   /**
@@ -108,7 +104,7 @@ case class TestEnvConfBuilder(numState: Int, pi: Map[(Int, Int, Int), (Double, D
     require(s0 >= 0 && s0 < numState)
     require(a >= 0 && a <= 1)
     require(s1 >= 0 && s1 < numState)
-    val pi1 = pi + ((s0, a, s1) -> (p, r))
+    val pi1 = pi + ((s0, a, s1) -> create(Array(p, r)))
     copy(pi = pi1)
   }
 
@@ -123,14 +119,9 @@ case class TestEnvConfBuilder(numState: Int, pi: Map[(Int, Int, Int), (Double, D
     } yield {
       val tab = for {
         s1 <- 0 until numState
-      } yield pi.getOrElse((s, a, s1), (0.0, 0.0))
-      val tot = Math.max(tab.map(_._1).sum, 1e-3)
-      val tab1 = tab.foldLeft(Seq[(Double, Double)]()) {
-        case (Nil, (likely, reward: Reward)) => Seq((likely, reward))
-        case (t, (likely, reward: Reward)) =>
-          t :+ (t.last._1 + likely, reward)
-      }
-      (s, a) -> tab1.map(entry => (entry._1 / tot, entry._2))
+      } yield pi.getOrElse((s, a, s1), zeros(2))
+      val tab1  =  vstack(tab.toArray : _*)
+      (s, a) -> tab1
     }
     TestEnvConf(numState, pi1.toMap)
   }
