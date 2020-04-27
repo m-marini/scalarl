@@ -30,35 +30,37 @@
 package org.mmarini.scalarl.v2.envs
 
 import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.indexing.{INDArrayIndex, NDArrayIndex}
 import org.scalatest.{FunSpec, Matchers}
 
 class LanderCustomerCoderTest extends FunSpec with Matchers {
-  Nd4j.create()
-  val DefaultFuel = 10
+  create()
+
+  val DefaultFuel: INDArray = ones(1).mul(10.0)
+
   val conf: LanderConf = new LanderConf(
-    dt = 0.25,
-    h0Range = 5.0,
-    z0 = 1.0,
+    dt = ones(1).mul(0.25),
+    h0Range = ones(1).mul(5.0),
+    z0 = ones(1).mul(1.0),
     fuel = DefaultFuel,
-    zMax = 150.0,
-    hRange = 500.0,
-    landingRadius = 10.0,
-    landingVH = 0.5,
-    landingVZ = 4.0,
-    g = 1.6,
-    maxAH = 1,
-    maxAZ = 3.2,
-    landedReward = 100.0,
-    crashReward = -100.0,
-    outOfRangeReward = -100.0,
-    outOfFuelReward = -100.0,
-    rewardDistanceScale = 0.01)
+    zMax = ones(1).mul(150.0),
+    hRange = ones(1).mul(500.0),
+    landingRadius = ones(1).mul(10.0),
+    landingVH = ones(1).mul(0.5),
+    landingVZ = ones(1).mul(4.0),
+    g = ones(1).mul(1.6),
+    maxAH = ones(1).mul(1),
+    maxAZ = ones(1).mul(3.2),
+    landedReward = ones(1).mul(100.0),
+    crashReward = ones(1).mul(-100.0),
+    outOfRangeReward = ones(1).mul(-100.0),
+    outOfFuelReward = ones(1).mul(-100.0),
+    rewardDistanceScale = ones(1).mul(0.01))
 
   val coder: LanderEncoder = new LanderCustomCoder(
     z1 = 10.0,
-    zMax = 150,
+    zMax = 150.0,
     hRange = 500.0,
     vhRange = 24.0,
     landingVH = 0.5,
@@ -90,18 +92,18 @@ class LanderCustomerCoderTest extends FunSpec with Matchers {
 
   def features(idx: Int, size: Int): INDArray = {
     require(idx >= 0 && idx < size)
-    val f = Nd4j.zeros(size)
+    val f = zeros(size)
     f.putScalar(idx, 1)
     f
   }
 
   def status(pos: INDArray, speed: INDArray): LanderStatus =
-    LanderStatus(pos = pos, speed = speed, conf = conf, coder = coder, time = 0, fuel = DefaultFuel)
+    LanderStatus(pos = pos, speed = speed, conf = conf, coder = coder, time = zeros(1), fuel = DefaultFuel)
 
   describe("LanderConf pos signals") {
-    val speed = Nd4j.zeros(3)
+    val speed = zeros(3)
     describe("at (0,0,0)") {
-      val pos = Nd4j.zeros(3)
+      val pos = zeros(3)
       val signals = coder.signals(status(pos, speed))
       it("should return pos signals (0,0,0)") {
         signals.get(Pos) shouldBe pos
@@ -111,110 +113,110 @@ class LanderCustomerCoderTest extends FunSpec with Matchers {
       }
     }
     describe("at low SW") {
-      val pos = Nd4j.create(Array(-250.0, -250.0, 5.0))
+      val pos = create(Array(-250.0, -250.0, 5.0))
       val signals = coder.signals(status(pos, speed))
       it("should return pos signals (-0.5,-0.5,0)") {
-        signals.get(Pos) shouldBe Nd4j.create(Array(-0.5, -0.5, 5.0 / 150.0))
+        signals.get(Pos) shouldBe create(Array(-0.5, -0.5, 5.0 / 150.0))
       }
       it("should return pos features") {
         signals.get(PosFeatures) shouldBe features(0, PosSize)
       }
     }
     describe("at low NW") {
-      val pos = Nd4j.create(Array(-250.0, 250.0, 5.0))
+      val pos = create(Array(-250.0, 250.0, 5.0))
       val signals = coder.signals(status(pos, speed))
       it("should return pos signals (-0.5,0.5,0)") {
-        signals.get(Pos) shouldBe Nd4j.create(Array(-0.5, 0.5, 5.0 / 150.0))
+        signals.get(Pos) shouldBe create(Array(-0.5, 0.5, 5.0 / 150.0))
       }
       it("should return pos features") {
         signals.get(PosFeatures) shouldBe features(1, PosSize)
       }
     }
     describe("at low SE") {
-      val pos = Nd4j.create(Array(250.0, -250.0, 5.0))
+      val pos = create(Array(250.0, -250.0, 5.0))
       val signals = coder.signals(status(pos, speed))
       it("should return pos signals (0.5,-0.5,0)") {
-        signals.get(Pos) shouldBe Nd4j.create(Array(0.5, -0.5, 5.0 / 150.0))
+        signals.get(Pos) shouldBe create(Array(0.5, -0.5, 5.0 / 150.0))
       }
       it("should return pos features") {
         signals.get(PosFeatures) shouldBe features(2, PosSize)
       }
     }
     describe("at low NE") {
-      val pos = Nd4j.create(Array(250.0, 250.0, 5.0))
+      val pos = create(Array(250.0, 250.0, 5.0))
       val signals = coder.signals(status(pos, speed))
       it("should return pos signals (0.5,0.5,0)") {
-        signals.get(Pos) shouldBe Nd4j.create(Array(0.5, 0.5, 5.0 / 150.0))
+        signals.get(Pos) shouldBe create(Array(0.5, 0.5, 5.0 / 150.0))
       }
       it("should return pos features") {
         signals.get(PosFeatures) shouldBe features(3, PosSize)
       }
     }
     describe("at (0,0,11)") {
-      val pos = Nd4j.create(Array(0.0, 0.0, 10.0))
+      val pos = create(Array(0.0, 0.0, 10.0))
       val signals = coder.signals(status(pos, speed))
       it("should return pos signals (0,0,1/15)") {
-        signals.get(Pos) shouldBe Nd4j.create(Array(0.0, 0.0, 10.0 / 150.0))
+        signals.get(Pos) shouldBe create(Array(0.0, 0.0, 10.0 / 150.0))
       }
       it("should return pos features") {
         signals.get(PosFeatures) shouldBe features(HighCenter, PosSize)
       }
     }
     describe("at high SW") {
-      val pos = Nd4j.create(Array(-250.0, -250.0, 10.0))
+      val pos = create(Array(-250.0, -250.0, 10.0))
       val signals = coder.signals(status(pos, speed))
       it("should return pos signals (-0.5,-0.5,10/150)") {
-        signals.get(Pos) shouldBe Nd4j.create(Array(-0.5, -0.5, 10.0 / 150.0))
+        signals.get(Pos) shouldBe create(Array(-0.5, -0.5, 10.0 / 150.0))
       }
       it("should return pos features") {
         signals.get(PosFeatures) shouldBe features(HighSW, PosSize)
       }
     }
     describe("at high NW") {
-      val pos = Nd4j.create(Array(-250.0, 250.0, 10.0))
+      val pos = create(Array(-250.0, 250.0, 10.0))
       val signals = coder.signals(status(pos, speed))
       it("should return pos signals (-0.5,0.5,1/15)") {
-        signals.get(Pos) shouldBe Nd4j.create(Array(-0.5, 0.5, 10.0 / 150.0))
+        signals.get(Pos) shouldBe create(Array(-0.5, 0.5, 10.0 / 150.0))
       }
       it("should return pos features") {
         signals.get(PosFeatures) shouldBe features(HighNW, PosSize)
       }
     }
     describe("at high SE") {
-      val pos = Nd4j.create(Array(250.0, -250.0, 10.0))
+      val pos = create(Array(250.0, -250.0, 10.0))
       val signals = coder.signals(status(pos, speed))
       it("should return pos signals (0.5,-0.5,1/15)") {
-        signals.get(Pos) shouldBe Nd4j.create(Array(0.5, -0.5, 10.0 / 150.0))
+        signals.get(Pos) shouldBe create(Array(0.5, -0.5, 10.0 / 150.0))
       }
       it("should return pos features") {
         signals.get(PosFeatures) shouldBe features(HighSE, PosSize)
       }
     }
     describe("at high NE") {
-      val pos = Nd4j.create(Array(250.0, 250.0, 10.0))
+      val pos = create(Array(250.0, 250.0, 10.0))
       val signals = coder.signals(status(pos, speed))
       it("should return pos signals (0.5,0.5,1/15)") {
-        signals.get(Pos) shouldBe Nd4j.create(Array(0.5, 0.5, 10.0 / 150.0))
+        signals.get(Pos) shouldBe create(Array(0.5, 0.5, 10.0 / 150.0))
       }
       it("should return pos features") {
         signals.get(PosFeatures) shouldBe features(HighNE, PosSize)
       }
     }
     describe("border of low center") {
-      val pos = Nd4j.create(Array(7.07, 7.07, 9.999))
+      val pos = create(Array(7.07, 7.07, 9.999))
       val signals = coder.signals(status(pos, speed))
       it("should return pos signals (7.07/500,7.07/500,1/15)") {
-        signals.get(Pos) shouldBe Nd4j.create(Array(7.07 / 500, 7.07 / 500, 10.0 / 150.0))
+        signals.get(Pos) shouldBe create(Array(7.07 / 500, 7.07 / 500, 10.0 / 150.0))
       }
       it("should return pos features") {
         signals.get(PosFeatures) shouldBe features(LowCenter, PosSize)
       }
     }
     describe("border out low center") {
-      val pos = Nd4j.create(Array(7.072, 7.072, 9.999))
+      val pos = create(Array(7.072, 7.072, 9.999))
       val signals = coder.signals(status(pos, speed))
       it("should return pos signals (7.072/500,7.072/500,1/15)") {
-        signals.get(Pos) shouldBe Nd4j.create(Array(7.072 / 500, 7.072 / 500, 10.0 / 150.0))
+        signals.get(Pos) shouldBe create(Array(7.072 / 500, 7.072 / 500, 10.0 / 150.0))
       }
       it("should return pos features") {
         signals.get(PosFeatures) shouldBe features(3, PosSize)
@@ -223,9 +225,9 @@ class LanderCustomerCoderTest extends FunSpec with Matchers {
   }
 
   describe("LanderConf hspeed signals") {
-    val pos = Nd4j.zeros(3)
+    val pos = zeros(3)
     describe("speed (0,0,0)") {
-      val speed = Nd4j.zeros(3)
+      val speed = zeros(3)
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0,0,0)") {
         signals.get(Speed) shouldBe speed
@@ -235,80 +237,80 @@ class LanderCustomerCoderTest extends FunSpec with Matchers {
       }
     }
     describe("low speed SW") {
-      val speed = Nd4j.create(Array(-0.176, -0.176, 0.0))
+      val speed = create(Array(-0.176, -0.176, 0.0))
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (-0.176,-0.176,0)") {
-        signals.get(Speed) shouldBe Nd4j.create(Array(-0.176 / 24, -0.176 / 24, 0.0))
+        signals.get(Speed) shouldBe create(Array(-0.176 / 24, -0.176 / 24, 0.0))
       }
       it("should return h speed features") {
         signals.get(HSpeedFeatures) shouldBe features(0, HSpeedSize)
       }
     }
     describe("low speed centrer NW") {
-      val speed = Nd4j.create(Array(-0.176, 0.176, 0.0))
+      val speed = create(Array(-0.176, 0.176, 0.0))
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (-0.176,0.176,0)") {
-        signals.get(Speed) shouldBe Nd4j.create(Array(-0.176 / 24, 0.176 / 24, 0.0))
+        signals.get(Speed) shouldBe create(Array(-0.176 / 24, 0.176 / 24, 0.0))
       }
       it("should return h speed features") {
         signals.get(HSpeedFeatures) shouldBe features(1, HSpeedSize)
       }
     }
     describe("low speed SE") {
-      val speed = Nd4j.create(Array(0.176, -0.176, 0.0))
+      val speed = create(Array(0.176, -0.176, 0.0))
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.176,-0.176,0)") {
-        signals.get(Speed) shouldBe Nd4j.create(Array(0.176 / 24, -0.176 / 24, 0.0))
+        signals.get(Speed) shouldBe create(Array(0.176 / 24, -0.176 / 24, 0.0))
       }
       it("should return h speed features") {
         signals.get(HSpeedFeatures) shouldBe features(2, HSpeedSize)
       }
     }
     describe("low speed NE") {
-      val speed = Nd4j.create(Array(0.176, 0.176, 0.0))
+      val speed = create(Array(0.176, 0.176, 0.0))
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.176,0.176,0)") {
-        signals.get(Speed) shouldBe Nd4j.create(Array(0.176 / 24, 0.176 / 24, 0.0))
+        signals.get(Speed) shouldBe create(Array(0.176 / 24, 0.176 / 24, 0.0))
       }
       it("should return h speed features") {
         signals.get(HSpeedFeatures) shouldBe features(3, HSpeedSize)
       }
     }
     describe("high speed SW") {
-      val speed = Nd4j.create(Array(-0.177, -0.177, 0.0))
+      val speed = create(Array(-0.177, -0.177, 0.0))
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (-0.177,-0.177,0)") {
-        signals.get(Speed) shouldBe Nd4j.create(Array(-0.177 / 24, -0.177 / 24, 0.0))
+        signals.get(Speed) shouldBe create(Array(-0.177 / 24, -0.177 / 24, 0.0))
       }
       it("should return h speed features") {
         signals.get(HSpeedFeatures) shouldBe features(HighSW, HSpeedSize)
       }
     }
     describe("high speed NW") {
-      val speed = Nd4j.create(Array(-0.177, 0.177, 0.0))
+      val speed = create(Array(-0.177, 0.177, 0.0))
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (-0.177,0.177,0)") {
-        signals.get(Speed) shouldBe Nd4j.create(Array(-0.177 / 24, 0.177 / 24, 0.0))
+        signals.get(Speed) shouldBe create(Array(-0.177 / 24, 0.177 / 24, 0.0))
       }
       it("should return h speed features") {
         signals.get(HSpeedFeatures) shouldBe features(HighNW, HSpeedSize)
       }
     }
     describe("high speed SE") {
-      val speed = Nd4j.create(Array(0.177, -0.177, 0.0))
+      val speed = create(Array(0.177, -0.177, 0.0))
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.177,-0.177,0)") {
-        signals.get(Speed) shouldBe Nd4j.create(Array(0.177 / 24, -0.177 / 24, 0.0))
+        signals.get(Speed) shouldBe create(Array(0.177 / 24, -0.177 / 24, 0.0))
       }
       it("should return h speed features") {
         signals.get(HSpeedFeatures) shouldBe features(HighSE, HSpeedSize)
       }
     }
     describe("high speed NE") {
-      val speed = Nd4j.create(Array(0.177, 0.177, 0.0))
+      val speed = create(Array(0.177, 0.177, 0.0))
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.177,0.177,0)") {
-        signals.get(Speed) shouldBe Nd4j.create(Array(0.177 / 24, 0.177 / 24, 0.0))
+        signals.get(Speed) shouldBe create(Array(0.177 / 24, 0.177 / 24, 0.0))
       }
       it("should return h speed features") {
         signals.get(HSpeedFeatures) shouldBe features(HighNE, HSpeedSize)
@@ -317,72 +319,72 @@ class LanderCustomerCoderTest extends FunSpec with Matchers {
   }
 
   describe("LanderConf zspeed signals") {
-    val pos = Nd4j.zeros(3)
+    val pos = zeros(3)
     describe("0 z speed") {
-      val speed = Nd4j.zeros(3)
+      val speed = zeros(3)
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0,0,0)") {
-        signals.get(Speed) shouldBe Nd4j.create(Array(0.0, 0.0, 0.0))
+        signals.get(Speed) shouldBe create(Array(0.0, 0.0, 0.0))
       }
       it("should return z speed features") {
         signals.get(ZSpeedFeatures) shouldBe features(0, ZSpeedSize)
       }
     }
     describe("very slow z speed") {
-      val speed = Nd4j.create(Array(0.0, 0.0, -0.1))
+      val speed = create(Array(0.0, 0.0, -0.1))
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.0,0.0,-0.1/12)") {
-        signals.get(Speed) shouldBe Nd4j.create(Array(0.0, 0.0, -0.1 / 12))
+        signals.get(Speed) shouldBe create(Array(0.0, 0.0, -0.1 / 12))
       }
       it("should return z speed features") {
         signals.get(ZSpeedFeatures) shouldBe features(1, ZSpeedSize)
       }
     }
     describe("slow z speed") {
-      val speed = Nd4j.create(Array(0.0, 0.0, -1.9))
+      val speed = create(Array(0.0, 0.0, -1.9))
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.0,0.0,-1.9/12)") {
-        signals.get(Speed) shouldBe Nd4j.create(Array(0.0, 0.0, -1.9 / 12))
+        signals.get(Speed) shouldBe create(Array(0.0, 0.0, -1.9 / 12))
       }
       it("should return z speed features") {
         signals.get(ZSpeedFeatures) shouldBe features(1, ZSpeedSize)
       }
     }
     describe("slow mid z speed") {
-      val speed = Nd4j.create(Array(0.0, 0.0, -2.0))
+      val speed = create(Array(0.0, 0.0, -2.0))
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.0,0.0,-2/12)") {
-        signals.get(Speed) shouldBe Nd4j.create(Array(0.0, 0.0, -2.0 / 12))
+        signals.get(Speed) shouldBe create(Array(0.0, 0.0, -2.0 / 12))
       }
       it("should return z speed features") {
         signals.get(ZSpeedFeatures) shouldBe features(2, ZSpeedSize)
       }
     }
     describe("fast mid z speed") {
-      val speed = Nd4j.create(Array(0.0, 0.0, -3.9))
+      val speed = create(Array(0.0, 0.0, -3.9))
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.0,0.0,-3.9/12)") {
-        signals.get(Speed) shouldBe Nd4j.create(Array(0.0, 0.0, -3.9 / 12))
+        signals.get(Speed) shouldBe create(Array(0.0, 0.0, -3.9 / 12))
       }
       it("should return z speed features") {
         signals.get(ZSpeedFeatures) shouldBe features(2, ZSpeedSize)
       }
     }
     describe("slow high z speed") {
-      val speed = Nd4j.create(Array(0.0, 0.0, -4))
+      val speed = create(Array(0.0, 0.0, -4.0))
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.0,0.0,-4/12)") {
-        signals.get(Speed) shouldBe Nd4j.create(Array(0.0, 0.0, -4.0 / 12))
+        signals.get(Speed) shouldBe create(Array(0.0, 0.0, -4.0 / 12))
       }
       it("should return z speed features") {
         signals.get(ZSpeedFeatures) shouldBe features(3, ZSpeedSize)
       }
     }
     describe("fast high z speed") {
-      val speed = Nd4j.create(Array(0.0, 0.0, -12.0))
+      val speed = create(Array(0.0, 0.0, -12.0))
       val signals = coder.signals(status(pos, speed))
       it("should return speed signals (0.0,0.0,-12/12)") {
-        signals.get(Speed) shouldBe Nd4j.create(Array(0.0, 0.0, -12.0 / 12))
+        signals.get(Speed) shouldBe create(Array(0.0, 0.0, -12.0 / 12))
       }
       it("should return z speed features") {
         signals.get(ZSpeedFeatures) shouldBe features(3, ZSpeedSize)

@@ -35,7 +35,6 @@ import monix.reactive.subjects.PublishSubject
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.ops.transforms.Transforms._
 
 import scala.annotation.tailrec
 
@@ -48,15 +47,15 @@ import scala.annotation.tailrec
  * @param epoch    the number of epochs
  * @param numSteps the number of steps for the session
  */
-class Session(env: => Env,
-              agent: => Agent,
-              epoch: Int,
-              numSteps: Int) extends LazyLogging {
+class SessionContinuousAction(env: => EnvContinuousAction,
+                              agent: => AgentContinuousAction,
+                              epoch: Int,
+                              numSteps: Int) extends LazyLogging {
 
-  private val stepsPub = PublishSubject[Step]()
+  private val stepsPub = PublishSubject[StepContinuousAction]()
 
   /** Returns the observable of steps */
-  def steps: Observable[Step] = stepsPub
+  def steps: Observable[StepContinuousAction] = stepsPub
 
   /**
    * Runs the interactions for a number of episodes
@@ -74,10 +73,10 @@ class Session(env: => Env,
    * @param random the random generator
    * @return the environment and agent after the interaction session
    */
-  def run(random: Random): (Env, Agent) = {
+  def run(random: Random): (EnvContinuousAction, AgentContinuousAction) = {
     val env0 = env
     val obs0 = env0.observation
-    val context0 = SessionContext(
+    val context0 = SessionContextContinuousAction(
       env = env0,
       agent = agent,
       obs = obs0)
@@ -95,7 +94,7 @@ class Session(env: => Env,
    * @return
    */
   @tailrec
-  private def runSession(random: Random, context: SessionContext): SessionContext = {
+  private def runSession(random: Random, context: SessionContextContinuousAction): SessionContextContinuousAction = {
     if (context.step >= numSteps) {
       context
     } else {
@@ -110,9 +109,9 @@ class Session(env: => Env,
    * @param random  the random generator
    * @param context the sessin context
    */
-  private def runStep(random: Random, context: SessionContext): SessionContext = {
+  private def runStep(random: Random, context: SessionContextContinuousAction): SessionContextContinuousAction = {
     // unfold context data
-    val SessionContext(step, env0, agent0, obs0, totalScore, returnValue) = context
+    val SessionContextContinuousAction(step, env0, agent0, obs0, totalScore, returnValue) = context
 
     // Agent chooses the action
     val action = agent0.chooseAction(obs0, random)
@@ -120,11 +119,11 @@ class Session(env: => Env,
     // Updates environment
     val (env1, reward) = env0.change(action, random)
     val obs1 = env1.observation
-    val feedback = Feedback(obs0, action, reward, obs1)
+    val feedback = FeedbackContinuousAction(obs0, action, reward, obs1)
     val (agent1, score) = agent0.fit(feedback, random)
 
     val returnValue1 = returnValue.add(reward)
-    val totalScore1 = pow(score, 2).addi(totalScore)
+    val totalScore1 = score.mul(score).add(totalScore)
 
     val ctx0 = context.copy(env = env1,
       agent = agent1,
@@ -134,7 +133,7 @@ class Session(env: => Env,
       returnValue = returnValue1)
 
     // Generate step event
-    val stepInfo = Step(
+    val stepInfo = StepContinuousAction(
       epoch = epoch,
       step = step,
       feedback = feedback,
@@ -163,9 +162,9 @@ class Session(env: => Env,
  * @param totalScore  the total loss
  * @param returnValue the return value
  */
-case class SessionContext(step: Int = 0,
-                          env: Env,
-                          agent: Agent,
-                          obs: Observation,
-                          totalScore: INDArray = Nd4j.zeros(1),
-                          returnValue: INDArray = Nd4j.zeros(1))
+case class SessionContextContinuousAction(step: Int = 0,
+                                          env: EnvContinuousAction,
+                                          agent: AgentContinuousAction,
+                                          obs: Observation,
+                                          totalScore: INDArray = Nd4j.zeros(1),
+                                          returnValue: INDArray = Nd4j.zeros(1))

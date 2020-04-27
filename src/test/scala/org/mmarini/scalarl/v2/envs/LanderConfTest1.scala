@@ -29,30 +29,33 @@
 
 package org.mmarini.scalarl.v2.envs
 
-import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.Nd4j._
 import org.scalatest.{FunSpec, Matchers}
 
 class LanderConfTest1 extends FunSpec with Matchers {
-  Nd4j.create()
-  val DefaultFuel = 10
+  create()
+
+  val DefaultFuel: INDArray = ones(1).mul(10.0)
+
   val conf: LanderConf = new LanderConf(
-    dt = 0.25,
-    h0Range = 5.0,
-    z0 = 1.0,
+    dt = ones(1).mul(0.25),
+    h0Range = ones(1).mul(5.0),
+    z0 = ones(1).mul(1.0),
     fuel = DefaultFuel,
-    zMax = 100.0,
-    hRange = 500.0,
-    landingRadius = 10.0,
-    landingVH = 0.5,
-    landingVZ = 4.0,
-    g = 1.6,
-    maxAH = 1,
-    maxAZ = 3.2,
-    landedReward = 100.0,
-    crashReward = -100.0,
-    outOfRangeReward = -100.0,
-    outOfFuelReward = -100.0,
-    rewardDistanceScale = 0.01)
+    zMax = ones(1).mul(100.0),
+    hRange = ones(1).mul(500.0),
+    landingRadius = ones(1).mul(10.0),
+    landingVH = ones(1).mul(0.5),
+    landingVZ = ones(1).mul(4.0),
+    g = ones(1).mul(1.6),
+    maxAH = ones(1).mul(1),
+    maxAZ = ones(1).mul(3.2),
+    landedReward = ones(1).mul(100.0),
+    crashReward = ones(1).mul(-100.0),
+    outOfRangeReward = ones(1).mul(-100.0),
+    outOfFuelReward = ones(1).mul(-100.0),
+    rewardDistanceScale = ones(1).mul(0.01))
 
   private val MaxPower = 4
   private val NumChannels = 15
@@ -61,14 +64,14 @@ class LanderConfTest1 extends FunSpec with Matchers {
     require(x >= 0 && x < 5)
     require(y >= 0 && y < 5)
     require(z >= 0 && z < 5)
-    val result = Nd4j.zeros(NumChannels)
+    val result = zeros(NumChannels)
     result.putScalar(x, 1)
     result.putScalar(y + 5, 1)
     result.putScalar(z + 10, 1)
     result
   }
 
-  private def vector(x: Double, y: Double, z: Double) = Nd4j.create(Array(x, y, z))
+  private def vector(x: Double, y: Double, z: Double) = create(Array(x, y, z))
 
   describe("LanderConf drive") {
     val pos = vector(0, 0, 10.0)

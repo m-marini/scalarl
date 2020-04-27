@@ -41,7 +41,7 @@ import org.nd4j.linalg.api.rng.Random
  * Updates its strategy policy to optimize the return value (discount sum of rewards)
  * and the observation of resulting environment
  */
-trait Agent {
+trait AgentContinuousAction {
 
   /**
    * Returns the new agent and the chosen action.
@@ -50,7 +50,7 @@ trait Agent {
    * @param observation the observation of environment
    * @param random      the random generator
    */
-  def chooseAction(observation: Observation, random: Random): Action
+  def chooseAction(observation: Observation, random: Random): INDArray
 
 
   /**
@@ -59,14 +59,14 @@ trait Agent {
    * @param feedback the feedback from the last step
    * @param random   the random generator
    */
-  def fit(feedback: Feedback, random: Random): (Agent, INDArray)
+  def fit(feedback: FeedbackContinuousAction, random: Random): (AgentContinuousAction, INDArray)
 
   /**
    * Returns the score for a feedback
    *
    * @param feedback the feedback from the last step
    */
-  def score(feedback: Feedback): INDArray
+  def score(feedback: FeedbackContinuousAction): INDArray
 
   /**
    * Writes the agent status to file
@@ -74,5 +74,5 @@ trait Agent {
    * @param file the filename
    * @return the agents
    */
-  def writeModel(file: String): Agent
+  def writeModel(file: String): AgentContinuousAction
 }

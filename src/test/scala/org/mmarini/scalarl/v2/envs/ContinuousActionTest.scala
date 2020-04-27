@@ -31,67 +31,56 @@ package org.mmarini.scalarl.v2.envs
 
 import com.typesafe.scalalogging.LazyLogging
 import org.deeplearning4j.nn.api.OptimizationAlgorithm
+import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
-import org.deeplearning4j.nn.conf.layers.{DenseLayer, OutputLayer}
-import org.deeplearning4j.nn.conf.{GradientNormalization, NeuralNetConfiguration}
+import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
-import org.mmarini.scalarl.v2.agents.ExpSarsaAgent
-import org.mmarini.scalarl.v2.{Agent, Session}
+import org.mmarini.scalarl.v2.agents.ACContinuousActionAgent
+import org.mmarini.scalarl.v2.{AgentContinuousAction, SessionContinuousAction}
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.rng.Random
-import org.nd4j.linalg.factory.Nd4j._
-import org.nd4j.linalg.learning.config.Adam
+import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.learning.config.Sgd
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 import org.scalatest.{FunSpec, Matchers}
 
-class TestEnv1Test extends FunSpec with Matchers with LazyLogging {
+class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
   val Seed = 12345L
   val NoSteps = 1000
-  val MaxEpisodeLength = 100
   val Hiddens = 10
+  val NoInputs: Long = Tiles(2).noFeatures
 
-  create()
+  Nd4j.create()
 
-  def agent: Agent =
-    ExpSarsaAgent(net = network,
-      model = Seq(),
-      noActions = 2,
-      avgReward = ones(1).mul(1.0 / 3),
-      beta = ones(1).mul(0.1),
-      maxModelSize = 0,
-      minModelSize = 1000,
-      epsilon = ones(1).mul(0.1),
-      kappa = ones(1).mul(1),
-      kappaPlus = ones(1).mul(0),
-      planningStepsCounter = 0,
-      tolerance = Some(create(Array(0.5, 0.5))))
+  def agent: AgentContinuousAction = ACContinuousActionAgent(
+    actor = actor,
+    critic = critic,
+    avg = 0.0,
+    alpha = 0.03,
+    rewardDecay = 0.97,
+    valueDecay = 0.99)
 
-  def network: MultiLayerNetwork = {
-    val hidden = new DenseLayer.Builder().
-      nIn(3).
-      nOut(Hiddens).
-      activation(Activation.TANH).
-      dropOut(0.8).
-      build()
-
+  def critic: MultiLayerNetwork = {
     val outLayer = new OutputLayer.Builder().
-      nIn(Hiddens).
-      nOut(2).
+      nIn(NoInputs).
+      nOut(1).
       lossFunction(LossFunction.MSE).
       activation(Activation.IDENTITY).
-      biasInit(1).
       build()
 
     val conf = new NeuralNetConfiguration.Builder().
       seed(Seed).
       weightInit(WeightInit.XAVIER).
-      updater(new Adam(10.0 / (4 * Hiddens + (Hiddens + 1) * 2), 0.9, 0.999, 0.1)).
+      updater(new Sgd(3e-3)).
+      //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
+      //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
-      constrainAllParameters(new MinMaxNormConstraint(-10e3, 10e3, 1)).
-      gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue).
-      gradientNormalizationThreshold(1).
-      list(hidden, outLayer)
+      miniBatch(false).
+      //      constrainAllParameters(new MinMaxNormConstraint(-10e3, 10e3, 1)).
+      //      gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue).
+      //      gradientNormalizationThreshold(100).
+      list(outLayer)
       .build()
 
     val net = new MultiLayerNetwork(conf)
@@ -99,43 +88,54 @@ class TestEnv1Test extends FunSpec with Matchers with LazyLogging {
     net
   }
 
-  def random: Random =
-    getRandomFactory.getNewRandomInstance(Seed)
+  def actor: MultiLayerNetwork = {
+    val outLayer = new OutputLayer.Builder().
+      nIn(NoInputs).
+      nOut(2).
+      lossFunction(LossFunction.MSE).
+      activation(Activation.IDENTITY).
+      build()
 
-  describe("TestEnv") {
+    val conf = new NeuralNetConfiguration.Builder().
+      seed(Seed).
+      weightInit(WeightInit.XAVIER).
+      //      updater(new Adam(10.0 / (4 * Hiddens + (Hiddens + 1) * 2), 0.9, 0.999, 0.1)).
+      //updater(new Adam(1.0 / (4 * 2), 0.9, 0.999, 0.1)).
+      updater(new Sgd(1e-3)).
+      optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
+      constrainAllParameters(new MinMaxNormConstraint(-10e3, 10e3, 1)).
+      //    gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue).
+      //      gradientNormalizationThreshold(1).
+      list(outLayer)
+      .build()
 
-    val conf = TestEnvConfBuilder().numState(3).
-      p(0, 0, 0, 0, 1.0).
-      p(1, 0, 0, 1, 1.0).
-      p(1, 0, 1, 0, 1.0).
-      p(2, 1, 1, 1, 1.0).
-      p(0, 0, 2, 0, 1.0).
-      p(0, 0, 2, 1, 1.0).build
+    val net = new MultiLayerNetwork(conf)
+    net.init()
+    net
+  }
 
-    val s0 = TestEnv(zeros(1), 0, conf)
-    val s1 = TestEnv(zeros(1), 1, conf)
-    //  val s2 = TestEnv(0, 2, conf)
+  val random: Random =
+    Nd4j.getRandomFactory.getNewRandomInstance(Seed)
 
-    val session = new Session(numSteps = 30,
+  describe("ContinuousActionEnv") {
+
+
+    val s0 = ContinuousActionEnv(Nd4j.ones(1).mul(2), Nd4j.zeros(1))
+
+    val session = new SessionContinuousAction(numSteps = NoSteps,
       epoch = 0,
       env = s0,
       agent = agent)
 
     val (_, agent1) = session.run(random)
-
-    //t1.asInstanceOf[ExpSarsaAgent].avgReward shouldBe 0.25 +- 0.25
-    it("should return action 0 lower then action 1 at state 0") {
-      val q0 = agent1.asInstanceOf[ExpSarsaAgent].q(s0.observation)
-      q0.getDouble(0L) shouldBe <(q0.getDouble(1L))
-      //      q0.getDouble(0L) shouldBe 0.125 +- 0.05
-      //      q0.getDouble(1L) shouldBe 0.25 +- 0.05
+    val (mu, _, sigma) = agent1.asInstanceOf[ACContinuousActionAgent].muHSigma(s0.observation)
+    logger.info("mu=    {}", mu)
+    logger.info("sigma= {}", sigma)
+    it("should result mu = 2") {
+      mu.getDouble(0L) shouldBe 2.0 +- 1
     }
-
-    it("should return action 0 lower then action 1 at state 1") {
-      val q1 = agent1.asInstanceOf[ExpSarsaAgent].q(s1.observation)
-      q1.getDouble(0L) shouldBe <(q1.getDouble(1L))
-      //      q1.getDouble(0L) shouldBe 0.5 +- 0.05
-      //      q1.getDouble(1L) shouldBe 0.625 +- 0.05
+    it("should result sigma less then 1.5") {
+          sigma.getDouble(0L) should be < 1.5
     }
   }
 }

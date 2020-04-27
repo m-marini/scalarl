@@ -4,9 +4,28 @@ import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.indexing.NDArrayIndex
-import org.nd4j.linalg.ops.transforms.Transforms
+import org.nd4j.linalg.ops.transforms.Transforms._
 
 object Utils {
+  /**
+   * Returns the clip values
+   *
+   * @param x    the values
+   * @param xMin minimum value
+   * @param xMax maximum values
+   * @param copy true if return value is a new copy
+   */
+  def clip(x: INDArray, xMin: Double, xMax: Double, copy: Boolean = true): INDArray = min(max(x, xMin, copy), xMax, copy)
+
+  /**
+   * Returns the clip values
+   *
+   * @param x    the values
+   * @param xMin minimum value
+   * @param xMax maximum values
+   * @param copy true if return value is a new copy
+   */
+  def clip(x: INDArray, xMin: INDArray, xMax: INDArray, copy: Boolean): INDArray = min(max(x, xMin, copy), xMax, copy)
 
   /**
    * Returns the features vector with ones at indices
@@ -61,33 +80,11 @@ object Utils {
   }
 
   /**
-   * Returns the softMax distribution
-   *
-   * @param x the preferences
-   */
-  def softMax(x: INDArray): Policy = df(Transforms.exp(x))
-
-  /**
-   * Returns the softmax distribution by mask
-   *
-   * @param pr      the preferences
-   * @param actions the valid actions mask
-   */
-  def softMax(pr: INDArray, actions: ActionMask): INDArray = {
-    val pi = softMax(indexed(pr, actions))
-    val pi1 = Nd4j.zeros(pr.shape(): _*)
-    for {(i, j) <- actions.zipWithIndex} {
-      pi1.put(i.toInt, pi.getScalar(j.toLong))
-    }
-    pi1
-  }
-
-  /**
    * Returns the distribution function for linear preferences
    *
    * @param x the preferences
    */
-  def df(x: INDArray): Policy = x.div(x.sumNumber().doubleValue())
+  def df(x: INDArray): INDArray = x.div(x.sumNumber().doubleValue())
 
   /**
    * Returns the egreedy policy for the given action values
@@ -95,14 +92,15 @@ object Utils {
    * @param q       actions values
    * @param epsilon epsilon
    */
-  def egreedy(q: INDArray, epsilon: Double): Policy = {
+  def egreedy(q: INDArray, epsilon: INDArray): INDArray = {
     val n = q.length()
     if (n > 1) {
       val act = q.argMax().getInt(0)
-      val result = Nd4j.ones(1, n).muli(epsilon / (n - 1))
-      result.putScalar(act, 1 - epsilon)
+      val result = Nd4j.ones(1, n).muli(epsilon).divi(n - 1)
+      result.put(act, epsilon.sub(1).negi())
+      result
     } else {
-      Nd4j.ones(1, 1)
+      Nd4j.ones(1)
     }
   }
 
@@ -135,7 +133,7 @@ object Utils {
    * @param action action
    * @return the array of values for each channel and the indices of max action features
    */
-  def v(q: Policy, action: Action): VValue = q.getDouble(action.toLong)
+  def v(q: INDArray, action: Action): INDArray = q.getColumn(action)
 
   /**
    * Returns the expected status value
@@ -143,12 +141,12 @@ object Utils {
    * @param q  the action values
    * @param pi the policy
    */
-  def vExp(q: QValues, pi: Policy): Double = q.mul(pi).sumNumber().doubleValue()
+  def vExp(q: INDArray, pi: INDArray): INDArray = q.mul(pi).sum()
 
   /**
    * Returns the greedy status value
    *
    * @param q the actions values
    */
-  def vStar(q: QValues): Double = q.maxNumber().doubleValue()
+  def vStar(q: INDArray): INDArray = q.max()
 }

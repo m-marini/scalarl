@@ -29,314 +29,201 @@
 
 package org.mmarini.scalarl.v2.envs
 
-import org.nd4j.linalg.factory.Nd4j
+import org.mmarini.scalarl.v2.envs.StatusCode._
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.Nd4j._
+import org.nd4j.linalg.ops.transforms.Transforms
 import org.scalatest.{FunSpec, Matchers}
 
 class LanderConfTest extends FunSpec with Matchers {
-  Nd4j.create()
-  val DefaultFuel = 10
+
+  create()
+
+  val DefaultFuel: INDArray = ones(1).mul(10.0)
   val conf: LanderConf = new LanderConf(
-    dt = 0.25,
-    h0Range = 5.0,
-    z0 = 1.0,
+    dt = ones(1).mul(0.25),
+    h0Range = ones(1).mul(5.0),
+    z0 = ones(1).mul(1),
     fuel = DefaultFuel,
-    zMax = 100.0,
-    hRange = 500.0,
-    landingRadius = 10.0,
-    landingVH = 0.5,
-    landingVZ = 4.0,
-    g = 1.6,
-    maxAH = 1,
-    maxAZ = 3.2,
-    landedReward = 100.0,
-    crashReward = -100.0,
-    outOfRangeReward = -100.0,
-    outOfFuelReward = -100.0,
-    rewardDistanceScale = 0.01)
+    zMax = ones(1).mul(100.0),
+    hRange = ones(1).mul(500.0),
+    landingRadius = ones(1).mul(10.0),
+    landingVH = ones(1).mul(0.5),
+    landingVZ = ones(1).mul(4.0),
+    g = ones(1).mul(1.6),
+    maxAH = ones(1),
+    maxAZ = ones(1).mul(3.2),
+    landedReward = ones(1).mul(100.0),
+    crashReward = ones(1).mul(-100.0),
+    outOfRangeReward = ones(1).mul(-100.0),
+    outOfFuelReward = ones(1).mul(-100.0),
+    rewardDistanceScale = ones(1).mul(0.01))
 
   describe("LanderConf at land point") {
     describe("at (0,0,-0.1), (0,0,1)") {
-      val pos = Nd4j.create(Array[Double](0, 0, -0.1))
-      val speed = Nd4j.create(Array[Double](0, 0, 1))
+      val pos = create(Array[Double](0, 0, -0.1))
+      val speed = create(Array[Double](0, 0, 1))
+
       it("should be landed") {
-        conf.isLanded(pos, speed) shouldBe true
-      }
-      it("should not be out of range") {
-        conf.isOutOfRange(pos) should not be true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe Landed
       }
     }
 
     describe("at (0,0,-0.1) speed (0,0,-4)") {
-      val pos = Nd4j.create(Array[Double](0, 0, -0.1))
-      val speed = Nd4j.create(Array[Double](0, 0, -4.0))
+      val pos = create(Array[Double](0, 0, -0.1))
+      val speed = create(Array[Double](0, 0, -4.0))
       it("should be landed") {
-        conf.isLanded(pos, speed) shouldBe true
-      }
-      it("should not be out of range") {
-        conf.isOutOfRange(pos) should not be true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe Landed
       }
     }
 
     describe("a at (0,0,-0.1) speed (0.5,0,-4)") {
-      val pos = Nd4j.create(Array[Double](0, 0, -0.1))
-      val speed = Nd4j.create(Array[Double](0.5, 0, -4.0))
+      val pos = create(Array[Double](0, 0, -0.1))
+      val speed = create(Array[Double](0.5, 0, -4.0))
 
       it("should be landed") {
-        conf.isLanded(pos, speed) shouldBe true
-      }
-      it("should not be out of range") {
-        conf.isOutOfRange(pos) should not be true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
+        val x = conf.status(pos, speed, DefaultFuel)
+        x shouldBe Landed
       }
     }
 
     describe("at (0,0,-0.1) speed (-0.5,0,-4)") {
-      val pos = Nd4j.create(Array[Double](0, 0, -0.1))
-      val speed = Nd4j.create(Array[Double](-0.5, 0, -4.0))
+      val pos = create(Array[Double](0, 0, -0.1))
+      val speed = create(Array[Double](-0.5, 0, -4.0))
       it("should be landed") {
-        conf.isLanded(pos, speed) shouldBe true
-      }
-      it("should not be out of range") {
-        conf.isOutOfRange(pos) should not be true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe Landed
       }
     }
 
     describe("at(0,0,0) speed (0,0.5,-4)") {
-      val pos = Nd4j.create(Array[Double](0, 0, -0.1))
-      val speed = Nd4j.create(Array[Double](0, 0.5, -4.0))
+      val pos = create(Array[Double](0, 0, -0.1))
+      val speed = create(Array[Double](0, 0.5, -4.0))
       it("should be landed") {
-        conf.isLanded(pos, speed) shouldBe true
-      }
-      it("should not be out of range") {
-        conf.isOutOfRange(pos) should not be true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe Landed
       }
     }
 
     describe("at(0,0,-0.1) speed (0,-0.5,-4)") {
-      val pos = Nd4j.create(Array[Double](0, 0, -0.1))
-      val speed = Nd4j.create(Array[Double](0, -0.5, -4.0))
+      val pos = create(Array[Double](0, 0, -0.1))
+      val speed = create(Array[Double](0, -0.5, -4.0))
       it("should be landed") {
-        conf.isLanded(pos, speed) shouldBe true
-      }
-      it("should not be out of range") {
-        conf.isOutOfRange(pos) should not be true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe Landed
       }
     }
 
     describe("at(10,0,-0.1) speed (0,0,-4)") {
-      val pos = Nd4j.create(Array[Double](10.0, 0, -0.1))
-      val speed = Nd4j.create(Array[Double](0, 0, -4.0))
+      val pos = create(Array[Double](10.0, 0, -0.1))
+      val speed = create(Array[Double](0, 0, -4.0))
       it("should be landed") {
-        conf.isLanded(pos, speed) shouldBe true
-      }
-      it("should not be out of range") {
-        conf.isOutOfRange(pos) should not be true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe Landed
       }
     }
 
     describe("at(-10,0,-0.1) speed (0,0,-4)") {
-      val pos = Nd4j.create(Array[Double](-10.0, 0, -0.1))
-      val speed = Nd4j.create(Array[Double](0, 0, -4.0))
+      val pos = create(Array[Double](-10.0, 0, -0.1))
+      val speed = create(Array[Double](0, 0, -4.0))
       it("should be landed") {
-        conf.isLanded(pos, speed) shouldBe true
-      }
-      it("should not be out of range") {
-        conf.isOutOfRange(pos) should not be true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe Landed
       }
     }
 
     describe("at(0,10,-0.1) speed (0,0,-4)") {
-      val pos = Nd4j.create(Array[Double](0, 10.0, -0.1))
-      val speed = Nd4j.create(Array[Double](0, 0, -4.0))
+      val pos = create(Array[Double](0, 10.0, -0.1))
+      val speed = create(Array[Double](0, 0, -4.0))
       it("should be landed") {
-        conf.isLanded(pos, speed) shouldBe true
-      }
-      it("should not be out of range") {
-        conf.isOutOfRange(pos) should not be true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe Landed
       }
     }
 
     describe("at(0,-10,-0.1) speed (0,0,-4)") {
-      val pos = Nd4j.create(Array[Double](0, 10.0, -0.1))
-      val speed = Nd4j.create(Array[Double](0, 0, -4.0))
+      val pos = create(Array[Double](0, 10.0, -0.1))
+      val speed = create(Array[Double](0, 0, -4.0))
       it("should be landed") {
-        conf.isLanded(pos, speed) shouldBe true
-      }
-      it("should not be out of range") {
-        conf.isOutOfRange(pos) should not be true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe Landed
       }
     }
 
     describe("at(7.07,7.07,-0.1) speed (0,0,-4)") {
-      val pos = Nd4j.create(Array[Double](7.07, 7.07, -0.1))
-      val speed = Nd4j.create(Array[Double](0, 0, -4.0))
+      val pos = create(Array[Double](7.07, 7.07, -0.1))
+      val speed = create(Array[Double](0, 0, -4.0))
       it("should be landed") {
-        conf.isLanded(pos, speed) shouldBe true
-      }
-      it("should not be out of range") {
-        conf.isOutOfRange(pos) should not be true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe Landed
       }
     }
 
     describe("at(0,0,-0.1) speed (0.353,0.353,-4)") {
-      val pos = Nd4j.create(Array[Double](0, 0, -0.1))
-      val speed = Nd4j.create(Array[Double](0.353, 0.353, -4.0))
+      val pos = create(Array[Double](0, 0, -0.1))
+      val speed = create(Array[Double](0.353, 0.353, -4.0))
       it("should be landed") {
-        conf.isLanded(pos, speed) shouldBe true
-      }
-      it("should not be out of range") {
-        conf.isOutOfRange(pos) should not be true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe Landed
       }
     }
   }
 
   describe("LanderConf at crash point") {
     describe("at (0,0,-0.1) speed (0,0,-4.1)") {
-      val pos = Nd4j.create(Array[Double](0, 0, -0.1))
-      val speed = Nd4j.create(Array[Double](0, 0, -4.1))
+      val pos = create(Array[Double](0, 0, -0.1))
+      val speed = create(Array[Double](0, 0, -4.1))
       it("should be crashed") {
-        conf.isCrashed(pos, speed) shouldBe true
-      }
-      it("should not be landed") {
-        conf.isLanded(pos, speed) should not be true
-      }
-      it("should not be out of range") {
-        conf.isOutOfRange(pos) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe Crashed
       }
     }
 
     describe("at (0,0,-0.1) speed (0.354,0.354,-4.1)") {
-      val pos = Nd4j.create(Array[Double](0, 0, -0.1))
-      val speed = Nd4j.create(Array[Double](0.354, 0.354, -4.1))
+      val pos = create(Array[Double](0, 0, -0.1))
+      val speed = create(Array[Double](0.354, 0.354, -4.1))
       it("should be crashed") {
-        conf.isCrashed(pos, speed) shouldBe true
-      }
-      it("should not be landed") {
-        conf.isLanded(pos, speed) should not be true
-      }
-      it("should not be out of range") {
-        conf.isOutOfRange(pos) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe Crashed
       }
     }
 
     describe("at (7.08,7-08,-0.1) speed (0, 0, 0)") {
-      val pos = Nd4j.create(Array[Double](7.08, 7.08, -0.1))
-      val speed = Nd4j.create(Array[Double](0, 0, 0))
+      val pos = create(Array[Double](7.08, 7.08, -0.1))
+      val speed = create(Array[Double](0, 0, 0))
       it("should be crashed") {
-        conf.isCrashed(pos, speed) shouldBe true
-      }
-      it("should not be landed") {
-        conf.isLanded(pos, speed) should not be true
-      }
-      it("should not be out of range") {
-        conf.isOutOfRange(pos) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe OutOfPlatform
       }
     }
   }
 
   describe("LanderConf at out of range point") {
     describe("at (0,0,100.1) speed (0,0,0)") {
-      val pos = Nd4j.create(Array[Double](0, 0, 100.1))
-      val speed = Nd4j.zeros(3)
+      val pos = create(Array[Double](0, 0, 100.1))
+      val speed = zeros(3)
       it("should be out of range") {
-        conf.isOutOfRange(pos) shouldBe true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
-      }
-      it("should not be landed") {
-        conf.isLanded(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe OutOfRange
       }
     }
 
     describe("at (600.1,0,10) speed (0,0,0)") {
-      val pos = Nd4j.create(Array[Double](600.1, 0, 10.0))
-      val speed = Nd4j.zeros(3)
+      val pos = create(Array[Double](600.1, 0, 10.0))
+      val speed = zeros(3)
       it("should be out of range") {
-        conf.isOutOfRange(pos) shouldBe true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
-      }
-      it("should not be landed") {
-        conf.isLanded(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe OutOfRange
       }
     }
 
     describe("at (-600.1,0,10) speed (0,0,0)") {
-      val pos = Nd4j.create(Array[Double](-600.1, 0, 10.0))
-      val speed = Nd4j.zeros(3)
+      val pos = create(Array[Double](-600.1, 0, 10.0))
+      val speed = zeros(3)
       it("should be out of range") {
-        conf.isOutOfRange(pos) shouldBe true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
-      }
-      it("should not be landed") {
-        conf.isLanded(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe OutOfRange
       }
     }
 
     describe("at (0, 600.1,10) speed (0,0,0)") {
-      val pos = Nd4j.create(Array[Double](0, 600.1, 10.0))
-      val speed = Nd4j.zeros(3)
+      val pos = create(Array[Double](0, 600.1, 10.0))
+      val speed = zeros(3)
       it("should be out of range") {
-        conf.isOutOfRange(pos) shouldBe true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
-      }
-      it("should not be landed") {
-        conf.isLanded(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe OutOfRange
       }
     }
 
     describe("a lander status at (0, -600.1,10) speed (0,0,0)") {
-      val pos = Nd4j.create(Array[Double](0, -600.1, 10.0))
-      val speed = Nd4j.zeros(3)
+      val pos = create(Array[Double](0, -600.1, 10.0))
+      val speed = zeros(3)
       it("should be out of range") {
-        conf.isOutOfRange(pos) shouldBe true
-      }
-      it("should not be crashed") {
-        conf.isCrashed(pos, speed) should not be true
-      }
-      it("should not be landed") {
-        conf.isLanded(pos, speed) should not be true
+        conf.status(pos, speed, DefaultFuel) shouldBe OutOfRange
       }
     }
   }

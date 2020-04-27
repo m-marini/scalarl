@@ -38,7 +38,7 @@ import monix.execution.Scheduler
 import org.mmarini.scalarl.FileUtils.{withFile, writeINDArray}
 import org.mmarini.scalarl.v2._
 import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.factory.Nd4j._
 
 import scala.concurrent.duration.DurationInt
 
@@ -98,9 +98,9 @@ object SessionBuilder extends LazyLogging {
       }%,3d, Steps ${
         step.step
       }%6d ,avg rewards=${
-        if (step.step != 0) step.context.returnValue / step.step else 0.0
+        if (step.step != 0) step.context.returnValue.getDouble(0L) / step.step else 0.0
       }%,12g, avgScore=${
-        if (step.step != 0) step.context.totalScore / step.step else 0.0
+        if (step.step != 0) step.context.totalScore.getDouble(0L) / step.step else 0.0
       }%12g")
     }).subscribe()(Scheduler.global)
 
@@ -131,11 +131,11 @@ object SessionBuilder extends LazyLogging {
    * - 10 x 10 x 8 of q action values for each state for each action
    */
   private def createLanderDump(step: Step): INDArray =
-    Nd4j.create(Array[Double](
+    hstack(create(Array[Double](
       step.epoch,
-      step.step,
+      step.step)),
       step.feedback.reward,
-      step.score))
+      step.score)
 
   /**
    * Returns the trace data array of the step
@@ -161,17 +161,17 @@ object SessionBuilder extends LazyLogging {
     val isFinal = if (env1.asInstanceOf[LanderStatus].isFinal) 1.0 else 0.0
     val Feedback(_, action, reward, _) = feedback
 
-    val result = Nd4j.hstack(
-      Nd4j.create(Array[Double](
+    val result = hstack(
+      create(Array[Double](
         epoch,
-        stepCount,
-        reward,
-        score,
-        t0,
-        fuel0)),
+        stepCount)),
+      reward,
+      score,
+      t0,
+      fuel0,
       pos0,
       speed0,
-      Nd4j.create(Array[Double](
+      create(Array[Double](
         action,
         isFinal)),
       pos1,

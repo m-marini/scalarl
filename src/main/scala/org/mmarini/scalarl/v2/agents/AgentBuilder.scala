@@ -32,6 +32,7 @@ package org.mmarini.scalarl.v2.agents
 import io.circe.ACursor
 import org.mmarini.scalarl.v2.Agent
 import org.nd4j.linalg.activations.Activation
+import org.nd4j.linalg.factory.Nd4j
 
 /**
  *
@@ -60,9 +61,9 @@ object AgentBuilder {
     ACAgent(
       actor = AgentNetworkBuilder.fromJson(netConf, "actor.zip")(noInputs, noOutputs, Activation.HARDTANH),
       critic = AgentNetworkBuilder.fromJson(netConf, "critic.zip")(noInputs, 1, Activation.HARDTANH),
-      avg = conf.get[Double]("avgReward").toTry.get,
-      alpha = conf.get[Double]("alpha").toTry.get,
-      rewardDecay = conf.get[Double]("rewardDecay").toTry.get,
-      valueDecay = conf.get[Double]("valueDecay").toTry.get)
+      avg = conf.get[Double]("avgReward").toTry.map(Nd4j.ones(1).muli(_)).get,
+      alpha = conf.get[Double]("alpha").toTry.map(Nd4j.ones(1).muli(_)).get,
+      rewardDecay = conf.get[Double]("rewardDecay").toTry.map(Nd4j.ones(1).muli(_)).get,
+      valueDecay = conf.get[Double]("valueDecay").toTry.map(Nd4j.ones(1).muli(_)).get)
   }
 }

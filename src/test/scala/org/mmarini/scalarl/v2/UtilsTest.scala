@@ -29,39 +29,31 @@
 
 package org.mmarini.scalarl.v2
 
-import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.factory.Nd4j._
 import org.scalatest.{FunSpec, Matchers}
 
 import scala.math._
 
 class UtilsTest extends FunSpec with Matchers {
 
-  Nd4j.create()
+  create()
 
   describe("Utils") {
-    val pr = Nd4j.create(Array(0.125, 0.25, 0.125, 0.5))
-    val cdf = Nd4j.create(Array(0.125, 0.375, 0.5, 1.0))
-    val softMax = Nd4j.create(Array(-log(2), 0.0, -log(2), log(2)))
+    val pr = create(Array(0.125, 0.25, 0.125, 0.5))
+    val cdf = create(Array(0.125, 0.375, 0.5, 1.0))
+    val softMax = create(Array(-log(2), 0.0, -log(2), log(2)))
 
     it("should get cdf") {
       Utils.cdf(pr) shouldBe cdf
     }
 
     it("should get df") {
-      val x = Nd4j.create(Array(1.0, 2.0, 1.0, 4.0))
+      val x = create(Array(1.0, 2.0, 1.0, 4.0))
       Utils.df(x) shouldBe pr
     }
 
-    it("should get softMax") {
-      Utils.softMax(softMax) shouldBe pr
-    }
-
-    it("should get softMax with mask") {
-      Utils.softMax(softMax, Seq(0L, 3L)) shouldBe Nd4j.create(Array(1.0 / 5, 0.0, 0.0, 4.0 / 5))
-    }
-
     it("should generate random with cdf") {
-      val random = Nd4j.randomFactory.getNewRandomInstance(100)
+      val random = randomFactory.getNewRandomInstance(100)
       val samples = for {i <- 1 to 800} yield {
         Utils.cdfRandomInt(cdf)(random)
       }
@@ -74,7 +66,7 @@ class UtilsTest extends FunSpec with Matchers {
     }
 
     it("should generate random with df") {
-      val random = Nd4j.randomFactory.getNewRandomInstance(100)
+      val random = randomFactory.getNewRandomInstance(100)
       val samples = for {i <- 1 to 800} yield {
         Utils.randomInt(pr)(random)
       }
@@ -87,23 +79,23 @@ class UtilsTest extends FunSpec with Matchers {
     }
 
     it("should create egreedy policy for a single action") {
-      Utils.egreedy(Nd4j.zeros(1), 0.1) shouldBe Nd4j.ones(1)
+      Utils.egreedy(zeros(1), ones(1).mul(0.1)) shouldBe ones(1)
     }
 
     it("should create egreedy policy for a multiple actions") {
-      Utils.egreedy(Nd4j.create(Array(1.0, 2.0, 0.0)), 0.1) shouldBe Nd4j.create(Array(0.05, 0.9, 0.05))
+      Utils.egreedy(create(Array(1.0, 2.0, 0.0)), ones(1).mul(0.1)) shouldBe create(Array(0.05, 0.9, 0.05))
     }
 
     it("should find indices") {
-      Utils.find(Nd4j.create(Array(1.0, 0.0, 0.0, 1.0, 0.0))) shouldBe Seq(0L, 3L)
+      Utils.find(create(Array(1.0, 0.0, 0.0, 1.0, 0.0))) shouldBe Seq(0L, 3L)
     }
 
     it("should indexed a vector") {
-      Utils.indexed(Nd4j.create(Array(1.0, 2.0, 3.0, 4.0, 5.0)), Seq(0L, 3L)) shouldBe Nd4j.create(Array(1.0, 4.0))
+      Utils.indexed(create(Array(1.0, 2.0, 3.0, 4.0, 5.0)), Seq(0L, 3L)) shouldBe create(Array(1.0, 4.0))
     }
 
     it("should create features vector") {
-      Utils.features(Seq(0L, 3L), 5) shouldBe Nd4j.create(Array(1.0, 0.0, 0.0, 1.0, 0.0))
+      Utils.features(Seq(0L, 3L), 5) shouldBe create(Array(1.0, 0.0, 0.0, 1.0, 0.0))
     }
   }
 }

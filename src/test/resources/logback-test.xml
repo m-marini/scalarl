@@ -11,7 +11,11 @@
         </encoder>
     </appender>
 
-    <root level="info">
+    <logger name="org.mmarini.scalarl.v2.agents.ExpSarsaAgent" level="info"/>
+    <logger name="org.mmarini.scalarl.v2.agents.ACAgent" level="info"/>
+    <logger name="org.mmarini.scalarl.v2.agents.ACContinuousActionAgent" level="info"/>
+
+    <root level="debug">
         <appender-ref ref="STDOUT"/>
     </root>
 
