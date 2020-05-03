@@ -25,3 +25,5 @@
 /analysis-01/*.zip
 *.zip
 /.idea/
+/v3/*.csv
+/debug/*.csv

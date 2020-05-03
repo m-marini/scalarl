@@ -1,0 +1,89 @@
+---
+version: "3"
+env:
+  type: LanderTiles
+  actionConfig: DiscreteActions
+  dt: 0.25
+  h0Range: 5
+  z0: 1
+  fuel: 10
+  zMax: 150
+  hRange: 500
+  zRange: 150
+  vhRange: 24
+  vzRange: 12
+  landingRadius: 10
+  landingVH: 0.5
+  landingVZ: 4
+  g: 1.6
+  maxAH: 1
+  maxAZ: 3.2
+  landedReward: 10
+  crashReward: -10
+  outOfRangeReward: -10
+  outOfFuelReward: -10
+  rewardDistanceScale: 3
+agent:
+  type: ActorCritic
+  avgReward: 0
+  rewardDecay: 0.99
+  valueDecay: 0.99
+  #modelPath: lander-model
+  critic:
+    numHiddens: []
+    seed: 1234
+    updater: Sgd
+    autoScaleLearningRate: 10.0
+    beta1: 0.9
+    beta2: 0.999
+    epsilonAdam: 0.1
+    maxAbsGradients: 1
+    maxAbsParameters: 10e3
+    dropOut: 0.8
+  actors:
+    - type: PolicyActor
+      alpha: 3
+      network:
+        numHiddens: []
+        seed: 1234
+        updater: Sgd
+        autoScaleLearningRate: 10.0
+        beta1: 0.9
+        beta2: 0.999
+        epsilonAdam: 0.1
+        maxAbsGradients: 1
+        maxAbsParameters: 10e3
+        dropOut: 0.8
+    - type: PolicyActor
+      alpha: 3
+      network:
+        numHiddens: []
+        seed: 1234
+        updater: Sgd
+        autoScaleLearningRate: 10.0
+        beta1: 0.9
+        beta2: 0.999
+        epsilonAdam: 0.1
+        maxAbsGradients: 1
+        maxAbsParameters: 10e3
+        dropOut: 0.8
+    - type: PolicyActor
+      alpha: 3
+      network:
+        numHiddens: []
+        seed: 1234
+        updater: Sgd
+        autoScaleLearningRate: 10.0
+        beta1: 0.9
+        beta2: 0.999
+        epsilonAdam: 0.1
+        maxAbsGradients: 1
+        maxAbsParameters: 10e3
+        dropOut: 0.8
+session:
+  numSteps: 3000
+  seed: 1234
+  trace: debug/lander-trace.csv
+  dump: debug/lander-dump.csv
+  modelFile: debug/lander-model
+  kpiFile: debug/kpi.csv
