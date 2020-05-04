@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #44: Actor Critic and sofmax policy
 - Issue #48: Simplify without multiple actions
 - Issue #54: Continuous Action
+- Issue #56: Multidimension Actions
 
 ## [0.1.0] - 2019-01-28
 
