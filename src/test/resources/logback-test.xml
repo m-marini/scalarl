@@ -11,9 +11,9 @@
         </encoder>
     </appender>
 
-    <logger name="org.mmarini.scalarl.v2.agents.ExpSarsaAgent" level="info"/>
-    <logger name="org.mmarini.scalarl.v2.agents.ACAgent" level="info"/>
-    <logger name="org.mmarini.scalarl.v2.agents.ACContinuousActionAgent" level="info"/>
+    <logger name="org.mmarini.scalarl.v3.agents.ExpSarsaMethod" level="info"/>
+    <logger name="org.mmarini.scalarl.v3.agents.PolicyActor" level="debug"/>
+    <logger name="org.mmarini.scalarl.v3.agents.GaussianPolicy" level="info"/>
 
     <root level="debug">
         <appender-ref ref="STDOUT"/>
