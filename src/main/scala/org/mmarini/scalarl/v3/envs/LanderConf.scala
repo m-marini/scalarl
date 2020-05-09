@@ -30,7 +30,7 @@
 package org.mmarini.scalarl.v3.envs
 
 import io.circe.ACursor
-import org.mmarini.scalarl.v3._
+import org.mmarini.scalarl.v3.Utils
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
@@ -129,18 +129,17 @@ class LanderConf(val dt: INDArray,
   def status(pos: INDArray, speed: INDArray, fuel: INDArray): StatusCode.Value = {
     if (pos.getDouble(2L) <= 0) {
       // has touched ground
-      val vhSquare = speed.getColumns(0, 1).norm2()
-      if (not(lessThanOrEqual(vhSquare, landingVH)).getInt(0) > 0) {
-        Crashed
-      } else if (not(greaterThanOrEqual(speed.getColumn(2), landingVZ.neg())).getInt(0) > 0) {
-        Crashed
+      //      val vhSquare = speed.getColumns(0, 1).norm2()
+      //      if (not(lessThanOrEqual(vhSquare, landingVH)).getInt(0) > 0) {
+      //        Crashed
+      //      } else if (not(greaterThanOrEqual(speed.getColumn(2), landingVZ.neg())).getInt(0) > 0) {
+      //        Crashed
+      //      } else {
+      val landPosition = lessThanOrEqual(pos.getColumns(0, 1).norm2(), landingRadius).getInt(0) > 0
+      if (landPosition) {
+        Landed
       } else {
-        val landPosition = lessThanOrEqual(pos.getColumns(0, 1).norm2(), landingRadius).getInt(0) > 0
-        if (landPosition) {
-          Landed
-        } else {
-          OutOfPlatform
-        }
+        OutOfPlatform
       }
     } else if (greaterThanOrEqual(pos, maxRange).sumNumber().intValue() > 0) {
       OutOfRange

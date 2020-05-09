@@ -54,14 +54,24 @@ trait Agent {
    */
   def chooseAction(observation: Observation, random: Random): INDArray
 
-
   /**
    * Returns the fit agent and the score
-   * Optimizes the policy based on the feedback
+   * Optimizes the policy based on the feedback and model/planning
+   *
    * @param feedback the feedback from the last step
    * @param random   the random generator
    */
   def fit(feedback: Feedback, random: Random): (Agent, INDArray)
+
+  /**
+   * Returns the fit agent and the score
+   * Optimizes the policy based on the feedback for a single feedback
+   *
+   * @param feedback the feedback from the last step
+   * @param random   the random generator
+   */
+  def directLearn(feedback: Feedback, random: Random): (Agent, INDArray)
+
 
   /**
    * Returns the score for a feedback

@@ -98,14 +98,14 @@ object MountingCarEnv {
    *
    * @param random the random generator
    */
+  def initial(random: Random): MountingCarEnv = initial(random, Nd4j.zeros(1))
+
+  /**
+   *
+   * @param random the random generator
+   */
   def initial(random: Random, t: INDArray): MountingCarEnv = {
     val x0 = Nd4j.create(Array(random.nextDouble() * (XRight - XLeft) - XLeft))
     MountingCarEnv(x = x0, v = Nd4j.zeros(1), t = t)
   }
-
-  /**
-   *
-   * @param random  the random generator
-   */
-  def initial(random: Random): MountingCarEnv = initial(random, Nd4j.zeros(1))
 }

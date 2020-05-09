@@ -28,12 +28,23 @@ agent:
   avgReward: 0
   rewardDecay: 0.99
   valueDecay: 0.99
-  #modelPath: lander-model
+  planner:
+    planningSteps: 5
+    scoreThreshold: 0.1
+    model:
+      minModelSize: 75
+      maxModelSize: 100
+    stateKey:
+      type: Identity
+    actionsKey:
+      type: Identity
+    #modelPath: lander-model
   critic:
-    numHiddens: []
+    numHiddens:
+      - 15
     seed: 1234
     updater: Sgd
-    autoScaleLearningRate: 10.0
+    autoScaleLearningRate: 3
     beta1: 0.9
     beta2: 0.999
     epsilonAdam: 0.1
@@ -47,7 +58,7 @@ agent:
         numHiddens: []
         seed: 1234
         updater: Sgd
-        autoScaleLearningRate: 10.0
+        autoScaleLearningRate: 10
         beta1: 0.9
         beta2: 0.999
         epsilonAdam: 0.1
@@ -60,7 +71,7 @@ agent:
         numHiddens: []
         seed: 1234
         updater: Sgd
-        autoScaleLearningRate: 10.0
+        autoScaleLearningRate: 10
         beta1: 0.9
         beta2: 0.999
         epsilonAdam: 0.1
@@ -73,7 +84,7 @@ agent:
         numHiddens: []
         seed: 1234
         updater: Sgd
-        autoScaleLearningRate: 10.0
+        autoScaleLearningRate: 10
         beta1: 0.9
         beta2: 0.999
         epsilonAdam: 0.1

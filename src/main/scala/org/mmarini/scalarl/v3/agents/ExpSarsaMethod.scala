@@ -99,6 +99,20 @@ case class ExpSarsaMethod(dimension: Int,
   }
 
   /**
+   * Returns the new average reward and the score by training from feedback
+   *
+   * @param net      the neural network
+   * @param feedback the feedback
+   * @param avg      the average reward
+   */
+  private def train(net: MultiLayerNetwork, feedback: Feedback, avg: INDArray): (INDArray, INDArray) = {
+    val (inputs, labels, newAvg, score) = createData(feedback, avg)
+    // Train network
+    net.fit(inputs, labels)
+    (newAvg, score)
+  }
+
+  /**
    * Returns the score a feedback
    *
    * @param feedback the feedback from the last step
@@ -131,20 +145,6 @@ case class ExpSarsaMethod(dimension: Int,
   def writeModel(path: File): ExpSarsaMethod = {
     ModelSerializer.writeModel(net, new File(path, s"network-$dimension.zip"), false)
     this
-  }
-
-  /**
-   * Returns the new average reward and the score by training from feedback
-   *
-   * @param net      the neural network
-   * @param feedback the feedback
-   * @param avg      the average reward
-   */
-  private def train(net: MultiLayerNetwork, feedback: Feedback, avg: INDArray): (INDArray, INDArray) = {
-    val (inputs, labels, newAvg, score) = createData(feedback, avg)
-    // Train network
-    net.fit(inputs, labels)
-    (newAvg, score)
   }
 }
 

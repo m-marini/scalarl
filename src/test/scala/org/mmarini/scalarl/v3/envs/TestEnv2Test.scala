@@ -36,7 +36,7 @@ import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
 import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
-import org.mmarini.scalarl.v3.agents.{ActorCriticAgent, ExpSarsaAgent, PolicyActor}
+import org.mmarini.scalarl.v3.agents.{ActorCriticAgent, PolicyActor}
 import org.mmarini.scalarl.v3.{Agent, Session}
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.rng.Random
@@ -44,13 +44,15 @@ import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.learning.config.Sgd
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 import org.scalatest.{FunSpec, Matchers}
+import org.nd4j.linalg.ops.transforms.Transforms._
 
 class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
   val Seed = 12345L
-  val NoSteps = 3000
+  val NoSteps = 500
   val Hiddens = 10
 
   create()
+  val random: Random = getRandomFactory.getNewRandomInstance(Seed)
 
   def agent: Agent = ActorCriticAgent(
     critic = critic,
@@ -60,7 +62,8 @@ class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
     actors = Array(PolicyActor(
       dimension = 0,
       actor = actor,
-      alpha = ones(1).mul(3))))
+      alpha = ones(1).mul(3))),
+    planner = None)
 
   def critic: MultiLayerNetwork = {
     val outLayer = new OutputLayer.Builder().
@@ -74,13 +77,8 @@ class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
       seed(Seed).
       weightInit(WeightInit.XAVIER).
       updater(new Sgd(1.0 / 4)).
-      //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
-      //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
       miniBatch(false).
-      //      constrainAllParameters(new MinMaxNormConstraint(-10e3, 10e3, 1)).
-      //      gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue).
-      //      gradientNormalizationThreshold(100).
       list(outLayer)
       .build()
 
@@ -100,13 +98,9 @@ class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
     val conf = new NeuralNetConfiguration.Builder().
       seed(Seed).
       weightInit(WeightInit.XAVIER).
-      //      updater(new Adam(10.0 / (4 * Hiddens + (Hiddens + 1) * 2), 0.9, 0.999, 0.1)).
-      //updater(new Adam(1.0 / (4 * 2), 0.9, 0.999, 0.1)).
       updater(new Sgd(1.0 / (4 * 2))).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
       constrainAllParameters(new MinMaxNormConstraint(-10e3, 10e3, 1)).
-      //    gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue).
-      //      gradientNormalizationThreshold(1).
       list(outLayer)
       .build()
 
@@ -115,9 +109,13 @@ class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
     net
   }
 
-  val random: Random = getRandomFactory.getNewRandomInstance(Seed)
-
-  describe("TestEnv") {
+  describe(
+    s"""TestEnv
+       | Given a continuous MDP process with 3 state, deterministic transitions driven by 2 possible actions
+       |   and an agent implementing actor critic method
+       | When acting in the environment
+       | Then the actor should improve its policy approching the optimal policy
+       |   and reaching a good policy within $NoSteps interaction steps""".stripMargin) {
 
     val conf = TestEnvConfBuilder().numState(3).
       p(0, 0, 0, 0, 1.0).
@@ -129,7 +127,6 @@ class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
 
     val s0 = TestEnv(zeros(1), 0, conf)
     val s1 = TestEnv(zeros(1), 1, conf)
-    //  val s2 = TestEnv(0, 2, conf)
 
     val session = new Session(numSteps = NoSteps,
       epoch = 0,
@@ -139,21 +136,17 @@ class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
     it("should compare first with last episode") {
       val (_, agent1) = session.run(random)
 
-      //t1.asInstanceOf[ExpSarsaAgent].avgReward shouldBe 0.25 +- 0.25
-
       val q0 = agent1.asInstanceOf[ActorCriticAgent].
         actors.head.asInstanceOf[PolicyActor].
         actor.output(s0.observation.signals)
+      logger.debug("q(s0) = {}, pi(s0) = {}", q0, softmax(q0))
       q0.getDouble(1L) shouldBe >(q0.getDouble(0L))
-      //      q0.getDouble(0L) shouldBe 0.125 +- 0.05
-      //      q0.getDouble(1L) shouldBe 0.25 +- 0.05
 
       val q1 = agent1.asInstanceOf[ActorCriticAgent].
         actors.head.asInstanceOf[PolicyActor].
         actor.output(s1.observation.signals)
+      logger.debug("q(s1) = {}, pi(s1) = {}", q1, softmax(q1))
       q1.getDouble(1L) shouldBe >(q1.getDouble(0L))
-      //      q1.getDouble(0L) shouldBe 0.5 +- 0.05
-      //      q1.getDouble(1L) shouldBe 0.625 +- 0.05
     }
   }
 }

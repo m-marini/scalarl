@@ -30,9 +30,9 @@
 package org.mmarini.scalarl.v3.envs
 
 import com.typesafe.scalalogging.LazyLogging
-import org.scalatest.{FunSpec, Matchers}
 import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.ops.transforms.Transforms
+import org.scalatest.{FunSpec, Matchers}
 
 class TilesTest extends FunSpec with Matchers with LazyLogging {
 

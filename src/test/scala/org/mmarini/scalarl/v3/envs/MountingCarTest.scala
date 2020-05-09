@@ -52,6 +52,8 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
   val NoInputs: Long = Tiles(1, 1).noFeatures
 
   create()
+  val random: Random =
+    getRandomFactory.getNewRandomInstance(Seed)
 
   def agent: ActorCriticAgent = ActorCriticAgent(
     critic = critic,
@@ -60,7 +62,8 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
     valueDecay = ones(1).muli(0.99),
     actors = Array(GaussianActor(dimension = 0,
       actor = actor,
-      alpha = ones(1).muli(0.1))))
+      alpha = ones(1).muli(0.1))),
+    planner = None)
 
   def critic: MultiLayerNetwork = {
     val outLayer = new OutputLayer.Builder().
@@ -114,9 +117,6 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
     net.init()
     net
   }
-
-  val random: Random =
-    getRandomFactory.getNewRandomInstance(Seed)
 
   describe("TestEnv") {
 

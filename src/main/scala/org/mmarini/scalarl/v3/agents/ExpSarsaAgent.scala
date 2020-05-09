@@ -57,7 +57,6 @@ case class ExpSarsaAgent(actionAgents: Array[ExpSarsaMethod]) extends Agent with
     result
   }
 
-
   /**
    * Returns the fit agent and the score
    * Optimizes the policy based on the feedback
@@ -65,11 +64,8 @@ case class ExpSarsaAgent(actionAgents: Array[ExpSarsaMethod]) extends Agent with
    * @param feedback the feedback from the last step
    * @param random   the random generator
    */
-  override def fit(feedback: Feedback, random: Random): (ExpSarsaAgent, INDArray) = {
-    val (agents, scores) = actionAgents.map(_.fit(feedback, random)).unzip
-    val score = hstack(scores: _ *).sum()
-    (copy(actionAgents = agents), score)
-  }
+  override def fit(feedback: Feedback, random: Random): (Agent, INDArray) =
+    directLearn(feedback, random)
 
   /**
    * Returns the score for a feedback
@@ -90,5 +86,18 @@ case class ExpSarsaAgent(actionAgents: Array[ExpSarsaMethod]) extends Agent with
   override def writeModel(path: File): ExpSarsaAgent = {
     actionAgents.foreach(_.writeModel(path))
     this
+  }
+
+  /**
+   * Returns the fit agent and the score
+   * Optimizes the policy based on the feedback for a single feedback
+   *
+   * @param feedback the feedback from the last step
+   * @param random   the random generator
+   */
+  override def directLearn(feedback: Feedback, random: Random): (Agent, INDArray) = {
+    val (agents, scores) = actionAgents.map(_.fit(feedback, random)).unzip
+    val score = hstack(scores: _ *).sum()
+    (copy(actionAgents = agents), score)
   }
 }

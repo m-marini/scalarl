@@ -27,45 +27,50 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.v3.envs
+package org.mmarini.scalarl.v3.agents
 
 import io.circe.ACursor
 import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.factory.Nd4j._
 
 /**
- * The LanderConf with lander parameters
+ * Prioriry queue with insertion threshold
  *
- * @param statusScale the status scale
+ * @param threshold the threshold
+ * @param queue     the data queue
+ * @tparam T the type of elements
  */
-class LanderContinuousEncoder(statusScale: INDArray) extends LanderEncoder {
+case class PriorityQueue[T](threshold: Double, queue: Map[T, Double]) {
 
-  /** Returns the number of signals */
-  override val noSignals: Int = 6
+  /** Returns the value and the new queue without the value */
+  def dequeue(): (Option[T], PriorityQueue[T]) = if (queue.isEmpty) {
+    (None, this)
+  } else {
+    val value = queue.toSeq.sortBy(_._2).lastOption.map(_._1)
+    val newQueue = value.map(k => copy(queue = queue - k)).getOrElse(this)
+    (value, newQueue)
+  }
 
   /**
-   * Returns the input signals
+   * Returns the queue with new entry if score higher then threshold
    *
-   * @param status the status
+   * @param entry the entry
    */
-  override def signals(status: LanderStatus): INDArray =
-    hstack(status.pos, status.speed).muli(statusScale)
+  def +(entry: (T, Double)): PriorityQueue[T] = entry match {
+    case (_, score) if score <= threshold =>
+      this
+    case (value, score) =>
+      copy(queue = queue + (value -> score))
+  }
 }
 
-/** Factory for [[LanderContinuousEncoder]] instances */
-object LanderContinuousEncoder {
+/** The object factory of [[PriorityQueue]] */
+object PriorityQueue {
   /**
+   * Returns the priority queue from json configuration
    *
-   * @param conf the json configuration
+   * @param conf the configuration
    */
-  def fromJson(conf: ACursor): LanderContinuousEncoder = {
-    val hRange = conf.get[Double]("hRange").toTry.get
-    val zMax = conf.get[Double]("zMax").toTry.get
-    val vhRange = conf.get[Double]("vhRange").toTry.get
-    val vzRange = conf.get[Double]("vzRange").toTry.get
-    new LanderContinuousEncoder(create(Array(
-      1 / hRange, 1 / hRange, 1 / zMax,
-      1 / vhRange, 1 / vhRange, 1 / vzRange
-    )))
-  }
+  def fromJson(conf: ACursor): PriorityQueue[(INDArray, INDArray)] = PriorityQueue(
+    threshold = conf.get[Double]("scoreThreshold").toTry.get,
+    queue = Map())
 }

@@ -8,7 +8,7 @@ function actors(X, EPS=1e-3, T=20)
     XX = X(find(abs(X(:, j)) > EPS), j : j + 1);
     m = size(XX, 1);
     K = XX(:, 2) ./ XX(:, 1);
-    C = 100 / max(K);
+    C = 100 / mean(K);
     e = sum(K >= 1);
     v = m - e;
     f = n - m;

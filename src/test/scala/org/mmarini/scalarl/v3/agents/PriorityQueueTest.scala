@@ -27,45 +27,41 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.v3.envs
+package org.mmarini.scalarl.v3.agents
 
-import io.circe.ACursor
-import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j._
+import org.scalatest.{FunSpec, Matchers}
 
-/**
- * The LanderConf with lander parameters
- *
- * @param statusScale the status scale
- */
-class LanderContinuousEncoder(statusScale: INDArray) extends LanderEncoder {
+class PriorityQueueTest extends FunSpec with Matchers {
 
-  /** Returns the number of signals */
-  override val noSignals: Int = 6
+  create()
 
-  /**
-   * Returns the input signals
-   *
-   * @param status the status
-   */
-  override def signals(status: LanderStatus): INDArray =
-    hstack(status.pos, status.speed).muli(statusScale)
-}
+  describe("PriorityQueue") {
+    val p = PriorityQueue[String](threshold = 0.1, Map())
 
-/** Factory for [[LanderContinuousEncoder]] instances */
-object LanderContinuousEncoder {
-  /**
-   *
-   * @param conf the json configuration
-   */
-  def fromJson(conf: ACursor): LanderContinuousEncoder = {
-    val hRange = conf.get[Double]("hRange").toTry.get
-    val zMax = conf.get[Double]("zMax").toTry.get
-    val vhRange = conf.get[Double]("vhRange").toTry.get
-    val vzRange = conf.get[Double]("vzRange").toTry.get
-    new LanderContinuousEncoder(create(Array(
-      1 / hRange, 1 / hRange, 1 / zMax,
-      1 / vhRange, 1 / vhRange, 1 / vzRange
-    )))
+    it("should enqueues values with priority higer than threshold") {
+      val p1 = p + ("a", 1)
+      p1.queue should contain("a" -> 1.0)
+    }
+
+    it("should not enqueues values with priority lower  than threshold") {
+      val p1 = p + ("a" -> 0)
+      p1.queue shouldBe empty
+    }
+
+    it("should not enqueues values with priority equal to threshold") {
+      val p1 = p + ("a" -> 0.1)
+      p1.queue shouldBe empty
+    }
+
+    describe("with enqueued values") {
+      val p1 = p + ("a" -> 1.0) + ("b" -> 2.0)
+      it("should dequeue higer element") {
+        val (value, p2) = p1.dequeue()
+        value should contain("b")
+        p2.queue.size shouldBe 1
+        p2.queue should contain("a" -> 1.0)
+      }
+    }
   }
 }

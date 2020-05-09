@@ -1,3 +1,3 @@
-function analizeFile(FILE)
+function analyzeFile(FILE)
   analyze(csvread(FILE));
 endfunction

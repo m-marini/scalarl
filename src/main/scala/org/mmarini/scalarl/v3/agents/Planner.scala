@@ -27,45 +27,26 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-package org.mmarini.scalarl.v3.envs
+package org.mmarini.scalarl.v3.agents
 
-import io.circe.ACursor
-import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.factory.Nd4j._
+import org.mmarini.scalarl.v3.{Agent, Feedback}
+import org.nd4j.linalg.api.rng.Random
 
-/**
- * The LanderConf with lander parameters
- *
- * @param statusScale the status scale
- */
-class LanderContinuousEncoder(statusScale: INDArray) extends LanderEncoder {
-
-  /** Returns the number of signals */
-  override val noSignals: Int = 6
+trait Planner {
 
   /**
-   * Returns the input signals
+   * Returns the mode updated by a new feedback
    *
-   * @param status the status
+   * @param feedback the feedback
+   * @param agent    the agent
    */
-  override def signals(status: LanderStatus): INDArray =
-    hstack(status.pos, status.speed).muli(statusScale)
-}
+  def learn(feedback: Feedback, agent: Agent): Planner
 
-/** Factory for [[LanderContinuousEncoder]] instances */
-object LanderContinuousEncoder {
   /**
+   * Returns the agent fit by planning and updated model
    *
-   * @param conf the json configuration
+   * @param agent  the agent to fit
+   * @param random the random generator
    */
-  def fromJson(conf: ACursor): LanderContinuousEncoder = {
-    val hRange = conf.get[Double]("hRange").toTry.get
-    val zMax = conf.get[Double]("zMax").toTry.get
-    val vhRange = conf.get[Double]("vhRange").toTry.get
-    val vzRange = conf.get[Double]("vzRange").toTry.get
-    new LanderContinuousEncoder(create(Array(
-      1 / hRange, 1 / hRange, 1 / zMax,
-      1 / vhRange, 1 / vhRange, 1 / vzRange
-    )))
-  }
+  def plan(agent: Agent, random: Random): (Agent, Planner)
 }

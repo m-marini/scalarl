@@ -36,6 +36,7 @@ import org.scalatest.{FunSpec, Matchers}
 class LanderConfTest1 extends FunSpec with Matchers {
   create()
 
+  private val MaxPower = 4
   val DefaultFuel: INDArray = ones(1).mul(10.0)
 
   val conf: LanderConf = new LanderConf(
@@ -56,16 +57,13 @@ class LanderConfTest1 extends FunSpec with Matchers {
     outOfRangeReward = ones(1).mul(-100.0),
     outOfFuelReward = ones(1).mul(-100.0),
     rewardDistanceScale = ones(1).mul(0.01))
-
-  private val MaxPower = 4
-
-  private def vector(x: Double, y: Double, z: Double) = create(Array(x, y, z))
-
   val Act000: INDArray = zeros(3)
   val Act111: INDArray = ones(3)
   val Act222: INDArray = ones(3).muli(2)
   val Act333: INDArray = ones(3).muli(3)
   val Act444: INDArray = ones(3).muli(MaxPower)
+
+  private def vector(x: Double, y: Double, z: Double) = create(Array(x, y, z))
 
   describe("LanderConf drive") {
     val pos = vector(0, 0, 10.0)

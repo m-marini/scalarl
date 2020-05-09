@@ -65,6 +65,13 @@ case class GaussianActor(dimension: Int,
   }
 
   /**
+   * Returns mu, h, sigma
+   *
+   * @param s0 the state observation
+   */
+  def muHSigma(s0: Observation): (INDArray, INDArray, INDArray) = GaussianActor.muHSigma(actor.output(s0.signals))
+
+  /**
    * Returns the fit agent by optimizing its strategy policy and the score
    *
    * @param feedback the feedback from the last step
@@ -86,13 +93,6 @@ case class GaussianActor(dimension: Int,
     val newActpr = copy(actor = newActor)
     newActpr
   }
-
-  /**
-   * Returns mu, h, sigma
-   *
-   * @param s0 the state observation
-   */
-  def muHSigma(s0: Observation): (INDArray, INDArray, INDArray) = GaussianActor.muHSigma(actor.output(s0.signals))
 
   /**
    * Writes the agent status to file

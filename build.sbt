@@ -16,6 +16,7 @@ libraryDependencies += "io.circe" %% "circe-yaml" % "0.13.0"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % Test
 libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.14.0" % Test
+libraryDependencies += "org.mockito" % "mockito-core" % "3.3.3" % Test
 
 publishArtifact in(Compile, packageDoc) := false
 

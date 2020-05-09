@@ -160,21 +160,21 @@ class LanderConfTest extends FunSpec with Matchers {
   }
 
   describe("LanderConf at crash point") {
-    describe("at (0,0,-0.1) speed (0,0,-4.1)") {
-      val pos = create(Array[Double](0, 0, -0.1))
-      val speed = create(Array[Double](0, 0, -4.1))
-      it("should be crashed") {
-        conf.status(pos, speed, DefaultFuel) shouldBe Crashed
-      }
-    }
+//    describe("at (0,0,-0.1) speed (0,0,-4.1)") {
+//      val pos = create(Array[Double](0, 0, -0.1))
+//      val speed = create(Array[Double](0, 0, -4.1))
+//      it("should be crashed") {
+//        conf.status(pos, speed, DefaultFuel) shouldBe Crashed
+//      }
+//    }
 
-    describe("at (0,0,-0.1) speed (0.354,0.354,-4.1)") {
-      val pos = create(Array[Double](0, 0, -0.1))
-      val speed = create(Array[Double](0.354, 0.354, -4.1))
-      it("should be crashed") {
-        conf.status(pos, speed, DefaultFuel) shouldBe Crashed
-      }
-    }
+//    describe("at (0,0,-0.1) speed (0.354,0.354,-4.1)") {
+//      val pos = create(Array[Double](0, 0, -0.1))
+//      val speed = create(Array[Double](0.354, 0.354, -4.1))
+//      it("should be crashed") {
+//        conf.status(pos, speed, DefaultFuel) shouldBe Crashed
+//      }
+//    }
 
     describe("at (7.08,7-08,-0.1) speed (0, 0, 0)") {
       val pos = create(Array[Double](7.08, 7.08, -0.1))
