@@ -1,14 +1,11 @@
 package org.mmarini.scalarl.v3.envs
 
 import com.typesafe.scalalogging.LazyLogging
-import monix.eval.Task
 import monix.execution.Scheduler
 import monix.execution.Scheduler.global
-import org.mmarini.scalarl.v3.agents.{ActorCriticAgent, AgentBuilder, PolicyActor}
+import org.mmarini.scalarl.v3.agents.AgentBuilder
 import org.mmarini.scalarl.v3.reactive.WrapperBuilder._
-import org.mmarini.scalarl.v3.{Feedback, Step, Utils}
 import org.nd4j.linalg.factory.Nd4j._
-import org.nd4j.linalg.ops.transforms.Transforms
 
 import scala.concurrent.duration.DurationInt
 

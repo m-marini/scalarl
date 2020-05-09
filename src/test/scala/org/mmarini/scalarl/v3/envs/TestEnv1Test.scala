@@ -37,7 +37,7 @@ import org.deeplearning4j.nn.conf.{GradientNormalization, NeuralNetConfiguration
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
 import org.mmarini.scalarl.v3.Session
-import org.mmarini.scalarl.v3.agents.{ExpSarsaMethod, ExpSarsaAgent}
+import org.mmarini.scalarl.v3.agents.{ExpSarsaAgent, ExpSarsaMethod}
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
@@ -97,7 +97,12 @@ class TestEnv1Test extends FunSpec with Matchers with LazyLogging {
   def random: Random =
     getRandomFactory.getNewRandomInstance(Seed)
 
-  describe("TestEnv") {
+  describe(
+    """TestEnv
+      | Given a contonuous MDP process with 3 state, deterministic transitions driven by 2 possible actions
+      | And an agent implementing expected sarsa method
+      | When acting in the environment
+      | Then the actor should improve its policy approching the optimal policy""".stripMargin) {
 
     val conf = TestEnvConfBuilder().numState(3).
       p(0, 0, 0, 0, 1.0).

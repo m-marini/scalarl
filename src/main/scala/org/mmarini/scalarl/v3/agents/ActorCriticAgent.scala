@@ -48,21 +48,14 @@ import org.nd4j.linalg.ops.transforms.Transforms.pow
  * @param avg         the average reward
  * @param valueDecay  the value decay parameter
  * @param rewardDecay the reward decay parameter
+ * @param planner     the model to run planning
  */
 case class ActorCriticAgent(actors: Array[Actor],
                             critic: MultiLayerNetwork,
                             avg: INDArray,
                             valueDecay: INDArray,
-                            rewardDecay: INDArray) extends Agent {
-
-  /**
-   *
-   * @param v0     initail state value
-   * @param v1     final state value
-   * @param reward reward
-   */
-  def computeDelta(v0: INDArray, v1: INDArray, reward: INDArray): (INDArray, INDArray, INDArray) =
-    ActorCriticAgent.computeDelta(v0, v1, reward, avg, valueDecay, rewardDecay)
+                            rewardDecay: INDArray,
+                            planner: Option[Planner]) extends Agent {
 
   /**
    * Returns chosen action.
@@ -77,7 +70,6 @@ case class ActorCriticAgent(actors: Array[Actor],
     result
   }
 
-
   /**
    * Returns the fit agent and the score
    * Optimizes the policy based on the feedback
@@ -86,6 +78,24 @@ case class ActorCriticAgent(actors: Array[Actor],
    * @param random   the random generator
    */
   override def fit(feedback: Feedback, random: Random): (Agent, INDArray) = {
+    val result = directLearn(feedback, random)
+    planner.map(mod => {
+      // Model learn and planning fase
+      val (agent1, score) = result
+      val (agent2, model1) = mod.learn(feedback, agent1).plan(agent1, random)
+      val agent3 = agent2.asInstanceOf[ActorCriticAgent].copy(planner = Some(model1))
+      (agent3, score)
+    }).getOrElse(result)
+  }
+
+  /**
+   * Returns the fit agent and the score
+   * Optimizes the policy based on a single feedback
+   *
+   * @param feedback the feedback from the last step
+   * @param random   the random generator
+   */
+  override def directLearn(feedback: Feedback, random: Random): (Agent, INDArray) = {
     val Feedback(s0, _, reward, s1) = feedback
     val v0 = v(s0)
     val v1 = v(s1)
@@ -100,6 +110,15 @@ case class ActorCriticAgent(actors: Array[Actor],
     val newAgent = copy(actors = newActors, critic = newCritic, avg = newAvg)
     (newAgent, score)
   }
+
+  /**
+   *
+   * @param v0     initail state value
+   * @param v1     final state value
+   * @param reward reward
+   */
+  def computeDelta(v0: INDArray, v1: INDArray, reward: INDArray): (INDArray, INDArray, INDArray) =
+    ActorCriticAgent.computeDelta(v0, v1, reward, avg, valueDecay, rewardDecay)
 
   /**
    * Returns the value of a state

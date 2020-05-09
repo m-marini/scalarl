@@ -81,7 +81,7 @@ class StepsWrapper(val observable: Observable[Step]) extends ObservableWrapper[S
       }
     }).flatten
     val kpiSeq = deltaCritic +: deltaCritic1 +: kpiActorsAry
-    val kpis = create(kpiSeq.toArray)
+    val kpis = pow(create(kpiSeq.toArray), 2)
     kpis
   }))
 
@@ -123,53 +123,6 @@ class StepsWrapper(val observable: Observable[Step]) extends ObservableWrapper[S
   }).map(createLanderTrace))
 
   /**
-   * Returns the lander dump
-   * The data array is composed by:
-   *
-   * - epoch
-   * - step
-   * - returnValue
-   * - score
-   *
-   */
-  def landerDump(): INDArrayWrapper =
-    new INDArrayWrapper(
-      observable.filter(_.env0 match {
-        case _: LanderStatus => true
-        case _ => false
-      }).map(createLanderDump))
-
-  /**
-   * Returns the steps observable that saves the model
-   *
-   * @param path the model path
-   */
-  def saveAgent(path: File): StepsWrapper = new StepsWrapper(
-    observable.doOnNext(step => Task.eval {
-      step.context.agent.writeModel(path)
-    })
-  )
-
-  /** Returns the lander observable */
-  def lander(): LanderWrapper = new LanderWrapper(
-    observable.filter(_.env0 match {
-      case _: LanderStatus => true
-      case _ => false
-    }).map(_.env0.asInstanceOf[LanderStatus]))
-
-  /**
-   * Returns the dump data array of the episode
-   *
-   * @param step the step
-   */
-  private def createLanderDump(step: Step): INDArray = hstack(create(
-    Array[Double](
-      step.epoch,
-      step.step)),
-    step.feedback.reward,
-    step.score)
-
-  /**
    * Returns the trace data array of the step
    *
    * @param step the step
@@ -208,4 +161,51 @@ class StepsWrapper(val observable: Observable[Step]) extends ObservableWrapper[S
       softmax(prefs))
     trace
   }
+
+  /**
+   * Returns the lander dump
+   * The data array is composed by:
+   *
+   * - epoch
+   * - step
+   * - returnValue
+   * - score
+   *
+   */
+  def landerDump(): INDArrayWrapper =
+    new INDArrayWrapper(
+      observable.filter(_.env0 match {
+        case _: LanderStatus => true
+        case _ => false
+      }).map(createLanderDump))
+
+  /**
+   * Returns the dump data array of the episode
+   *
+   * @param step the step
+   */
+  private def createLanderDump(step: Step): INDArray = hstack(create(
+    Array[Double](
+      step.epoch,
+      step.step)),
+    step.feedback.reward,
+    step.score)
+
+  /**
+   * Returns the steps observable that saves the model
+   *
+   * @param path the model path
+   */
+  def saveAgent(path: File): StepsWrapper = new StepsWrapper(
+    observable.doOnNext(step => Task.eval {
+      step.context.agent.writeModel(path)
+    })
+  )
+
+  /** Returns the lander observable */
+  def lander(): LanderWrapper = new LanderWrapper(
+    observable.filter(_.env0 match {
+      case _: LanderStatus => true
+      case _ => false
+    }).map(_.env0.asInstanceOf[LanderStatus]))
 }

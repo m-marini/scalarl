@@ -66,14 +66,6 @@ case class PolicyActor(dimension: Int,
   }
 
   /**
-   * Returns the preferences
-   *
-   * @param observation the observation
-   */
-  def preferences(observation: Observation): INDArray =
-    normalize(actor.output(observation.signals))
-
-  /**
    * Returns the changed actor
    * The lerning method is applied to create a new fit actor
    *
@@ -93,6 +85,14 @@ case class PolicyActor(dimension: Int,
     val newActor = copy(actor = newNet)
     newActor
   }
+
+  /**
+   * Returns the preferences
+   *
+   * @param observation the observation
+   */
+  def preferences(observation: Observation): INDArray =
+    normalize(actor.output(observation.signals))
 
   /**
    * Writes the agent status to file

@@ -48,27 +48,20 @@ object AgentBuilder extends LazyLogging {
 
 
   /**
-   * Returns the agent
+   * Returns [[Agent]] from json configuration
    *
-   * @param dimension    the dimension index
-   * @param conf         the json configuration
-   * @param noInputs     the number ofr inputs
-   * @param actionConfig the action configuration
-   * @param modelPath    the path of model to load
+   * @param conf         the configuration
+   * @param noInputs     the number of inputs
+   * @param actionConfig actions configuration
    */
-  def actorFromJson(conf: ACursor)(dimension: Int,
-                                   noInputs: Int,
-                                   actionConfig: ActionConfig,
-                                   modelPath: Option[String]): Actor = {
-    val typ = conf.get[String]("type").toTry.get
-    (typ, actionConfig) match {
-      case ("PolicyActor", DiscreteAction(nValues)) =>
-        policyActorFromJson(conf)(dimension, noInputs, nValues, modelPath)
-      case ("GaussianActor", _) =>
-        gaussianFromJson(conf)(dimension, noInputs, modelPath)
-      case _ =>
-        throw new IllegalArgumentException(s"Actor $dimension '$typ' incompatible with action configuration $actionConfig")
+  def fromJson(conf: ACursor)(noInputs: Int, actionConfig: Seq[ActionConfig]): Agent = {
+    val agent = conf.get[String]("type").toTry.get match {
+      case "ActorCritic" => actorCriticFromJson(conf)(noInputs, actionConfig)
+      case "ExpSarsa" => expSarsaAgentFromJson(conf)(noInputs, actionConfig)
+      case typ =>
+        throw new IllegalArgumentException(s"Agent type '$typ' unrecognized")
     }
+    agent
   }
 
   /**
@@ -94,47 +87,39 @@ object AgentBuilder extends LazyLogging {
       loadNetwork(new File(path, s"critic.zip"), noInputs, 1)
     }).getOrElse(AgentNetworkBuilder.fromJson(conf.downField("critic"))(noInputs, 1, Activation.IDENTITY))
 
+    val plannerCfg = conf.downField("planner")
+    val planner = if (plannerCfg.succeeded) Some(PriorityPlanner.fromJson(plannerCfg)) else None
+
     ActorCriticAgent(actors = actors.toArray,
       critic: MultiLayerNetwork,
       avg: INDArray,
       valueDecay: INDArray,
-      rewardDecay: INDArray)
+      rewardDecay: INDArray,
+      planner)
   }
 
   /**
-   * Returns the [[ExpSarsaAgent]]
+   * Returns the agent
    *
+   * @param dimension    the dimension index
    * @param conf         the json configuration
-   * @param noInputs     the number of inputs
+   * @param noInputs     the number ofr inputs
    * @param actionConfig the action configuration
+   * @param modelPath    the path of model to load
    */
-  def expSarsaAgentFromJson(conf: ACursor)(noInputs: Int, actionConfig: Seq[ActionConfig]): ExpSarsaAgent = {
-    val actions = conf.downField("actions")
-    val modelPath = conf.get[String]("modelPath").toOption
-    val actionAgents = actionConfig.zipWithIndex.map {
-      case (DiscreteAction(noActions), dim) =>
-        expSarsaFromJson(actions.downN(dim))(dim, noInputs, noActions, modelPath)
-      case (actionConf, dim) =>
-        throw new IllegalArgumentException(s"Action $dim '$actionConf' incompatible with ExpSarsaAgent")
+  def actorFromJson(conf: ACursor)(dimension: Int,
+                                   noInputs: Int,
+                                   actionConfig: ActionConfig,
+                                   modelPath: Option[String]): Actor = {
+    val typ = conf.get[String]("type").toTry.get
+    (typ, actionConfig) match {
+      case ("PolicyActor", DiscreteAction(nValues)) =>
+        policyActorFromJson(conf)(dimension, noInputs, nValues, modelPath)
+      case ("GaussianActor", _) =>
+        gaussianFromJson(conf)(dimension, noInputs, modelPath)
+      case _ =>
+        throw new IllegalArgumentException(s"Actor $dimension '$typ' incompatible with action configuration $actionConfig")
     }
-    ExpSarsaAgent(actionAgents.toArray)
-  }
-
-  /**
-   * Returns [[Agent]] from json configuration
-   *
-   * @param conf         the configuration
-   * @param noInputs     the number of inputs
-   * @param actionConfig actions configuration
-   */
-  def fromJson(conf: ACursor)(noInputs: Int, actionConfig: Seq[ActionConfig]): Agent = {
-    val agent = conf.get[String]("type").toTry.get match {
-      case "ActorCritic" => actorCriticFromJson(conf)(noInputs, actionConfig)
-      case "ExpSarsa" => expSarsaAgentFromJson(conf)(noInputs, actionConfig)
-      case typ =>
-        throw new IllegalArgumentException(s"Agent type '$typ' unrecognized")
-    }
-    agent
   }
 
   /**
@@ -155,6 +140,28 @@ object AgentBuilder extends LazyLogging {
       loadNetwork(new File(path, s"actor-$dimension.zip"), noInputs, noOutputs)
     }).getOrElse(AgentNetworkBuilder.fromJson(netConf)(noInputs, noOutputs, Activation.IDENTITY))
     PolicyActor(
+      dimension = dimension,
+      actor = actor,
+      alpha = conf.get[Double]("alpha").toTry.map(Nd4j.ones(1).muli(_)).get)
+  }
+
+  /**
+   * Returns the discrete action agent
+   *
+   * @param conf      the configuration element
+   * @param dimension the dimension index
+   * @param noInputs  the number of inputs
+   * @param modelPath the path of model to load
+   */
+  def gaussianFromJson(conf: ACursor)(dimension: Int,
+                                      noInputs: Int,
+                                      modelPath: Option[String]): GaussianActor = {
+    val netConf = conf.downField("network")
+    val actor = modelPath.map(path => {
+      loadNetwork(new File(path, s"actor-$dimension.zip"), noInputs, 2)
+    }).getOrElse(AgentNetworkBuilder.fromJson(netConf)(noInputs, 2, Activation.IDENTITY))
+
+    GaussianActor(
       dimension = dimension,
       actor = actor,
       alpha = conf.get[Double]("alpha").toTry.map(Nd4j.ones(1).muli(_)).get)
@@ -183,25 +190,22 @@ object AgentBuilder extends LazyLogging {
   }
 
   /**
-   * Returns the discrete action agent
+   * Returns the [[ExpSarsaAgent]]
    *
-   * @param conf      the configuration element
-   * @param dimension the dimension index
-   * @param noInputs  the number of inputs
-   * @param modelPath the path of model to load
+   * @param conf         the json configuration
+   * @param noInputs     the number of inputs
+   * @param actionConfig the action configuration
    */
-  def gaussianFromJson(conf: ACursor)(dimension: Int,
-                                      noInputs: Int,
-                                      modelPath: Option[String]): GaussianActor = {
-    val netConf = conf.downField("network")
-    val actor = modelPath.map(path => {
-      loadNetwork(new File(path, s"actor-$dimension.zip"), noInputs, 2)
-    }).getOrElse(AgentNetworkBuilder.fromJson(netConf)(noInputs, 2, Activation.IDENTITY))
-
-    GaussianActor(
-      dimension = dimension,
-      actor = actor,
-      alpha = conf.get[Double]("alpha").toTry.map(Nd4j.ones(1).muli(_)).get)
+  def expSarsaAgentFromJson(conf: ACursor)(noInputs: Int, actionConfig: Seq[ActionConfig]): ExpSarsaAgent = {
+    val actions = conf.downField("actions")
+    val modelPath = conf.get[String]("modelPath").toOption
+    val actionAgents = actionConfig.zipWithIndex.map {
+      case (DiscreteAction(noActions), dim) =>
+        expSarsaFromJson(actions.downN(dim))(dim, noInputs, noActions, modelPath)
+      case (actionConf, dim) =>
+        throw new IllegalArgumentException(s"Action $dim '$actionConf' incompatible with ExpSarsaAgent")
+    }
+    ExpSarsaAgent(actionAgents.toArray)
   }
 
   /**

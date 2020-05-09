@@ -6,7 +6,7 @@ function critic(X, EPS = 1e-3, T=20)
   # Number of vaid steps
   m = size(X, 1);
   K = X(:, 2) ./ X(:, 1);
-  C = 100 / max(K);
+  C = 100 / mean(K);
   e = sum(K >= 1);
   v = m - e;
   f = n - m;

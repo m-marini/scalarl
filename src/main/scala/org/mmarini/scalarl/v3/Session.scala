@@ -124,7 +124,7 @@ class Session(env: => Env,
     val (agent1, score) = agent0.fit(feedback, random)
 
     val returnValue1 = returnValue.add(reward)
-    val totalScore1 = pow(score, 2).addi(totalScore)
+    val totalScore1 = totalScore.addi(score)
 
     val ctx0 = context.copy(env = env1,
       agent = agent1,

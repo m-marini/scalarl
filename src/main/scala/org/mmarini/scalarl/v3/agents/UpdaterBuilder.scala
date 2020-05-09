@@ -38,6 +38,18 @@ import org.nd4j.linalg.learning.config.{Adam, IUpdater, Sgd}
 object UpdaterBuilder {
 
   /**
+   * Returns an [[IUpdater]] builder from parameters counter
+   *
+   * @param conf    the json configuration
+   * @param noParms the number of parameters
+   */
+  def fromJson(conf: ACursor)(noParms: => Int): IUpdater = conf.get[String]("updater").toTry.get match {
+    case "Adam" => adam(conf)(noParms)
+    case "Sgd" => sgd(conf)(noParms)
+    case x => throw new IllegalArgumentException(s"unrecognized updater $x")
+  }
+
+  /**
    * Returns an [[Adam]] builder from parameters counter
    *
    * @param conf    the json configuration
@@ -49,18 +61,6 @@ object UpdaterBuilder {
     val beta2 = conf.get[Double]("beta2").toTry.get
     val epsilon = conf.get[Double]("epsilonAdam").toTry.get
     new Adam(eta, beta1, beta2, epsilon)
-  }
-
-  /**
-   * Returns an [[IUpdater]] builder from parameters counter
-   *
-   * @param conf    the json configuration
-   * @param noParms the number of parameters
-   */
-  def fromJson(conf: ACursor)(noParms: => Int): IUpdater = conf.get[String]("updater").toTry.get match {
-    case "Adam" => adam(conf)(noParms)
-    case "Sgd" => sgd(conf)(noParms)
-    case x => throw new IllegalArgumentException(s"unrecognized updater $x")
   }
 
   /**

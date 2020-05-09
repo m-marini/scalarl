@@ -81,19 +81,6 @@ case class LanderStatus(encoder: LanderEncoder,
   def status: StatusCode.Value = conf.status(pos, speed, fuel)
 
   /**
-   *
-   * @param random the random generator
-   */
-  private def initial(random: Random): LanderStatus = {
-    val newEnv = copy(
-      pos = conf.initialPos(random),
-      speed = zeros(3),
-      fuel = conf.fuel,
-      time = time.add(conf.dt))
-    newEnv
-  }
-
-  /**
    * Returns the next status and the reward.
    * Computes the next status of environment executing an action.
    *
@@ -123,6 +110,19 @@ case class LanderStatus(encoder: LanderEncoder,
       (newEnv, reward)
     case _ =>
       (initial(random), zeros(1))
+  }
+
+  /**
+   *
+   * @param random the random generator
+   */
+  private def initial(random: Random): LanderStatus = {
+    val newEnv = copy(
+      pos = conf.initialPos(random),
+      speed = zeros(3),
+      fuel = conf.fuel,
+      time = time.add(conf.dt))
+    newEnv
   }
 
   /**

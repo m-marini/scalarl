@@ -36,38 +36,59 @@ import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
 import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
-import org.mmarini.scalarl.v3.Session
-import org.mmarini.scalarl.v3.agents.{ActorCriticAgent, GaussianActor}
+import org.mmarini.scalarl.v3.agents._
+import org.mmarini.scalarl.v3.{Agent, Feedback, Session}
 import org.nd4j.linalg.activations.Activation
+import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.learning.config.Sgd
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
+import org.nd4j.linalg.ops.transforms.Transforms.softmax
 import org.scalatest.{FunSpec, Matchers}
 
-class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
-  val Seed = 12345L
-  val NoSteps = 1000
+class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
+  val Seed = 123L
+  val NoSteps = 100
   val Hiddens = 10
-  val NoInputs: Long = Tiles(2).noFeatures
 
   create()
-  val random: Random =
-    getRandomFactory.getNewRandomInstance(Seed)
+  val random: Random = getRandomFactory.getNewRandomInstance(Seed)
 
-  def agent: ActorCriticAgent = ActorCriticAgent(
+  def model: Model[(INDArray, INDArray), Feedback] = Model[(INDArray, INDArray), Feedback](
+    minModelSize = 6,
+    maxModelSize = 10,
+    data = Map(),
+    ordering = Ordering.by((t: ((INDArray, INDArray), Feedback)) => t._2.s0.time.getDouble(0L)).reverse
+  )
+
+  def queue: PriorityQueue[(INDArray, INDArray)] = PriorityQueue[(INDArray, INDArray)](
+    threshold = 0.1,
+    queue = Map()
+  )
+
+  def planner: PriorityPlanner[INDArray, INDArray] = PriorityPlanner[INDArray, INDArray](
+    stateKeyGen = x => x,
+    actionsKeyGen = x => x,
+    planningSteps = 5,
+    model = model,
+    queue = queue
+  )
+
+  def agent: Agent = ActorCriticAgent(
     critic = critic,
+    rewardDecay = ones(1).mul(0.97),
+    valueDecay = ones(1).mul(0.99),
     avg = zeros(1),
-    rewardDecay = ones(1).muli(0.97),
-    valueDecay = ones(1).muli(0.99),
-    actors = Array(GaussianActor(dimension = 0,
+    actors = Array(PolicyActor(
+      dimension = 0,
       actor = actor,
-      alpha = ones(1).muli(0.03))),
-    planner = None)
+      alpha = ones(1).mul(3))),
+    planner = Some(planner))
 
   def critic: MultiLayerNetwork = {
     val outLayer = new OutputLayer.Builder().
-      nIn(NoInputs).
+      nIn(3).
       nOut(1).
       lossFunction(LossFunction.MSE).
       activation(Activation.IDENTITY).
@@ -76,7 +97,7 @@ class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
     val conf = new NeuralNetConfiguration.Builder().
       seed(Seed).
       weightInit(WeightInit.XAVIER).
-      updater(new Sgd(3e-3)).
+      updater(new Sgd(1.0 / 4)).
       //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
       //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
@@ -94,7 +115,7 @@ class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
 
   def actor: MultiLayerNetwork = {
     val outLayer = new OutputLayer.Builder().
-      nIn(NoInputs).
+      nIn(3).
       nOut(2).
       lossFunction(LossFunction.MSE).
       activation(Activation.IDENTITY).
@@ -105,7 +126,7 @@ class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
       weightInit(WeightInit.XAVIER).
       //      updater(new Adam(10.0 / (4 * Hiddens + (Hiddens + 1) * 2), 0.9, 0.999, 0.1)).
       //updater(new Adam(1.0 / (4 * 2), 0.9, 0.999, 0.1)).
-      updater(new Sgd(1e-3)).
+      updater(new Sgd(1.0 / (4 * 2))).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
       constrainAllParameters(new MinMaxNormConstraint(-10e3, 10e3, 1)).
       //    gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue).
@@ -118,10 +139,25 @@ class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
     net
   }
 
-  describe("ContinuousActionEnv") {
+  describe(
+    s"""TestEnv
+       | Given a continuous MDP process with 3 state, deterministic transitions driven by 2 possible actions
+       |   and an agent implementing actor critic method with planning
+       | When acting in the environment
+       | Then the actor should improve its policy approching the optimal policy
+       |   and reaching a good policy within $NoSteps interaction steps""".stripMargin) {
 
+    val conf = TestEnvConfBuilder().numState(3).
+      p(0, 0, 0, 0, 1.0).
+      p(1, 0, 0, 1, 1.0).
+      p(1, 0, 1, 0, 1.0).
+      p(2, 1, 1, 1, 1.0).
+      p(0, 0, 2, 0, 1.0).
+      p(0, 0, 2, 1, 1.0).build
 
-    val s0 = ContinuousActionEnv(ones(1).mul(2), zeros(1))
+    val s0 = TestEnv(zeros(1), 0, conf)
+    val s1 = TestEnv(zeros(1), 1, conf)
+    //  val s2 = TestEnv(0, 2, conf)
 
     val session = new Session(numSteps = NoSteps,
       epoch = 0,
@@ -129,16 +165,27 @@ class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
       agent = agent)
 
     val (_, agent1) = session.run(random)
-    val (mu, _, sigma) = agent1.asInstanceOf[ActorCriticAgent].
-      actors.head.asInstanceOf[GaussianActor].
-      muHSigma(s0.observation)
-    logger.info("mu=    {}", mu)
-    logger.info("sigma= {}", sigma)
-    it("should result mu = 2") {
-      mu.getDouble(0L) shouldBe 2.0 +- 1
+
+    val actor = agent1.asInstanceOf[ActorCriticAgent].actors.head.asInstanceOf[PolicyActor].actor
+
+    it("should result an actor with q(s0, a1) > q(s0, a1) ") {
+      val q0 = actor.output(s0.observation.signals)
+      logger.debug("q(s0) = {}, pi(s0) = {}", q0, softmax(q0))
+      q0.getDouble(1L) shouldBe >(q0.getDouble(0L))
     }
-    it("should result sigma less then 1.5") {
-      sigma.getDouble(0L) should be < 1.5
+
+    it("should result an actor with q(s1, a1) > q(s1, a1) ") {
+      val q1 = actor.output(s1.observation.signals)
+      logger.debug("q(s1) = {}, pi(s1) = {}", q1, softmax(q1))
+      q1.getDouble(1L) shouldBe >(q1.getDouble(0L))
+    }
+
+    val planner = agent1.asInstanceOf[ActorCriticAgent].planner.get.asInstanceOf[PriorityPlanner[INDArray, INDArray]]
+    it("should have model with 4 entries") {
+      planner.model.data should have size (4)
+    }
+    it("should have no queue entries") {
+      planner.queue.queue shouldBe empty
     }
   }
 }
