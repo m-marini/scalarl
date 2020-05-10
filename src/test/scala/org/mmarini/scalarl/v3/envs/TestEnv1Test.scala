@@ -34,6 +34,7 @@ import org.deeplearning4j.nn.api.OptimizationAlgorithm
 import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
 import org.deeplearning4j.nn.conf.layers.{DenseLayer, OutputLayer}
 import org.deeplearning4j.nn.conf.{GradientNormalization, NeuralNetConfiguration}
+import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
 import org.mmarini.scalarl.v3.Session
@@ -47,7 +48,7 @@ import org.scalatest.{FunSpec, Matchers}
 
 class TestEnv1Test extends FunSpec with Matchers with LazyLogging {
   val Seed = 12345L
-  val NoSteps = 1000
+  val NoSteps = 2000
   val MaxEpisodeLength = 100
   val Hiddens = 10
 
@@ -62,7 +63,7 @@ class TestEnv1Test extends FunSpec with Matchers with LazyLogging {
       beta = ones(1).mul(0.1),
       epsilon = ones(1).mul(0.1))))
 
-  def network: MultiLayerNetwork = {
+  def network: ComputationGraph = {
     val hidden = new DenseLayer.Builder().
       nIn(3).
       nOut(Hiddens).
@@ -91,7 +92,7 @@ class TestEnv1Test extends FunSpec with Matchers with LazyLogging {
 
     val net = new MultiLayerNetwork(conf)
     net.init()
-    net
+    net.toComputationGraph
   }
 
   def random: Random =

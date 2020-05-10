@@ -31,7 +31,7 @@ package org.mmarini.scalarl.v3.agents
 
 import java.io.File
 
-import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
+import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.v3.{Agent, Feedback, Observation}
 import org.nd4j.linalg.api.ndarray.INDArray
@@ -51,7 +51,7 @@ import org.nd4j.linalg.ops.transforms.Transforms.pow
  * @param planner     the model to run planning
  */
 case class ActorCriticAgent(actors: Array[Actor],
-                            critic: MultiLayerNetwork,
+                            critic: ComputationGraph,
                             avg: INDArray,
                             valueDecay: INDArray,
                             rewardDecay: INDArray,
@@ -104,7 +104,7 @@ case class ActorCriticAgent(actors: Array[Actor],
     // Critic update
     val criticLabel = newv0
     val newCritic = critic.clone()
-    newCritic.fit(s0.signals, criticLabel)
+    newCritic.fit(Array(s0.signals), Array(criticLabel))
     val score = pow(delta, 2)
     val newActors = actors.map(_.fit(feedback, delta, random))
     val newAgent = copy(actors = newActors, critic = newCritic, avg = newAvg)
@@ -189,6 +189,6 @@ object ActorCriticAgent {
    * @param critic the critic
    * @param obs    the observation
    */
-  def v(critic: MultiLayerNetwork, obs: Observation): INDArray =
-    critic.output(obs.signals)
+  def v(critic: ComputationGraph, obs: Observation): INDArray =
+    critic.output(obs.signals)(0)
 }

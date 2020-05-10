@@ -34,6 +34,7 @@ import org.deeplearning4j.nn.api.OptimizationAlgorithm
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
 import org.deeplearning4j.nn.conf.layers.OutputLayer
+import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
 import org.mmarini.scalarl.v3.agents._
@@ -55,6 +56,25 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
   create()
   val random: Random = getRandomFactory.getNewRandomInstance(Seed)
 
+  def agent: Agent = ActorCriticAgent(
+    critic = critic,
+    rewardDecay = ones(1).mul(0.97),
+    valueDecay = ones(1).mul(0.99),
+    avg = zeros(1),
+    actors = Array(PolicyActor(
+      dimension = 0,
+      actor = actor,
+      alpha = ones(1).mul(3))),
+    planner = Some(planner))
+
+  def planner: PriorityPlanner[INDArray, INDArray] = PriorityPlanner[INDArray, INDArray](
+    stateKeyGen = x => x,
+    actionsKeyGen = x => x,
+    planningSteps = 5,
+    model = model,
+    queue = queue
+  )
+
   def model: Model[(INDArray, INDArray), Feedback] = Model[(INDArray, INDArray), Feedback](
     minModelSize = 6,
     maxModelSize = 10,
@@ -67,26 +87,7 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
     queue = Map()
   )
 
-  def planner: PriorityPlanner[INDArray, INDArray] = PriorityPlanner[INDArray, INDArray](
-    stateKeyGen = x => x,
-    actionsKeyGen = x => x,
-    planningSteps = 5,
-    model = model,
-    queue = queue
-  )
-
-  def agent: Agent = ActorCriticAgent(
-    critic = critic,
-    rewardDecay = ones(1).mul(0.97),
-    valueDecay = ones(1).mul(0.99),
-    avg = zeros(1),
-    actors = Array(PolicyActor(
-      dimension = 0,
-      actor = actor,
-      alpha = ones(1).mul(3))),
-    planner = Some(planner))
-
-  def critic: MultiLayerNetwork = {
+  def critic: ComputationGraph = {
     val outLayer = new OutputLayer.Builder().
       nIn(3).
       nOut(1).
@@ -110,10 +111,10 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
 
     val net = new MultiLayerNetwork(conf)
     net.init()
-    net
+    net.toComputationGraph
   }
 
-  def actor: MultiLayerNetwork = {
+  def actor: ComputationGraph = {
     val outLayer = new OutputLayer.Builder().
       nIn(3).
       nOut(2).
@@ -136,7 +137,7 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
 
     val net = new MultiLayerNetwork(conf)
     net.init()
-    net
+    net.toComputationGraph
   }
 
   describe(
@@ -169,13 +170,13 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
     val actor = agent1.asInstanceOf[ActorCriticAgent].actors.head.asInstanceOf[PolicyActor].actor
 
     it("should result an actor with q(s0, a1) > q(s0, a1) ") {
-      val q0 = actor.output(s0.observation.signals)
+      val q0 = actor.output(s0.observation.signals)(0)
       logger.debug("q(s0) = {}, pi(s0) = {}", q0, softmax(q0))
       q0.getDouble(1L) shouldBe >(q0.getDouble(0L))
     }
 
     it("should result an actor with q(s1, a1) > q(s1, a1) ") {
-      val q1 = actor.output(s1.observation.signals)
+      val q1 = actor.output(s1.observation.signals)(0)
       logger.debug("q(s1) = {}, pi(s1) = {}", q1, softmax(q1))
       q1.getDouble(1L) shouldBe >(q1.getDouble(0L))
     }

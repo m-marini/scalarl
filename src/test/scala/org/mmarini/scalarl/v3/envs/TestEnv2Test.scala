@@ -34,6 +34,7 @@ import org.deeplearning4j.nn.api.OptimizationAlgorithm
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
 import org.deeplearning4j.nn.conf.layers.OutputLayer
+import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
 import org.mmarini.scalarl.v3.agents.{ActorCriticAgent, PolicyActor}
@@ -43,8 +44,8 @@ import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.learning.config.Sgd
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
-import org.scalatest.{FunSpec, Matchers}
 import org.nd4j.linalg.ops.transforms.Transforms._
+import org.scalatest.{FunSpec, Matchers}
 
 class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
   val Seed = 12345L
@@ -65,7 +66,7 @@ class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
       alpha = ones(1).mul(3))),
     planner = None)
 
-  def critic: MultiLayerNetwork = {
+  def critic: ComputationGraph = {
     val outLayer = new OutputLayer.Builder().
       nIn(3).
       nOut(1).
@@ -84,10 +85,10 @@ class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
 
     val net = new MultiLayerNetwork(conf)
     net.init()
-    net
+    net.toComputationGraph
   }
 
-  def actor: MultiLayerNetwork = {
+  def actor: ComputationGraph = {
     val outLayer = new OutputLayer.Builder().
       nIn(3).
       nOut(2).
@@ -106,7 +107,7 @@ class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
 
     val net = new MultiLayerNetwork(conf)
     net.init()
-    net
+    net.toComputationGraph
   }
 
   describe(
@@ -138,13 +139,13 @@ class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
 
       val q0 = agent1.asInstanceOf[ActorCriticAgent].
         actors.head.asInstanceOf[PolicyActor].
-        actor.output(s0.observation.signals)
+        actor.output(s0.observation.signals)(0)
       logger.debug("q(s0) = {}, pi(s0) = {}", q0, softmax(q0))
       q0.getDouble(1L) shouldBe >(q0.getDouble(0L))
 
       val q1 = agent1.asInstanceOf[ActorCriticAgent].
         actors.head.asInstanceOf[PolicyActor].
-        actor.output(s1.observation.signals)
+        actor.output(s1.observation.signals)(0)
       logger.debug("q(s1) = {}, pi(s1) = {}", q1, softmax(q1))
       q1.getDouble(1L) shouldBe >(q1.getDouble(0L))
     }

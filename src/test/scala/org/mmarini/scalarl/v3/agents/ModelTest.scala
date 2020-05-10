@@ -42,15 +42,15 @@ class ModelTest extends FunSpec with Matchers {
 
   def key(value: Double): INDArray = ones(1).muli(value)
 
-  def obs(value: Double, time: Double): INDArrayObservation =
-    INDArrayObservation(time = ones(1).muli(time), ones(1).muli(value))
-
   def feedback(value: Double, time: Double): Feedback = Feedback(
     s0 = obs(value, time),
     actions = zeros(0),
     reward = zeros(0),
     s1 = obs(10.0, 10.0)
   )
+
+  def obs(value: Double, time: Double): INDArrayObservation =
+    INDArrayObservation(time = ones(1).muli(time), ones(1).muli(value))
 
   describe("Model") {
     val p = Model[INDArray, Feedback](minModelSize = 1,

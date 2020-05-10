@@ -37,6 +37,7 @@ import org.deeplearning4j.nn.api.OptimizationAlgorithm
 import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
 import org.deeplearning4j.nn.conf.layers.{DenseLayer, OutputLayer}
 import org.deeplearning4j.nn.conf.{GradientNormalization, NeuralNetConfiguration}
+import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
 import org.deeplearning4j.util.ModelSerializer
@@ -56,7 +57,7 @@ object AgentNetworkBuilder extends LazyLogging {
    * @param noOutputs  the number of outputs
    * @param activation the output nodes activation function
    */
-  def fromJson(conf: ACursor)(noInputs: Int, noOutputs: Int, activation: Activation): MultiLayerNetwork = {
+  def fromJson(conf: ACursor)(noInputs: Int, noOutputs: Int, activation: Activation): ComputationGraph = {
     val seed = conf.get[Long]("seed").toOption
     val numHiddens = conf.get[List[Int]]("numHiddens").toTry.get
     val maxAbsGradient = conf.get[Double]("maxAbsGradients").toTry.get
@@ -106,7 +107,7 @@ object AgentNetworkBuilder extends LazyLogging {
 
     val net = new MultiLayerNetwork(annConf)
     net.init()
-    net
+    net.toComputationGraph
   }
 
   /**

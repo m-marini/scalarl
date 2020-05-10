@@ -32,7 +32,7 @@ package org.mmarini.scalarl.v3.agents
 import java.io.File
 
 import com.typesafe.scalalogging.LazyLogging
-import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
+import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.v3.Utils._
 import org.mmarini.scalarl.v3._
@@ -58,7 +58,7 @@ import org.nd4j.linalg.ops.transforms.Transforms._
  * @param beta      average reward step parameter
  */
 case class ExpSarsaMethod(dimension: Int,
-                          net: MultiLayerNetwork,
+                          net: ComputationGraph,
                           noActions: Int,
                           avgReward: INDArray,
                           epsilon: INDArray,
@@ -76,13 +76,6 @@ case class ExpSarsaMethod(dimension: Int,
     val action = ones(1).muli(randomInt(pr)(random))
     action
   }
-
-  /**
-   * Returns the policy for an observation
-   *
-   * @param observation the observation
-   */
-  def q(observation: Observation): INDArray = net.output(observation.signals)
 
   /**
    * Returns the fit agent by optimizing its strategy policy and the score
@@ -105,10 +98,10 @@ case class ExpSarsaMethod(dimension: Int,
    * @param feedback the feedback
    * @param avg      the average reward
    */
-  private def train(net: MultiLayerNetwork, feedback: Feedback, avg: INDArray): (INDArray, INDArray) = {
+  private def train(net: ComputationGraph, feedback: Feedback, avg: INDArray): (INDArray, INDArray) = {
     val (inputs, labels, newAvg, score) = createData(feedback, avg)
     // Train network
-    net.fit(inputs, labels)
+    net.fit(Array(inputs), Array(labels))
     (newAvg, score)
   }
 
@@ -135,6 +128,13 @@ case class ExpSarsaMethod(dimension: Int,
       val (labels, newAvg, score) = ExpSarsaMethod.createData(q0, q1, action, reward, beta, epsilon, avg)
       (obs0.signals, labels, newAvg, score)
   }
+
+  /**
+   * Returns the policy for an observation
+   *
+   * @param observation the observation
+   */
+  def q(observation: Observation): INDArray = net.output(observation.signals)(0)
 
   /**
    * Writes the agent status to file

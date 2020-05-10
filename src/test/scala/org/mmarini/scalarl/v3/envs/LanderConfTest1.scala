@@ -38,7 +38,6 @@ class LanderConfTest1 extends FunSpec with Matchers {
 
   private val MaxPower = 4
   val DefaultFuel: INDArray = ones(1).mul(10.0)
-
   val conf: LanderConf = new LanderConf(
     dt = ones(1).mul(0.25),
     h0Range = ones(1).mul(5.0),

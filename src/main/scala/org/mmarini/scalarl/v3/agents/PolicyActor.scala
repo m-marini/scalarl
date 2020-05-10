@@ -32,7 +32,7 @@ package org.mmarini.scalarl.v3.agents
 import java.io.File
 
 import com.typesafe.scalalogging.LazyLogging
-import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
+import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.v3.Utils._
 import org.mmarini.scalarl.v3._
@@ -50,7 +50,7 @@ import org.nd4j.linalg.ops.transforms.Transforms._
  * @param alpha     the alpha parameter
  */
 case class PolicyActor(dimension: Int,
-                       actor: MultiLayerNetwork,
+                       actor: ComputationGraph,
                        alpha: INDArray) extends Actor with LazyLogging {
   /**
    * Returns the new agent and the chosen action.
@@ -64,6 +64,14 @@ case class PolicyActor(dimension: Int,
     val action = ones(1).muli(randomInt(pi)(random))
     action
   }
+
+  /**
+   * Returns the preferences
+   *
+   * @param observation the observation
+   */
+  def preferences(observation: Observation): INDArray =
+    normalize(actor.output(observation.signals)(0))
 
   /**
    * Returns the changed actor
@@ -81,18 +89,10 @@ case class PolicyActor(dimension: Int,
     val prefs = preferences(s0)
     val actorLabel1 = computeActorLabel(prefs, action, alpha, delta)
     val newNet = actor.clone()
-    newNet.fit(s0.signals, actorLabel1)
+    newNet.fit(Array(s0.signals), Array(actorLabel1))
     val newActor = copy(actor = newNet)
     newActor
   }
-
-  /**
-   * Returns the preferences
-   *
-   * @param observation the observation
-   */
-  def preferences(observation: Observation): INDArray =
-    normalize(actor.output(observation.signals))
 
   /**
    * Writes the agent status to file

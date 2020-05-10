@@ -77,9 +77,6 @@ case class LanderStatus(encoder: LanderEncoder,
   /** Returns true if the status is final */
   def isFinal: Boolean = status != Flying
 
-  /** Returns the status code */
-  def status: StatusCode.Value = conf.status(pos, speed, fuel)
-
   /**
    * Returns the next status and the reward.
    * Computes the next status of environment executing an action.
@@ -111,6 +108,9 @@ case class LanderStatus(encoder: LanderEncoder,
     case _ =>
       (initial(random), zeros(1))
   }
+
+  /** Returns the status code */
+  def status: StatusCode.Value = conf.status(pos, speed, fuel)
 
   /**
    *

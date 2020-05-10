@@ -64,6 +64,14 @@ object UpdaterBuilder {
   }
 
   /**
+   * Returns an [[Sgd]] builder from parameters counter
+   *
+   * @param conf    the json configuration
+   * @param noParms the number of parameters
+   */
+  def sgd(conf: ACursor)(noParms: => Int): Sgd = new Sgd(learningRate(conf)(noParms))
+
+  /**
    * Returns the learningRate builder from parameters counts
    *
    * @param conf    the json configuration
@@ -74,12 +82,4 @@ object UpdaterBuilder {
       val eta = conf.get[Double]("autoScaleLearningRate").toTry.get
       eta / noParms
     }
-
-  /**
-   * Returns an [[Sgd]] builder from parameters counter
-   *
-   * @param conf    the json configuration
-   * @param noParms the number of parameters
-   */
-  def sgd(conf: ACursor)(noParms: => Int): Sgd = new Sgd(learningRate(conf)(noParms))
 }

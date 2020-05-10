@@ -30,8 +30,8 @@
 package org.mmarini.scalarl.v3.agents
 
 import org.mmarini.scalarl.v3.{Agent, Feedback, INDArrayObservation}
-import org.mockito.Mockito._
 import org.mockito.ArgumentMatchers._
+import org.mockito.Mockito._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j.{ones, _}
 import org.scalatest.mockito.MockitoSugar
@@ -47,15 +47,15 @@ class PriorityPlannerTest2 extends FunSpec with Matchers with MockitoSugar {
 
   def action(n: Int): INDArray = ones(1).muli(n)
 
-  def obs(time: Double, s: INDArray): INDArrayObservation =
-    INDArrayObservation(time = ones(1).muli(time), signals = s)
-
   def feedback(time: Double, s0: INDArray, a: INDArray, r: Double, s1: INDArray): Feedback = Feedback(
     s0 = obs(time, s0),
     actions = a,
     reward = ones(1).muli(r),
     s1 = obs(time + dt, s1)
   )
+
+  def obs(time: Double, s: INDArray): INDArrayObservation =
+    INDArrayObservation(time = ones(1).muli(time), signals = s)
 
   describe("A PriorityPlanner") {
     val stateKeyGen = (x: INDArray) => x

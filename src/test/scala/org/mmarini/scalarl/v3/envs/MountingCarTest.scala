@@ -34,6 +34,7 @@ import org.deeplearning4j.nn.api.OptimizationAlgorithm
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.constraint.MinMaxNormConstraint
 import org.deeplearning4j.nn.conf.layers.OutputLayer
+import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
 import org.mmarini.scalarl.v3.Session
@@ -65,7 +66,7 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
       alpha = ones(1).muli(0.1))),
     planner = None)
 
-  def critic: MultiLayerNetwork = {
+  def critic: ComputationGraph = {
     val outLayer = new OutputLayer.Builder().
       nIn(NoInputs).
       nOut(1).
@@ -89,10 +90,10 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
 
     val net = new MultiLayerNetwork(conf)
     net.init()
-    net
+    net.toComputationGraph
   }
 
-  def actor: MultiLayerNetwork = {
+  def actor: ComputationGraph = {
     val outLayer = new OutputLayer.Builder().
       nIn(NoInputs).
       nOut(2).
@@ -115,7 +116,7 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
 
     val net = new MultiLayerNetwork(conf)
     net.init()
-    net
+    net.toComputationGraph
   }
 
   describe("TestEnv") {
