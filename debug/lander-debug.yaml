@@ -32,16 +32,15 @@ agent:
     planningSteps: 5
     scoreThreshold: 0.1
     model:
-      minModelSize: 75
+      minModelSize: 20
       maxModelSize: 100
     stateKey:
-      type: Identity
+      type: Sparse
     actionsKey:
       type: Identity
     #modelPath: lander-model
   critic:
-    numHiddens:
-      - 15
+    numHiddens: []
     seed: 1234
     updater: Sgd
     autoScaleLearningRate: 3
@@ -53,7 +52,7 @@ agent:
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 3
+      alpha: 10
       network:
         numHiddens: []
         seed: 1234
@@ -66,7 +65,7 @@ agent:
         maxAbsParameters: 10e3
         dropOut: 0.8
     - type: PolicyActor
-      alpha: 3
+      alpha: 10
       network:
         numHiddens: []
         seed: 1234
@@ -79,7 +78,7 @@ agent:
         maxAbsParameters: 10e3
         dropOut: 0.8
     - type: PolicyActor
-      alpha: 3
+      alpha: 10
       network:
         numHiddens: []
         seed: 1234

@@ -126,15 +126,35 @@ class LanderConf(val dt: INDArray,
    * @param speed the speed
    * @param fuel  the fuel
    */
-  def status(pos: INDArray, speed: INDArray, fuel: INDArray): StatusCode.Value = {
+  def status1(pos: INDArray, speed: INDArray, fuel: INDArray): StatusCode.Value = {
     if (pos.getDouble(2L) <= 0) {
       // has touched ground
-      //      val vhSquare = speed.getColumns(0, 1).norm2()
-      //      if (not(lessThanOrEqual(vhSquare, landingVH)).getInt(0) > 0) {
-      //        Crashed
-      //      } else if (not(greaterThanOrEqual(speed.getColumn(2), landingVZ.neg())).getInt(0) > 0) {
-      //        Crashed
-      //      } else {
+      val vhSquare = speed.getColumns(0, 1).norm2()
+      if (not(lessThanOrEqual(vhSquare, landingVH)).getInt(0) > 0) {
+        Crashed
+      } else if (not(greaterThanOrEqual(speed.getColumn(2), landingVZ.neg())).getInt(0) > 0) {
+        Crashed
+      } else {
+        val landPosition = lessThanOrEqual(pos.getColumns(0, 1).norm2(), landingRadius).getInt(0) > 0
+        if (landPosition) {
+          Landed
+        } else {
+          OutOfPlatform
+        }
+      }
+    } else if (greaterThanOrEqual(pos, maxRange).sumNumber().intValue() > 0) {
+      OutOfRange
+    } else if (lessThanOrEqual(pos, minRange).sumNumber().intValue() > 0) {
+      OutOfRange
+    } else if (fuel.getDouble(0L) <= 0) {
+      OutOfFuel
+    } else {
+      Flying
+    }
+  }
+
+  def status(pos: INDArray, speed: INDArray, fuel: INDArray): StatusCode.Value = {
+    if (pos.getDouble(2L) <= 0) {
       val landPosition = lessThanOrEqual(pos.getColumns(0, 1).norm2(), landingRadius).getInt(0) > 0
       if (landPosition) {
         Landed

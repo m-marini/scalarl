@@ -34,7 +34,7 @@ import java.io.File
 import monix.eval.Task
 import monix.reactive.Observable
 import org.mmarini.scalarl.v3.Utils._
-import org.mmarini.scalarl.v3.agents.{ActorCriticAgent, PolicyActor}
+import org.mmarini.scalarl.v3.agents.{ActorCriticAgent, PolicyActor, PriorityPlanner}
 import org.mmarini.scalarl.v3.envs.LanderStatus
 import org.mmarini.scalarl.v3.{Feedback, Step}
 import org.nd4j.linalg.api.ndarray.INDArray
@@ -47,6 +47,19 @@ import org.nd4j.linalg.ops.transforms.Transforms._
  * @param observable the observable
  */
 class StepsWrapper(val observable: Observable[Step]) extends ObservableWrapper[Step] {
+
+  /** Returns the monitored obbservable */
+  def monitorInfo(): MonitorWrapper = {
+    val kpi = observable.mapAccumulate(zeros(2)) {
+      case (seed, step) =>
+        val newSeed = seed.add(hstack(step.feedback.reward, step.score))
+        val count = step.step
+        val kpis = newSeed.div(count)
+        val result = (step, kpis)
+        (newSeed, result)
+    }
+    new MonitorWrapper(kpi)
+  }
 
   /**
    * Returns the kpis
@@ -66,7 +79,7 @@ class StepsWrapper(val observable: Observable[Step]) extends ObservableWrapper[S
     val (delta, vStar, _) = agent.computeDelta(v0, v1, reward)
     val deltaCritic = vStar.distance2(v0)
     val deltaCritic1 = vStar.distance2(v01)
-    val kpiActorsAry = (for {
+    val actorsKpis = (for {
       ((a0, a1), action) <- agent.actors.zip(agent1.actors).zipWithIndex.toSeq
     } yield {
       (a0, a1) match {
@@ -76,28 +89,25 @@ class StepsWrapper(val observable: Observable[Step]) extends ObservableWrapper[S
           val pr1 = actor1.preferences(s0)
           val deltaActor = prStar.distance2(pr)
           val deltaActor1 = prStar.distance2(pr1)
-          Seq(deltaActor, deltaActor1)
+          Seq(deltaActor * deltaActor, deltaActor1 * deltaActor1)
         case _ => Seq()
       }
     }).flatten
-    val kpiSeq = deltaCritic +: deltaCritic1 +: kpiActorsAry
-    val kpis = pow(create(kpiSeq.toArray), 2)
+    val plannerKpis = agent.planner match {
+      case Some(pl: PriorityPlanner[INDArray, INDArray]) =>
+        Seq(pl.model.data.size.toDouble, pl.queue.queue.size.toDouble)
+      case _ => Seq()
+    }
+    val kpis = create((
+      step.epoch.toDouble +:
+        step.step.toDouble +:
+        deltaCritic * deltaCritic +:
+        deltaCritic1 * deltaCritic1 +:
+        (actorsKpis ++
+          plannerKpis)).toArray)
+
     kpis
   }))
-
-  /** Returns the monitored obbservable */
-  def monitorInfo(): StepsWrapper = new StepsWrapper(
-    observable.doOnNext(step => Task.eval {
-      logger.info(f"Epoch ${
-        step.epoch
-      }%,3d, Steps ${
-        step.step
-      }%6d ,avg rewards=${
-        if (step.step != 0) step.context.returnValue.getDouble(0L) / step.step else 0.0
-      }%,12g, avgScore=${
-        if (step.step != 0) step.context.totalScore.getDouble(0L) / step.step else 0.0
-      }%12g")
-    }))
 
   /**
    * Returns the trace observable

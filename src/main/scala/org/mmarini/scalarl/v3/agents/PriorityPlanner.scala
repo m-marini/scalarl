@@ -77,8 +77,14 @@ case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
     val m1 = model + (key, feedback)
     // Compute the score for the feedback
     val score = agent.score(feedback).getDouble(0L)
+
+    val newQueue1 = if (m1.data.size < model.data.size) {
+      queue.keep(m1.data.keySet)
+    } else {
+      queue
+    }
     // Adds the feedback to the updating queue
-    val newQueue = queue + (key, score)
+    val newQueue = newQueue1 + (key, score)
     val result = copy(queue = newQueue, model = m1)
     result
   }

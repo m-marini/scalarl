@@ -30,11 +30,11 @@
 package org.mmarini.scalarl.v3.agents
 
 import io.circe.ACursor
+import org.mmarini.scalarl.v3.Utils
 import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.ops.transforms.Transforms
 import org.nd4j.linalg.ops.transforms.Transforms._
-
+import org.nd4j.linalg.factory.Nd4j._
 /**
  *
  * @param offset the offset
@@ -68,6 +68,7 @@ object INDArrayKeyGenerator {
    */
   def fromJson(cursor: ACursor): INDArray => INDArray = cursor.get[String]("type").toTry.get match {
     case "Identity" => x => x
+    case "Sparse" => x => create(Utils.find(x).map(_.toDouble).toArray)
     case x => throw new IllegalArgumentException(s"Unrecognized key generator type '$x'")
   }
 
