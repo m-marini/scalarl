@@ -32,7 +32,7 @@ package org.mmarini.scalarl.v3.agents
 import java.io.File
 
 import com.typesafe.scalalogging.LazyLogging
-import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
+import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.v3._
 import org.nd4j.linalg.api.ndarray.INDArray
@@ -48,7 +48,7 @@ import org.nd4j.linalg.ops.transforms.Transforms._
  * @param alpha     the alpha parameter
  */
 case class GaussianActor(dimension: Int,
-                         actor: MultiLayerNetwork,
+                         actor: ComputationGraph,
                          alpha: INDArray) extends Actor with LazyLogging {
 
   /**
@@ -63,13 +63,6 @@ case class GaussianActor(dimension: Int,
     val action = sigma.mul(random.nextGaussian()).addi(mu)
     action
   }
-
-  /**
-   * Returns mu, h, sigma
-   *
-   * @param s0 the state observation
-   */
-  def muHSigma(s0: Observation): (INDArray, INDArray, INDArray) = GaussianActor.muHSigma(actor.output(s0.signals))
 
   /**
    * Returns the fit agent by optimizing its strategy policy and the score
@@ -88,11 +81,18 @@ case class GaussianActor(dimension: Int,
 
     val actorLabels = hstack(mu1, h1)
     val newActor = actor.clone()
-    newActor.fit(s0.signals, actorLabels)
+    newActor.fit(Array(s0.signals), Array(actorLabels))
 
     val newActpr = copy(actor = newActor)
     newActpr
   }
+
+  /**
+   * Returns mu, h, sigma
+   *
+   * @param s0 the state observation
+   */
+  def muHSigma(s0: Observation): (INDArray, INDArray, INDArray) = GaussianActor.muHSigma(actor.output(s0.signals)(0))
 
   /**
    * Writes the agent status to file

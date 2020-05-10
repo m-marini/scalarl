@@ -53,7 +53,7 @@ class StepsWrapper(val observable: Observable[Step]) extends ObservableWrapper[S
     val kpi = observable.mapAccumulate(zeros(2)) {
       case (seed, step) =>
         val newSeed = seed.add(hstack(step.feedback.reward, step.score))
-        val count = step.step
+        val count = step.step + 1
         val kpis = newSeed.div(count)
         val result = (step, kpis)
         (newSeed, result)

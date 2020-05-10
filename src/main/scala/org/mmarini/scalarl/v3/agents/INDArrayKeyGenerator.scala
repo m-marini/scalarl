@@ -32,9 +32,10 @@ package org.mmarini.scalarl.v3.agents
 import io.circe.ACursor
 import org.mmarini.scalarl.v3.Utils
 import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.ops.transforms.Transforms
 import org.nd4j.linalg.ops.transforms.Transforms._
-import org.nd4j.linalg.factory.Nd4j._
+
 /**
  *
  * @param offset the offset

@@ -33,11 +33,10 @@ import java.io.File
 
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.ACursor
-import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
+import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.v3.{ActionConfig, Agent, DiscreteAction}
 import org.nd4j.linalg.activations.Activation
-import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.factory.Nd4j.ones
 
@@ -91,11 +90,11 @@ object AgentBuilder extends LazyLogging {
     val planner = if (plannerCfg.succeeded) Some(PriorityPlanner.fromJson(plannerCfg)) else None
 
     ActorCriticAgent(actors = actors.toArray,
-      critic: MultiLayerNetwork,
-      avg: INDArray,
-      valueDecay: INDArray,
-      rewardDecay: INDArray,
-      planner)
+      critic = critic,
+      avg = avg,
+      valueDecay = valueDecay,
+      rewardDecay = rewardDecay,
+      planner = planner)
   }
 
   /**
@@ -168,28 +167,6 @@ object AgentBuilder extends LazyLogging {
   }
 
   /**
-   * Returns the network loaded from a file
-   *
-   * @param file      the file to load
-   * @param noInputs  the number of inputs
-   * @param noOutputs the number of outputs
-   */
-  def loadNetwork(file: File, noInputs: Int, noOutputs: Int): MultiLayerNetwork = {
-    logger.info("Loading {} ...", file)
-    val net = ModelSerializer.restoreMultiLayerNetwork(file, true)
-    // Validate
-    net.layerInputSize(0) match {
-      case x if x != noInputs =>
-        throw new IllegalArgumentException(s"Network $file with wrong ($x) input number: expected $noInputs")
-    }
-    net.numLabels() match {
-      case x if x != noOutputs =>
-        throw new IllegalArgumentException(s"Network $file with wrong ($x) outputs number: expected $noOutputs")
-    }
-    net
-  }
-
-  /**
    * Returns the [[ExpSarsaAgent]]
    *
    * @param conf         the json configuration
@@ -235,5 +212,27 @@ object AgentBuilder extends LazyLogging {
       beta = conf.get[Double]("beta").toTry.map(ones(1).muli(_)).get,
       avgReward = avgReward,
       epsilon = conf.get[Double]("epsilon").toTry.map(ones(1).muli(_)).get)
+  }
+
+  /**
+   * Returns the network loaded from a file
+   *
+   * @param file      the file to load
+   * @param noInputs  the number of inputs
+   * @param noOutputs the number of outputs
+   */
+  def loadNetwork(file: File, noInputs: Int, noOutputs: Int): ComputationGraph = {
+    logger.info("Loading {} ...", file)
+    val net = ModelSerializer.restoreComputationGraph(file, true)
+    // Validate
+    net.layerInputSize(0) match {
+      case x if x != noInputs =>
+        throw new IllegalArgumentException(s"Network $file with wrong ($x) input number: expected $noInputs")
+    }
+    //    net.numLabels() match {
+    //      case x if x != noOutputs =>
+    //        throw new IllegalArgumentException(s"Network $file with wrong ($x) outputs number: expected $noOutputs")
+    //    }
+    net
   }
 }

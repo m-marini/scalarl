@@ -54,17 +54,6 @@ case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
                                    queue: PriorityQueue[(KS, KA)]) extends Planner {
 
   /**
-   * Returns the set of predecessor state, action key
-   *
-   * @param status the target status
-   */
-  def predecessors(status: INDArray): Map[(KS, KA), Feedback] = {
-    val key = stateKeyGen(status)
-    val result = model.filterValues(feedback => stateKeyGen(feedback.s1.signals).equals(key))
-    result
-  }
-
-  /**
    * Returns the mode updated by a new feedback
    *
    * @param feedback the feedback
@@ -87,25 +76,6 @@ case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
     val newQueue = newQueue1 + (key, score)
     val result = copy(queue = newQueue, model = m1)
     result
-  }
-
-  /**
-   * Returns the updated planner by sweeping backward.
-   * Sweep backward enqueuing status action bringing to target
-   *
-   * @param signals the target state signals
-   * @param agent   the agent used to compute the score
-   */
-  def sweepBackward(signals: INDArray, agent: Agent): PriorityPlanner[KS, KA] = {
-    // For each feedback bringing yo the target status
-    val planner = predecessors(signals).foldLeft(this) {
-      case (planner1, (key, feedback)) =>
-        // enqueues the feedback with the score
-        val score = agent.score(feedback).getDouble(0L)
-        val newQueue = planner1.queue + (key, score)
-        planner1.copy(queue = newQueue)
-    }
-    planner
   }
 
   /**
@@ -139,6 +109,36 @@ case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
     }
 
     planLoop((agent, this), planningSteps)
+  }
+
+  /**
+   * Returns the updated planner by sweeping backward.
+   * Sweep backward enqueuing status action bringing to target
+   *
+   * @param signals the target state signals
+   * @param agent   the agent used to compute the score
+   */
+  def sweepBackward(signals: INDArray, agent: Agent): PriorityPlanner[KS, KA] = {
+    // For each feedback bringing yo the target status
+    val planner = predecessors(signals).foldLeft(this) {
+      case (planner1, (key, feedback)) =>
+        // enqueues the feedback with the score
+        val score = agent.score(feedback).getDouble(0L)
+        val newQueue = planner1.queue + (key, score)
+        planner1.copy(queue = newQueue)
+    }
+    planner
+  }
+
+  /**
+   * Returns the set of predecessor state, action key
+   *
+   * @param status the target status
+   */
+  def predecessors(status: INDArray): Map[(KS, KA), Feedback] = {
+    val key = stateKeyGen(status)
+    val result = model.filterValues(feedback => stateKeyGen(feedback.s1.signals).equals(key))
+    result
   }
 }
 
