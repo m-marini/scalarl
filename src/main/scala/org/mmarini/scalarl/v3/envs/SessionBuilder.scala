@@ -38,7 +38,6 @@ import monix.execution.Scheduler.global
 import org.mmarini.scalarl.v3._
 import org.mmarini.scalarl.v3.reactive.WrapperBuilder._
 
-
 /**
  *
  */

@@ -32,10 +32,7 @@ package org.mmarini.scalarl.v3
 import com.typesafe.scalalogging.LazyLogging
 import monix.reactive.Observable
 import monix.reactive.subjects.PublishSubject
-import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
-import org.nd4j.linalg.factory.Nd4j._
-import org.nd4j.linalg.ops.transforms.Transforms._
 
 import scala.annotation.tailrec
 
@@ -112,7 +109,7 @@ class Session(env: => Env,
    */
   private def runStep(random: Random, context: SessionContext): SessionContext = {
     // unfold context data
-    val SessionContext(step, env0, agent0, obs0, totalScore, returnValue) = context
+    val SessionContext(step, env0, agent0, obs0) = context
 
     // Agent chooses the action
     val action = agent0.chooseAction(obs0, random)
@@ -123,15 +120,10 @@ class Session(env: => Env,
     val feedback = Feedback(obs0, action, reward, obs1)
     val (agent1, score) = agent0.fit(feedback, random)
 
-    val returnValue1 = returnValue.add(reward)
-    val totalScore1 = totalScore.addi(score)
-
     val ctx0 = context.copy(env = env1,
       agent = agent1,
       obs = obs1,
-      step = step + 1,
-      totalScore = totalScore1,
-      returnValue = returnValue1)
+      step = step + 1)
 
     // Generate step event
     val stepInfo = Step(
@@ -153,16 +145,12 @@ class Session(env: => Env,
 /**
  * The session context
  *
- * @param step        the step counter
- * @param env         the environment
- * @param agent       the agent
- * @param obs         the observable
- * @param totalScore  the total loss
- * @param returnValue the return value
+ * @param step  the step counter
+ * @param env   the environment
+ * @param agent the agent
+ * @param obs   the observable
  */
 case class SessionContext(step: Int = 0,
                           env: Env,
                           agent: Agent,
-                          obs: Observation,
-                          totalScore: INDArray = zeros(1),
-                          returnValue: INDArray = zeros(1))
+                          obs: Observation)

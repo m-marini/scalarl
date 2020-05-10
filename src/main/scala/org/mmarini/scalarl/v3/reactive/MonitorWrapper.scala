@@ -29,36 +29,38 @@
 
 package org.mmarini.scalarl.v3.reactive
 
+import monix.eval.Task
 import monix.reactive.Observable
-import org.mmarini.scalarl.v3.{Session, Step}
+import org.mmarini.scalarl.v3.Step
+import org.mmarini.scalarl.v3.agents.{ActorCriticAgent, PriorityPlanner}
 import org.nd4j.linalg.api.ndarray.INDArray
 
-object WrapperBuilder {
-  /**
-   * Returns the steps wrapper from a session
-   *
-   * @param session the session
-   */
-  implicit def from(session: Session): StepsWrapper = new StepsWrapper(session.steps)
-
-  /**
-   *
-   * @param obs
-   * @return
-   */
-  implicit def from(obs: Observable[Step]): StepsWrapper = new StepsWrapper(obs)
-
-  /**
-   *
-   * @param obs
-   * @return
-   */
-  implicit def from(obs: Observable[INDArray]): INDArrayWrapper = new INDArrayWrapper(obs)
-
-  /**
-   *
-   * @param obs
-   * @return
-   */
-  implicit def from(obs: Observable[(Step, INDArray)]): MonitorWrapper = new MonitorWrapper(obs)
+/**
+ * Wrapper of [[Observable[INDArray]]] to add functionalities
+ *
+ * @param observable the observable
+ */
+class MonitorWrapper(val observable: Observable[(Step, INDArray)]) extends ObservableWrapper[(Step, INDArray)] {
+  /** Returns the observable that log as info the monitor data */
+  def logInfo(): MonitorWrapper = new MonitorWrapper(observable.doOnNext(data => Task.eval {
+    val (step, avg) = data
+    val (modelSize, queueSize) = step.agent0 match {
+      case a: ActorCriticAgent => a.planner match {
+        case Some(planner: PriorityPlanner[INDArray, INDArray]) => (
+          planner.model.data.size,
+          planner.queue.queue.size)
+        case _ => (0, 0)
+      }
+      case _ => (0, 0)
+    }
+    logger.info(f"Epoch ${
+      step.epoch
+    }%,3d, Steps ${
+      step.step
+    }%5d ,avg rewards=${
+      avg.getDouble(0L)
+    }%12g, avgScore=${
+      avg.getDouble(1L)
+    }%12g, model=${modelSize}%4d, queue=$queueSize%d")
+  }))
 }

@@ -34,13 +34,14 @@ A ratio $ \Kappa (s_t) \ll 1 $  means a step-size parameter too low with very po
 
 Because the $ J(s_t) $ should approach to $ 0 $ in optimal conditions, we should take into consideration only the steps that have a $ J(s_t) > \varepsilon $.
 
-In a learning session we can evaluate the maximum value of kpi and adjust the step-size parameter accordingly.
-As empirical method we can adjust the step-size parameter is multiply by a factor of
+In learning session we can evaluate the value of kpi and adjust the step-size parameter accordingly.
+As empirical method we can compute the 90th percentile and adjust the step-size parameter by multiply by a factor of
 
 ```math
-     C = \frac{1}{\sum_t^T \Kappa(s_t)} = \frac{1}{\sum_t^T \frac{J'(s_t)}{J(s_t)}}
+     C_{90} = \frac{1}{\Kappa_{90}}
 ```
 
+In such a way the 90% of sample should be corrected.
 
 ### Policy Actor KPIs
 
@@ -50,8 +51,11 @@ The actor computes the updated preferernces of current state by adding a step-si
     pr^*(s_t, a) = pr(s_t, a) + \alpha \delta_t \ln \nabla \pi(s_t, a)
 ```
 
-To avoid comuptation overflow the preferences are constratints to a limited range $ (-7, +7) $.
-The changes of preferences should be limited too to a fraction of the range $ (-1, +1) $ so meaninful kpis are the distance of changes of preferences:
+> *The correct equation should consider the softmax effect on the preferences*
+
+
+To avoid comuptation overflow the preferences are constratints to a limited range e.g. $ (-7, +7) $.
+The changes of preferences should also be limited to a fraction of the range $ (-\xi, +\xi) $, so meaninful kpi is the squared distance of changes of preferences:
 
 ```math
     J(s_t) = \sum_a
@@ -59,12 +63,30 @@ The changes of preferences should be limited too to a fraction of the range $ (-
         pr^*(s_t, a) - pr(s_t, a)
     \right] ^2
     = \sum_a
-    \alpha \delta_t \ln^2 \nabla \pi(s_t, a)
+    \alpha^2 \delta_t^2 \ln^2 \nabla \pi(s_t, a)
+    = \alpha^2 \delta_t^2 \sum_a \ln^2 \nabla \pi(s_t, a)
 ```
 
-A kpi $ J(s_t) \ge 1 $ - out of defined range $ (-1, +1) $ - means an $ \alpha $ parameter value too high.
+A kpi $ J(s_t) \ge \xi^2 $ - out of defined range $ (-\xi, +\xi) $ - means an $ \alpha $ parameter value too high.
 
-Then it adjusts the network to fit the updated preferences.
+Let's suppose to correct the $ \alpha $ parameter by a $ C $ factor so that the corrected $ J_C(s_t) $ is equal to $ \xi^2 $, we have
+
+```math
+    J_C(s_t) = (C \alpha)^2 \delta_t^2 \sum_a \ln^2 \nabla \pi(s_t, a)
+    = C^2 J_(s_t)
+    \\
+    \xi^2 = C^2 J(s_t)
+    \\
+    C = \frac{\xi}{\sqrt{J(s_t)}}
+```
+
+So to correct the agent we may apply the correction to the 90 percetage of J samples by computing $ J_{90} $, the 90 percenitle of $ J $,  and computes the correction factor
+
+```math
+    C_{90} = \frac{\xi}{\sqrt{J_{90} } }
+```
+
+Then actor adjusts the network to fit the updated preferences.
 The same kpi for the critic is used for each action of actor:
 
 ```math
@@ -74,7 +96,7 @@ The same kpi for the critic is used for each action of actor:
     \\
     \Kappa(s_t) = \frac{J'(s_t)}{J(s_t)}
     \\
-    C = \frac{1}{\sum_t^T \Kappa(s_t)} = \frac{1}{\sum_t^T  \frac{J'(s_t)}{J(s_t)}}
+    C_{90} = \frac{1}{\Kappa_{90}}
 ```
 
 ## KPIs File
@@ -83,6 +105,8 @@ The kpis format is
 
 | Length | Offset | Field      |
 |-------:|-------:|------------|
+|      1 |      0 | Epoch      |
+|      1 |      1 | Step       |
 |      1 |      0 | Critic J   |
 |      1 |      1 | Critik J'  |
 |      1 |      2 | X Actor J  |

@@ -32,7 +32,7 @@ agent:
     planningSteps: 5
     scoreThreshold: 0.1
     model:
-      minModelSize: 75
+      minModelSize: 30
       maxModelSize: 100
     stateKey:
       type: Identity

@@ -41,6 +41,17 @@ import org.nd4j.linalg.api.ndarray.INDArray
  */
 case class PriorityQueue[T](threshold: Double, queue: Map[T, Double]) {
 
+  /**
+   * Returns the priority queue.
+   * Keeps only the given keys
+   *
+   * @param keys the kept keys
+   */
+  def keep(keys: Set[T]): PriorityQueue[T] = {
+    val newQueue = queue.filter(entry => keys.contains(entry._1))
+    copy(queue = newQueue)
+  }
+
   /** Returns the value and the new queue without the value */
   def dequeue(): (Option[T], PriorityQueue[T]) = if (queue.isEmpty) {
     (None, this)
