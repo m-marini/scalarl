@@ -19,14 +19,14 @@ function actors(X, EPS=1e-3, PRC = 50 : 10 : 100, T=20)
   cv = cm - ce;
   cf = n - cm;
 
-  subplot(NA + 1, NC, 1);
+  subplot(NA + 1, NC, 3);
   hist(CK, T);
   grid on;
   title(sprintf("Critic K"));
   xlabel("K");
   ylabel("# samples");
   
-  subplot(NA + 1, NC, 2);
+  subplot(NA + 1, NC, 4);
   plot(PRC, CC);
   grid on;
   grid minor on;
@@ -34,7 +34,7 @@ function actors(X, EPS=1e-3, PRC = 50 : 10 : 100, T=20)
   xlabel("% corrected samples");
   ylabel("Correction factor C");
   
-  subplot(NA + 1, NC, 3);
+  subplot(NA + 1, NC, 5);
   pie([ce, cv, cf]);
   title("Critic Steps");
   #legend("unoptimizable", "optimizing", "optimized");
