@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #58: Priority Sweeping Agent
 - Issue #59: Planner kpi
 - Issue #62: Move Multilayer Network to Computational Graph
+- Issue #63: Actor Critic with single network
 
 ## [0.1.0] - 2019-01-28
 
