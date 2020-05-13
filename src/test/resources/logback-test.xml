@@ -15,6 +15,10 @@
     <logger name="org.mmarini.scalarl.v3.agents.PolicyActor" level="debug"/>
     <logger name="org.mmarini.scalarl.v3.agents.GaussianPolicy" level="info"/>
 
+    <logger name="org.mmarini.scalarl.v4.agents.ExpSarsaMethod" level="info"/>
+    <logger name="org.mmarini.scalarl.v4.agents.PolicyActor" level="debug"/>
+    <logger name="org.mmarini.scalarl.v4.agents.GaussianPolicy" level="info"/>
+
     <root level="debug">
         <appender-ref ref="STDOUT"/>
     </root>
