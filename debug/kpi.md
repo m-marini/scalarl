@@ -105,8 +105,6 @@ The kpis format is
 
 | Length | Offset | Field      |
 |-------:|-------:|------------|
-|      1 |      0 | Epoch      |
-|      1 |      1 | Step       |
 |      1 |      0 | Critic J   |
 |      1 |      1 | Critik J'  |
 |      1 |      2 | X Actor J  |
@@ -115,3 +113,5 @@ The kpis format is
 |      1 |      5 | Y Actor J' |
 |      1 |      6 | Z Actor J  |
 |      1 |      7 | Z Actor J' |
+|      1 |      8 | Model size |
+|      1 |      9 | Queue size |

@@ -1,5 +1,5 @@
 ---
-version: "3"
+version: "4"
 env:
   type: LanderTiles
   actionConfig: DiscreteActions
@@ -35,15 +35,15 @@ agent:
       minModelSize: 20
       maxModelSize: 100
     stateKey:
-      type: Sparse
+      type: Identity
     actionsKey:
       type: Identity
     #modelPath: lander-model
-  critic:
+  network:
     numHiddens: []
     seed: 1234
     updater: Sgd
-    autoScaleLearningRate: 3
+    autoScaleLearningRate: 30
     beta1: 0.9
     beta2: 0.999
     epsilonAdam: 0.1
@@ -53,43 +53,10 @@ agent:
   actors:
     - type: PolicyActor
       alpha: 10
-      network:
-        numHiddens: []
-        seed: 1234
-        updater: Sgd
-        autoScaleLearningRate: 10
-        beta1: 0.9
-        beta2: 0.999
-        epsilonAdam: 0.1
-        maxAbsGradients: 1
-        maxAbsParameters: 10e3
-        dropOut: 0.8
     - type: PolicyActor
       alpha: 10
-      network:
-        numHiddens: []
-        seed: 1234
-        updater: Sgd
-        autoScaleLearningRate: 10
-        beta1: 0.9
-        beta2: 0.999
-        epsilonAdam: 0.1
-        maxAbsGradients: 1
-        maxAbsParameters: 10e3
-        dropOut: 0.8
     - type: PolicyActor
       alpha: 10
-      network:
-        numHiddens: []
-        seed: 1234
-        updater: Sgd
-        autoScaleLearningRate: 10
-        beta1: 0.9
-        beta2: 0.999
-        epsilonAdam: 0.1
-        maxAbsGradients: 1
-        maxAbsParameters: 10e3
-        dropOut: 0.8
 session:
   numSteps: 3000
   seed: 1234
