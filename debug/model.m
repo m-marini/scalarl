@@ -7,7 +7,7 @@ function model(X, T = 500)
 
   XX = X(:, 9 : 10);
   
-  [Y XN] = [slieAvg(XX, T, 1)];
+  [Y XN] = slideAvg(XX, T, T);
   
   subplot(1,1,1);
   plot(XN, Y);

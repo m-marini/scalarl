@@ -1,6 +1,6 @@
 function analyze(X, LAST = 100)
   Y = trend(X, LAST);
-  [YR, XR] = slideAvg(Y, LAST);
+  [YR, XR] = slideAvg(Y, LAST, LAST);
 
   subplot(2,2,1);
   hist(X(:,3), 100);

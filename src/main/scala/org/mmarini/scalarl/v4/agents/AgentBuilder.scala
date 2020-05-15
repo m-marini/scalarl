@@ -88,7 +88,7 @@ object AgentBuilder extends LazyLogging {
     }).getOrElse(AgentNetworkBuilder.fromJson(conf.downField("network"))(noInputs, noOutputs))
 
     val plannerCfg = conf.downField("planner")
-    val planner = if (plannerCfg.succeeded) Some(PriorityPlanner.fromJson(plannerCfg)) else None
+    val planner = if (plannerCfg.succeeded) Some(PriorityPlanner.fromJson(plannerCfg)(noInputs, actionConfig.length)) else None
 
     val subj = PublishSubject[AgentEvent]()
     val agent = ActorCriticAgent(actors = actors,

@@ -50,7 +50,7 @@ import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 object AgentNetworkBuilder extends LazyLogging {
 
   /**
-   * Returns the [[MultiLayerNetwork]] builder for an actor
+   * Returns the [[ComputationGraph]] builder for an actor
    *
    * @param conf     the json configuration
    * @param noInputs the number of inputs
@@ -59,60 +59,24 @@ object AgentNetworkBuilder extends LazyLogging {
   def fromJson(conf: ACursor)(noInputs: Int, outputs: Seq[Int]): ComputationGraph = {
     val seed = conf.get[Long]("seed").toOption
     val numHiddens = conf.get[List[Int]]("numHiddens").toTry.get
+    val shortcuts = conf.get[List[List[Int]]]("shortcuts").toOption.getOrElse(Seq())
     val maxAbsGradient = conf.get[Double]("maxAbsGradients").toTry.get
     val maxAbsParams = conf.get[Double]("maxAbsParameters").toTry.get
     val dropOut = conf.get[Double]("dropOut").toTry.get
     val bias = conf.get[Double]("bias").toOption
+    val shortcutsMap = validateShortCut(shortcuts, numHiddens.length)
 
-    // Computes the number of inputs node for each layer
-    val noHiddenInputs = if (numHiddens.isEmpty) {
-      Seq()
-    } else {
-      noInputs +: numHiddens.init
-    }
-
-    val noOutputLayerInputs = if (numHiddens.isEmpty) {
-      noInputs
-    } else {
-      numHiddens.last
-    }
-
-    // Creates the hidden layers
-    val hiddenLayers = for {
-      (outs, ins) <- numHiddens.zip(noHiddenInputs)
-    } yield new DenseLayer.Builder().
-      nIn(ins).
-      nOut(outs).
-      activation(Activation.TANH).
-      dropOut(dropOut).
-      build()
-
-    val outputLayers = for {
-      outs <- outputs
-    } yield {
-      val layer0 = new OutputLayer.Builder().
-        nIn(noOutputLayerInputs).
-        nOut(outs).
-        lossFunction(LossFunction.MSE).
-        activation(Activation.IDENTITY)
-      val layer1 = bias.map(layer0.biasInit).getOrElse(layer0).build()
-      layer1
-    }
-
-    // Computes num parameters
-    val hiddenParms = hiddenLayers.map(l =>
-      l.getNOut * (l.getNIn + 1)
-    ).sum
-    val outParms = outputLayers.map(l =>
-      l.getNOut * (l.getNIn + 1)
-    ).sum
-    val noParms = outParms + hiddenParms
-
+    // Computes the number of inputs for hidden layers
+    val (noInputsByLayers, inputLayerNames) = inputLayersByLayer(noInputs, numHiddens, shortcutsMap)
+    val hiddenLayers = createHiddenLayers(noInputsByLayers.zip(numHiddens), dropOut)
+    val outputLayers = createOutputLayers(outputs, noInputsByLayers.last, bias)
+    val noParms = numParms(hiddenLayers, outputLayers)
     val updater = UpdaterBuilder.fromJson(conf)(noParms.toInt)
-
     val annConf = seed.map(seed =>
       new NeuralNetConfiguration.Builder().seed(seed)
-    ).getOrElse(new NeuralNetConfiguration.Builder()).
+    ).getOrElse(new NeuralNetConfiguration.Builder(
+
+    )).
       weightInit(WeightInit.XAVIER).
       updater(updater).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
@@ -122,20 +86,134 @@ object AgentNetworkBuilder extends LazyLogging {
       graphBuilder().
       addInputs("L0")
 
-    val withHidden = hiddenLayers.zipWithIndex.foldLeft(annConf) {
-      case (builder, (layer, i)) => builder.addLayer(s"L${i + 1}", layer, s"L$i")
-    }
-    val inName = s"L${numHiddens.length}"
+    val withHidden = hiddenLayers.
+      zip(inputLayerNames).
+      zipWithIndex.
+      foldLeft(annConf) {
+        case (builder, ((layer, inputNames), i)) =>
+          builder.addLayer(s"L${i + 1}", layer, inputNames.toArray: _*)
+      }
+
+    val inNames = inputLayerNames.last.toArray
     val withOutput = outputLayers.zipWithIndex.foldLeft(withHidden) {
-      case (builder, (layer, i)) => builder.addLayer(s"O$i", layer, inName)
+      case (builder, (layer, i)) => builder.addLayer(s"O$i", layer, inNames: _*)
     }
     val outNames = for {
-      i <- 0 until outputLayers.length
+      i <- outputLayers.indices
     } yield s"O$i"
     val config = withOutput.setOutputs(outNames.toArray: _*).build()
     val net = new ComputationGraph(config)
     net.init()
     net
+  }
+
+  /**
+   * Returns the validated shortcuts map
+   *
+   * @param shortcuts the shortcuts
+   * @param noHidden  the number of hidden layers
+   */
+  def validateShortCut(shortcuts: Seq[Seq[Int]], noHidden: Int): Map[Int, Seq[Int]] = {
+    // Validates the inputs
+    // inputs, hiddens, outputs
+    for {
+      (l, i) <- shortcuts.zipWithIndex
+      from = l.head
+      to = l(1)
+    } {
+      if (from < 0 || from > noHidden) {
+        throw new IllegalArgumentException(s"Wrong input layer $from at shortcut $i")
+      }
+      if (to <= 0 || from > noHidden + 1) {
+        throw new IllegalArgumentException(s"Wrong output layer $to at shortcut $i")
+      }
+      if (to <= from) {
+        throw new IllegalArgumentException(s"Output layer $to must be forward than input layer $from at shortcut $i")
+      }
+    }
+    // get the map of input layers by output layer
+    val shortcutsMap = shortcuts.groupBy(_ (1)).map {
+      case (out, list) => (out, list.map(_.head))
+    }
+    shortcutsMap
+  }
+
+  /**
+   * Returns the hidden layers
+   *
+   * @param ioConf  list of number of inputs and outputs
+   * @param dropOut the drop out parameter
+   */
+  def createHiddenLayers(ioConf: Seq[(Int, Int)], dropOut: Double): Seq[DenseLayer] = for {
+    (ins, outs)
+      <- ioConf
+  } yield new DenseLayer.Builder().
+    nIn(ins).
+    nOut(outs).
+    activation(Activation.TANH).
+    dropOut(dropOut).
+    build()
+
+  /**
+   * Returns the output layers
+   *
+   * @param outputs  the number of outputs nodes
+   * @param noInputs the number of inputs
+   * @param bias     the bias
+   */
+  def createOutputLayers(outputs: Seq[Int], noInputs: Int, bias: Option[Double]): Seq[OutputLayer] = for {
+    outs <- outputs
+  } yield {
+    val layer0 = new OutputLayer.Builder().
+      nIn(noInputs).
+      nOut(outs).
+      lossFunction(LossFunction.MSE).
+      activation(Activation.IDENTITY)
+    val layer1 = bias.map(layer0.biasInit).getOrElse(layer0).build()
+    layer1
+  }
+
+  /**
+   * Returns num parameters
+   *
+   * @param hiddens the hidden layers
+   * @param outputs the output layers
+   */
+  def numParms(hiddens: Seq[DenseLayer], outputs: Seq[OutputLayer]): Long = {
+    val hiddenParms = hiddens.map(l =>
+      l.getNOut * (l.getNIn + 1)
+    ).sum
+    val outParms = outputs.map(l =>
+      l.getNOut * (l.getNIn + 1)
+    ).sum
+    outParms + hiddenParms
+  }
+
+  /**
+   * Returns the number of inputs per layer and the input names per layer
+   *
+   * @param noInputs     the number of inputs
+   * @param hiddens      the number of nodes for hidden layers
+   * @param shortcutsMap the shortcuts
+   */
+  def inputLayersByLayer(noInputs: Int, hiddens: Seq[Int], shortcutsMap: Map[Int, Seq[Int]]): (Seq[Int], Seq[Seq[String]]) = {
+    // number of nodes per layer
+    val noNodes = noInputs +: hiddens
+    // list of input layer for each layer
+    val inputLayers = for {
+      l <- 0 to hiddens.length
+    } yield {
+      (l +: shortcutsMap.getOrElse(l + 1, Seq())).distinct
+    }
+    // Number of inputs for each layer
+    val noLayerInputs = inputLayers.map(l => {
+      l.map(noNodes).sum
+    })
+    // list of input layer name per layer
+    val inputLayerNames = inputLayers.map(
+      _.map(l => s"L$l")
+    )
+    (noLayerInputs, inputLayerNames)
   }
 
   /**
