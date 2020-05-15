@@ -30,18 +30,19 @@
 package org.mmarini.scalarl.v4.envs
 
 import io.circe.ACursor
+import org.mmarini.scalarl.v4.envs.LanderContinuousEncoder._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j._
 
 /**
  * The LanderConf with lander parameters
  *
- * @param statusScale the status scale
+ * @param normalize the normalize function
  */
-class LanderContinuousEncoder(statusScale: INDArray) extends LanderEncoder {
+class LanderContinuousEncoder(normalize: INDArray => INDArray) extends LanderEncoder {
 
   /** Returns the number of signals */
-  override val noSignals: Int = 6
+  override val noSignals: Int = NumDims
 
   /**
    * Returns the input signals
@@ -49,23 +50,19 @@ class LanderContinuousEncoder(statusScale: INDArray) extends LanderEncoder {
    * @param status the status
    */
   override def signals(status: LanderStatus): INDArray =
-    hstack(status.pos, status.speed).muli(statusScale)
+    normalize(hstack(status.pos, status.speed))
 }
 
 /** Factory for [[LanderContinuousEncoder]] instances */
 object LanderContinuousEncoder {
+  val NumDims: Int = 6
+
   /**
    *
    * @param conf the json configuration
    */
   def fromJson(conf: ACursor): LanderContinuousEncoder = {
-    val hRange = conf.get[Double]("hRange").toTry.get
-    val zMax = conf.get[Double]("zMax").toTry.get
-    val vhRange = conf.get[Double]("vhRange").toTry.get
-    val vzRange = conf.get[Double]("vzRange").toTry.get
-    new LanderContinuousEncoder(create(Array(
-      1 / hRange, 1 / hRange, 1 / zMax,
-      1 / vhRange, 1 / vhRange, 1 / vzRange
-    )))
+    val normalize = Normalizer.fromJson(conf.downField("normalize"))(NumDims)
+    new LanderContinuousEncoder(normalize)
   }
 }

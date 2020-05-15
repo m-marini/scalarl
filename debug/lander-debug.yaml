@@ -1,7 +1,7 @@
 ---
 version: "4"
 env:
-  type: LanderTiles
+  type: LanderContinuous
   actionConfig: DiscreteActions
   dt: 0.25
   h0Range: 5
@@ -23,6 +23,11 @@ env:
   outOfRangeReward: -10
   outOfFuelReward: -10
   rewardDistanceScale: 3
+  normalize:
+    clipMin: [-500, -500, -150, -24, -24, -12]
+    clipMax: [500, 500, 150, 24, 24, 12]
+    offset: [0, 0, 0, 0, 0, 0]
+    max: [4, 4, 4, 0.4, 0.4, 0.5]
 agent:
   type: ActorCritic
   avgReward: 0
@@ -32,15 +37,22 @@ agent:
     planningSteps: 5
     scoreThreshold: 0.1
     model:
-      minModelSize: 20
-      maxModelSize: 100
+      minModelSize: 30
+      maxModelSize: 200
     stateKey:
-      type: Identity
+      type: Tiles
+      offset: [-1, -1, 0, -1, -1, -1]
+      max: [1, 1, 1, 1, 1, 1]
+      tiles: [32, 32, 32, 32, 32, 32]
     actionsKey:
       type: Identity
     #modelPath: lander-model
   network:
-    numHiddens: []
+    numHiddens:
+      - 100
+      - 100
+    shortcuts:
+      - [ 0, 3 ]
     seed: 1234
     updater: Sgd
     autoScaleLearningRate: 30
@@ -52,15 +64,15 @@ agent:
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 10
+      alpha: 0.1
     - type: PolicyActor
-      alpha: 10
+      alpha: 0.1
     - type: PolicyActor
-      alpha: 10
+      alpha: 0.1
 session:
   numSteps: 3000
   seed: 1234
-  trace: debug/lander-trace.csv
+  #trace: debug/lander-trace.csv
   dump: debug/lander-dump.csv
-  modelFile: debug/lander-model
+  #modelFile: debug/lander-model
   kpiFile: debug/kpi.csv

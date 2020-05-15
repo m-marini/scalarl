@@ -144,17 +144,20 @@ case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
 
 /** The object factory form [[PriorityPlanner]] */
 object PriorityPlanner {
+
   /**
    * Returns the planner from json configuration
    *
-   * @param conf the configuration
+   * @param conf      the configuration
+   * @param noInputs  the number of inputs
+   * @param noOutputs the number of outputs
    */
-  def fromJson(conf: ACursor): PriorityPlanner[INDArray, INDArray] = {
+  def fromJson(conf: ACursor)(noInputs: Int, noOutputs: Int): PriorityPlanner[INDArray, INDArray] = {
     val planningSteps = conf.get[Int]("planningSteps").toTry.get
     val model = Model.fromJson(conf.downField("model"))
     val queue = PriorityQueue.fromJson(conf)
-    val stateKeyGen = INDArrayKeyGenerator.fromJson(conf.downField("stateKey"))
-    val actionsKeyGen = INDArrayKeyGenerator.fromJson(conf.downField("actionsKey"))
+    val stateKeyGen = INDArrayKeyGenerator.fromJson(conf.downField("stateKey"))(noInputs)
+    val actionsKeyGen = INDArrayKeyGenerator.fromJson(conf.downField("actionsKey"))(noOutputs)
     PriorityPlanner(
       stateKeyGen = stateKeyGen,
       actionsKeyGen = actionsKeyGen,

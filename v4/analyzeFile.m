@@ -1,3 +1,3 @@
-function analyzeFile(FILE)
-  analyze(csvread(FILE));
+function analyzeFile(FILE, LAST = 100)
+  analyze(csvread(FILE), LAST);
 endfunction

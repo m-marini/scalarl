@@ -177,7 +177,7 @@ The available actions consist of the 5 possible levels of jet powers for each of
 
 The output signals consists of 15 output units representing the estimation of advantage action value. The higer value of the output indicates the action to be taken.
 
-# Test cases
+## Test cases
 
 | Cases |   z | radius | fuel |
 |-------|----:|-------:|-----:|
@@ -186,3 +186,16 @@ The output signals consists of 15 output units representing the estimation of ad
 |     3 |  10 |     50 |  100 |
 |     4 |  30 |    150 |  300 |
 |     5 | 100 |    500 |  500 |
+
+## Planner model
+
+The state space of the planner is the 3D lander position and 3D lander speed tiled to have a sufficent precision to controll the lander.
+
+| Dimension |  Full Range |  Precision | Clipped Range | Tiles | Signal range |
+|-----------|------------:|-----------:|--------------:|------:|-------------:|
+| x         |   -/+ 500 m |     250 mm |       -/+ 4 m |    32 |     -/+ 8e-3 |
+| y         |   -/+ 500 m |     250 mm |       -/+ 4 m |    32 |     -/+ 8e-3 |
+| z         |    0, 150 m |    62.5 mm |        0, 4 m |    32 |  0, 26.67e-3 |
+| $v_x $    |  -/+ 24 m/s |    25 mm/s |   -/+ 0.4 m/s |    32 | -/+ 16.67e-3 |
+| $v_y $    |  -/+ 24 m/s |    25 mm/s |   -/+ 0.4 m/s |    32 | -/+ 16.67e-3 |
+| $v_z $    |  -/+ 12 m/s | 31.25 mm/s |   -/+ 0.5 m/s |    32 | -/+ 41.67e-3 |
