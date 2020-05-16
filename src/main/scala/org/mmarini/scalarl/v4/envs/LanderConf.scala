@@ -55,6 +55,7 @@ import org.nd4j.linalg.ops.transforms.Transforms._
  * @param outOfRangeReward    the reward when out of range
  * @param outOfFuelReward     the rewaord when out of fuel
  * @param rewardDistanceScale the reward by distance
+ * @param flyingReward        the reward when flying
  * @param fuel                the initial available fuel
  */
 class LanderConf(val dt: INDArray,
@@ -73,6 +74,7 @@ class LanderConf(val dt: INDArray,
                  val crashReward: INDArray,
                  val outOfRangeReward: INDArray,
                  val outOfFuelReward: INDArray,
+                 val flyingReward: INDArray,
                  val rewardDistanceScale: INDArray) {
 
   import LanderConf._
@@ -126,7 +128,7 @@ class LanderConf(val dt: INDArray,
    * @param speed the speed
    * @param fuel  the fuel
    */
-  def status1(pos: INDArray, speed: INDArray, fuel: INDArray): StatusCode.Value = {
+  def status(pos: INDArray, speed: INDArray, fuel: INDArray): StatusCode.Value = {
     if (pos.getDouble(2L) <= 0) {
       // has touched ground
       val vhSquare = speed.getColumns(0, 1).norm2()
@@ -141,25 +143,6 @@ class LanderConf(val dt: INDArray,
         } else {
           OutOfPlatform
         }
-      }
-    } else if (greaterThanOrEqual(pos, maxRange).sumNumber().intValue() > 0) {
-      OutOfRange
-    } else if (lessThanOrEqual(pos, minRange).sumNumber().intValue() > 0) {
-      OutOfRange
-    } else if (fuel.getDouble(0L) <= 0) {
-      OutOfFuel
-    } else {
-      Flying
-    }
-  }
-
-  def status(pos: INDArray, speed: INDArray, fuel: INDArray): StatusCode.Value = {
-    if (pos.getDouble(2L) <= 0) {
-      val landPosition = lessThanOrEqual(pos.getColumns(0, 1).norm2(), landingRadius).getInt(0) > 0
-      if (landPosition) {
-        Landed
-      } else {
-        OutOfPlatform
       }
     } else if (greaterThanOrEqual(pos, maxRange).sumNumber().intValue() > 0) {
       OutOfRange
@@ -225,6 +208,7 @@ object LanderConf {
     crashReward = conf.get[Double]("crashReward").toTry.map(ones(1).mul(_)).get,
     outOfRangeReward = conf.get[Double]("outOfRangeReward").toTry.map(ones(1).mul(_)).get,
     outOfFuelReward = conf.get[Double]("outOfFuelReward").toTry.map(ones(1).mul(_)).get,
+    flyingReward = conf.get[Double]("flyingReward").toTry.map(ones(1).mul(_)).get,
     rewardDistanceScale = conf.get[Double]("rewardDistanceScale").toTry.map(ones(1).mul(_)).get,
     fuel = conf.get[Int]("fuel").toTry.map(ones(1).mul(_)).get)
 }

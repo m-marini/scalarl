@@ -56,6 +56,7 @@ class LanderConfTest extends FunSpec with Matchers {
     crashReward = ones(1).mul(-100.0),
     outOfRangeReward = ones(1).mul(-100.0),
     outOfFuelReward = ones(1).mul(-100.0),
+    flyingReward = ones(1).mul(-1.0),
     rewardDistanceScale = ones(1).mul(0.01))
 
   describe("LanderConf at land point") {
