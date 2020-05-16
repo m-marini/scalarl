@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #59: Planner kpi
 - Issue #62: Move Multilayer Network to Computational Graph
 - Issue #63: Actor Critic with single network
+- Issue #64: Resnet
+- Issue @69: Lander with crash
 
 ## [0.1.0] - 2019-01-28
 

@@ -13,7 +13,8 @@ env:
   vhRange: 24
   vzRange: 12
   landingRadius: 10
-  landingVH: 0.5
+  #landingVH: 0.5
+  landingVH: 4
   landingVZ: 4
   g: 1.6
   maxAH: 1
@@ -22,7 +23,8 @@ env:
   crashReward: -10
   outOfRangeReward: -10
   outOfFuelReward: -10
-  rewardDistanceScale: 3
+  rewardDistanceScale: 0
+  flyingReward: -1
   normalize:
     clipMin: [-500, -500, -150, -24, -24, -12]
     clipMax: [500, 500, 150, 24, 24, 12]
