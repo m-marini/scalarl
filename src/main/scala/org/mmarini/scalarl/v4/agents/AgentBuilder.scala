@@ -38,7 +38,7 @@ import monix.reactive.subjects.PublishSubject
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.v4.{ActionConfig, Agent, DiscreteAction}
-import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.factory.Nd4j._
 
 /**
  *
@@ -71,9 +71,9 @@ object AgentBuilder extends LazyLogging {
    */
   def actorCriticFromJson(conf: ACursor)(noInputs: Int, actionConfig: Seq[ActionConfig]): (ActorCriticAgent, Observable[AgentEvent]) = {
     val modelPath = conf.get[String]("modelPath").toOption
-    val avg = conf.get[Double]("avgReward").toTry.map(Nd4j.ones(1).muli(_)).get
-    val rewardDecay = conf.get[Double]("rewardDecay").toTry.map(Nd4j.ones(1).muli(_)).get
-    val valueDecay = conf.get[Double]("valueDecay").toTry.map(Nd4j.ones(1).muli(_)).get
+    val avg = conf.get[Double]("avgReward").toTry.map(ones(1).muli(_)).get
+    val rewardDecay = conf.get[Double]("rewardDecay").toTry.map(ones(1).muli(_)).get
+    val valueDecay = conf.get[Double]("valueDecay").toTry.map(ones(1).muli(_)).get
 
     val actions = conf.downField("actors")
     val actors = actionConfig.zipWithIndex.map {
@@ -142,7 +142,7 @@ object AgentBuilder extends LazyLogging {
     PolicyActor(
       dimension = dimension,
       noOutputs = actionConfig.numValues,
-      alpha = conf.get[Double]("alpha").toTry.map(Nd4j.ones(1).muli(_)).get)
+      alpha = conf.get[Double]("alpha").toTry.map(ones(1).muli(_)).get)
 
   /**
    * Returns the discrete action agent
@@ -154,10 +154,13 @@ object AgentBuilder extends LazyLogging {
    */
   def gaussianFromJson(conf: ACursor)(dimension: Int,
                                       noInputs: Int,
-                                      modelPath: Option[String]): GaussianActor =
+                                      modelPath: Option[String]): GaussianActor = {
+    val alphaMu = conf.get[Double]("alphaMu").toTry.get
+    val alphaSigma = conf.get[Double]("alphaSigma").toTry.get
     GaussianActor(
       dimension = dimension,
-      alpha = conf.get[Double]("alpha").toTry.map(Nd4j.ones(1).muli(_)).get)
+      eta = create(Array(alphaMu, alphaSigma)))
+  }
 
   /**
    * Returns the network loaded from a file

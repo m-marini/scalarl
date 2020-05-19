@@ -49,7 +49,6 @@ object EnvBuilder extends LazyLogging {
   def fromJson(conf: ACursor)(random: Random): Env = {
     val landerConf = LanderConf.fromJson(conf)
     val coder = conf.get[String]("type").toTry.get match {
-      case "Lander" => LanderCustomEncoder.fromJson(conf)
       case "LanderTiles" => LanderTilesEncoder.fromJson(conf)
       case "LanderContinuous" => LanderContinuousEncoder.fromJson(conf)
       case typ => throw new IllegalArgumentException(s"Unreconginzed coder type '$typ'")

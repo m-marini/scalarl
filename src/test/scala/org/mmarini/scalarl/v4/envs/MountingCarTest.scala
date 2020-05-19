@@ -66,7 +66,7 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
     rewardDecay = ones(1).muli(0.97),
     valueDecay = ones(1).muli(0.99),
     actors = Array(GaussianActor(dimension = 0,
-      alpha = ones(1).muli(0.1))),
+      eta = ones(1).muli(0.1))),
     planner = None,
     agentObserver = events)
 

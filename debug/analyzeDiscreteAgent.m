@@ -1,4 +1,4 @@
-function actors(X, EPS=1e-3, PRC = 50 : 10 : 90, T=20)
+function analyzeDiscreteAgent(X, EPS=1e-3, PRC = 50 : 10 : 90, T=20, EPSH=1)
   #EPS = 1e-3;
   #PRC = 50 : 10 : 100;
   #T = 20;
@@ -9,30 +9,30 @@ function actors(X, EPS=1e-3, PRC = 50 : 10 : 90, T=20)
   # Number of charts
   NC = 5;
 
-  CX = X(find(abs(X(:, 1)) >= EPS), 1 : 2);
-  # Number of vaid steps
-  cm = size(CX, 1);
-  CK = CX(:, 2) ./ CX(:, 1);
-  CKP = prctile(CK, PRC);
-  CC = 1 ./ CKP;
-  ce = sum(CK >= 1);
+  JV = X(find(abs(X(:, 1)) >= EPS), 1 : 2).^2;
+  # Number of valid steps
+  cm = size(JV, 1);
+  KV = JV(:, 2) ./ JV(:, 1);
+  KVP = prctile(KV, PRC);
+  ETAV = 1 ./ KVP;
+  ce = sum(KV >= 1);
   cv = cm - ce;
   cf = n - cm;
 
   subplot(NA + 1, NC, 1);
   #hist(CK, T);
   grid on;
-  title(sprintf("Critic K"));
-  xlabel("K");
+  title(sprintf("Kv"));
+  xlabel("Kv");
   ylabel("# samples");
   
   subplot(NA + 1, NC, 2);
-  plot(PRC, CC);
+  plot(PRC, ETAV);
   grid on;
   grid minor on;
-  title(sprintf("Critic C"));
+  title(sprintf("\eta v"));
   xlabel("% corrected samples");
-  ylabel("Correction factor C");
+  ylabel("Correction factor alpha v");
   
   subplot(NA + 1, NC, 3);
   pie([ce, cv, cf]);
@@ -43,53 +43,52 @@ function actors(X, EPS=1e-3, PRC = 50 : 10 : 90, T=20)
     j = (actor - 1) * 2 + 3;
     i = actor * NC + 1;
     
-    XX = X(find(abs(X(:, j)) > EPS), j : j + 1);
-    m = size(XX, 1);
-    K = XX(:, 2) ./ XX(:, 1);
-    KP = prctile(K, PRC);
-    C = 1 ./ KP;
-    e = sum(K >= 1);
+    JH = X(find(abs(X(:, j)) > EPS), j : j + 1).^2;
+    m = size(JH, 1);
+    KH = JH(:, 2) ./ JH(:, 1);
+    KHP = prctile(KH, PRC);
+    ETAH= 1 ./ KHP;
+    e = sum(KH >= 1);
     v = m - e;
     f = n - m;
-    C1 = 1 ./ prctile(X(:, j), PRC);
+    GAMMAH = EPSH ./ prctile(X(:, j), PRC);
     
     subplot(NA + 1, NC, i + 0);
-    hist(K, T);
-    title(sprintf("Actor %d K", actor));
-    xlabel("K");
+    hist(KV, T);
+    title(sprintf("Actor %d Kh", actor));
+    xlabel("Kh");
     ylabel("# samples");
     grid on;
     
     subplot(NA + 1, NC, i + 1);
-    plot(PRC, C);
+    plot(PRC, ETAH);
     #semilogy(PRC, C);
     grid on;
     grid minor on;
-    title(sprintf("Actor %d C", actor));
+    title(sprintf("Actor %d eta h", actor));
     xlabel("% corrected samples");
-    ylabel("Correction factor C");
+    ylabel("eta h");
 
     subplot(NA + 1, NC, i + 2);
     pie([e v f]);
     title(sprintf("Actor %d Steps", actor));
     #legend(["unoptimizable"; "optimizing"; "optimized"]);
  
-    
     subplot(NA + 1, NC, i + 3);
-    hist(X(:, j), T);
-    title(sprintf("Actor %d J", actor));
-    xlabel("J");
+    hist(X(:, j).^2, T);
+    title(sprintf("Actor %d Jh", actor));
+    xlabel("Jh");
     ylabel("# samples");
     grid on;
 
     subplot(NA + 1, NC, i + 4);
-    plot(PRC, C1);
-    semilogy(PRC, C1);
+#    plot(PRC, GAMMAH);
+    semilogy(PRC, GAMMAH);
     grid on;
     grid minor on;
-    title(sprintf("Actor %d C1", actor));
+    title(sprintf("Actor %d gamma h", actor));
     xlabel("% corrected samples");
-    ylabel("Correction factor C1");
+    ylabel("gamma h");
 
   endfor
 endfunction

@@ -40,10 +40,10 @@ import org.nd4j.linalg.ops.transforms.Transforms._
  * Gaussian Actor
  *
  * @param dimension the dimension index
- * @param alpha     the alpha parameter
+ * @param eta    the eta (mu, sigma) parameters
  */
 case class GaussianActor(dimension: Int,
-                         alpha: INDArray) extends Actor with LazyLogging {
+                         eta: INDArray) extends Actor with LazyLogging {
   /**
    * Returns the actor labels
    *
@@ -54,7 +54,7 @@ case class GaussianActor(dimension: Int,
    */
   override def computeLabels(outputs: Array[INDArray], actions: INDArray, delta: INDArray, random: Random): INDArray = {
     val (mu, h, sigma) = muHSigma(outputs)
-    val (mu1, h1) = GaussianActor.computeActorTarget(actions.getColumn(dimension), alpha, delta, mu, h, sigma)
+    val (mu1, h1) = GaussianActor.computeActorTarget(actions.getColumn(dimension), eta, delta, mu, h, sigma)
     val actorLabels = hstack(mu1, h1)
     actorLabels
   }
@@ -106,14 +106,14 @@ object GaussianActor {
    * Returns the target mu, h
    *
    * @param action the action
-   * @param alpha  the alpha parameter
+   * @param eta    the alpha parameter
    * @param delta  the TD Error
    * @param mu     the mu
    * @param h      the h sigma
    * @param sigma  the sigma
    */
   def computeActorTarget(action: INDArray,
-                         alpha: INDArray,
+                         eta: INDArray,
                          delta: INDArray,
                          mu: INDArray,
                          h: INDArray,
@@ -122,9 +122,9 @@ object GaussianActor {
     val deltaAction = action.sub(mu)
     val ratio = deltaAction.div(sigma)
     // deltaMu = 2 (action - mu) / sigma^2 delta
-    val deltaMu = deltaAction.div(sigma2).muli(delta).muli(2)
+    val deltaMu = deltaAction.div(sigma2).muli(delta).muli(2).muli(eta.getColumn(0))
     // deltaH = (2 (action - mu)^2 / sigma^2) - 1) delta
-    val deltaH = ratio.mul(ratio).muli(2).subi(1).muli(delta).muli(alpha)
+    val deltaH = ratio.mul(ratio).muli(2).subi(1).muli(delta).muli(eta.getColumn(1))
     val mu1 = Utils.clip(mu.add(deltaMu), -MuRange, MuRange)
     val h1 = Utils.clip(h.add(deltaH), -HRange, HRange)
     (mu1, h1)

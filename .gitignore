@@ -27,3 +27,6 @@
 /.idea/
 /v3/*.csv
 /debug/*.csv
+/docs/*.aux
+/docs/*.log
+/docs/*.synctex.gz

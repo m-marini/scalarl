@@ -63,7 +63,7 @@ class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
     rewardDecay = ones(1).muli(0.97),
     valueDecay = ones(1).muli(0.99),
     actors = Array(GaussianActor(dimension = 0,
-      alpha = ones(1).muli(0.03))),
+      eta = ones(1).muli(0.03))),
     planner = None,
     agentObserver = events)
 
@@ -105,8 +105,6 @@ class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
   }
 
   describe("ContinuousActionEnv") {
-
-
     val s0 = ContinuousActionEnv(ones(1).mul(2), zeros(1))
 
     val session = new Session(numSteps = NoSteps,

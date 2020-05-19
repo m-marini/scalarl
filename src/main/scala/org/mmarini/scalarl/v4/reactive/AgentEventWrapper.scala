@@ -31,7 +31,7 @@ package org.mmarini.scalarl.v4.reactive
 
 import monix.reactive.Observable
 import org.mmarini.scalarl.v4.Feedback
-import org.mmarini.scalarl.v4.agents.{ActorCriticAgent, AgentEvent, PolicyActor, PriorityPlanner}
+import org.mmarini.scalarl.v4.agents.{ActorCriticAgent, AgentEvent, GaussianActor, PolicyActor, PriorityPlanner}
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j._
 
@@ -49,44 +49,54 @@ class AgentEventWrapper(val observable: Observable[AgentEvent]) extends Observab
    *  - alpha
    *  - eta
    */
-  def kpis(): INDArrayWrapper = new INDArrayWrapper(observable.map(step => {
-    val Feedback(s0, actions, reward, s1) = step.feedback
-    val agent = step.agent0.asInstanceOf[ActorCriticAgent]
-    val agent1 = step.agent1.asInstanceOf[ActorCriticAgent]
-    val outs0 = agent.network.output(s0.signals)
-    val outs1 = agent.network.output(s1.signals)
-    val outs01 = agent1.network.output(s0.signals)
-    val v0 = ActorCriticAgent.v(outs0)
-    val v1 = ActorCriticAgent.v(outs1)
-    val v01 = ActorCriticAgent.v(outs01)
-    val (delta, vStar, _) = agent.computeDelta(v0, v1, reward)
-    val deltaCritic = vStar.distance2(v0)
-    val deltaCritic1 = vStar.distance2(v01)
-    val actorsKpis = (for {
-      ((a0, a1), action) <- agent.actors.zip(agent1.actors).zipWithIndex
-    } yield {
-      (a0, a1) match {
-        case (actor: PolicyActor, actor1: PolicyActor) =>
-          val pr = actor.preferences(outs0)
-          val prStar = PolicyActor.computeActorLabel(pr, actions.getInt(action), actor.alpha, delta)
-          val pr1 = actor1.preferences(outs01)
-          val deltaActor = prStar.distance2(pr)
-          val deltaActor1 = prStar.distance2(pr1)
-          Seq(deltaActor * deltaActor, deltaActor1 * deltaActor1)
+  def kpis(): INDArrayWrapper = new INDArrayWrapper(observable.map(step => (step.agent0, step.agent1) match {
+    case (agent: ActorCriticAgent, agent1: ActorCriticAgent) =>
+      val Feedback(s0, actions, reward, s1) = step.feedback
+      val outs0 = agent.network.output(s0.signals)
+      val outs1 = agent.network.output(s1.signals)
+      val outs01 = agent1.network.output(s0.signals)
+      val v0 = ActorCriticAgent.v(outs0)
+      val v1 = ActorCriticAgent.v(outs1)
+      val v01 = ActorCriticAgent.v(outs01)
+      val (delta, vStar, _) = agent.computeDelta(v0, v1, reward)
+      val deltaCritic = v0.distance2(vStar)
+      val deltaCritic1 = v01.distance2(vStar)
+      val actorsKpis = (for {
+        ((a0, a1), action) <- agent.actors.zip(agent1.actors).zipWithIndex
+      } yield {
+        (a0, a1) match {
+          case (actor: PolicyActor, actor1: PolicyActor) =>
+            val pr = actor.preferences(outs0)
+            val prStar = PolicyActor.computeActorLabel(pr, actions.getInt(action), actor.alpha, delta)
+            val pr1 = actor1.preferences(outs01)
+            val deltaActor = pr.distance2(prStar)
+            val deltaActor1 = pr1.distance2(prStar)
+            Seq(deltaActor, deltaActor1)
+          case (actor: GaussianActor, actor1: GaussianActor) =>
+            val (mu, h, sigma) = actor.muHSigma(outs0)
+            val (muStar, hStar) = GaussianActor.computeActorTarget(actions.getColumn(actor.dimension),
+              actor.eta, delta, mu, h, sigma)
+            val (mu1, h1, _) = actor.muHSigma(outs0)
+            val deltaMu = mu.distance2(muStar)
+            val deltaMu1 = mu1.distance2(muStar)
+            val deltaH = h.distance2(hStar)
+            val deltaH1 = h1.distance2(hStar)
+            Seq(deltaMu, deltaMu1, deltaH, deltaH1)
+          case _ => Seq()
+        }
+      }).flatten
+      val plannerKpis = agent.planner match {
+        case Some(pl: PriorityPlanner[INDArray, INDArray]) =>
+          Seq(pl.model.data.size.toDouble, pl.queue.queue.size.toDouble)
         case _ => Seq()
       }
-    }).flatten
-    val plannerKpis = agent.planner match {
-      case Some(pl: PriorityPlanner[INDArray, INDArray]) =>
-        Seq(pl.model.data.size.toDouble, pl.queue.queue.size.toDouble)
-      case _ => Seq()
-    }
-    val kpis = create((
-      deltaCritic * deltaCritic +:
-        deltaCritic1 * deltaCritic1 +:
-        (actorsKpis ++
-          plannerKpis)).toArray)
+      val kpis = create((
+        deltaCritic +:
+          deltaCritic1 +:
+          (actorsKpis ++
+            plannerKpis)).toArray)
 
-    kpis
+      kpis
+    case _ => zeros(0)
   }))
 }
