@@ -63,7 +63,7 @@ class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
     rewardDecay = ones(1).muli(0.97),
     valueDecay = ones(1).muli(0.99),
     actors = Array(GaussianActor(dimension = 0,
-      eta = ones(1).muli(0.03))),
+      eta = ones(2).muli(0.03))),
     planner = None,
     agentObserver = events)
 

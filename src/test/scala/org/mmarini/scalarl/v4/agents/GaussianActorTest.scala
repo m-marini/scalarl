@@ -52,14 +52,14 @@ class GaussianActorTest extends FunSpec with Matchers {
       val mu = create(Array[Double](1))
       val h = create(Array[Double](Math.log(2)))
       val sigma = exp(h)
-      val alpha = ones(1)
+      val eta = ones(2)
 
       describe("with action = mu") {
         val action = mu
 
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
-          val (mu1, h1) = GaussianActor.computeActorTarget(action, alpha, delta, mu, h, sigma)
+          val (mu1, h1) = GaussianActor.computeActorTarget(action, eta, delta, mu, h, sigma)
 
           it("should return mu' = mu") {
             mu1 shouldBe mu
@@ -71,7 +71,7 @@ class GaussianActorTest extends FunSpec with Matchers {
 
         describe("with delta < 0") {
           val delta = create(Array[Double](-1))
-          val (mu1, h1) = GaussianActor.computeActorTarget(action, alpha, delta, mu, h, sigma)
+          val (mu1, h1) = GaussianActor.computeActorTarget(action, eta, delta, mu, h, sigma)
 
           it("should return mu' = mu") {
             mu1 shouldBe mu
@@ -86,7 +86,7 @@ class GaussianActorTest extends FunSpec with Matchers {
         val action = mu.add(1)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
-          val (mu1, h1) = GaussianActor.computeActorTarget(action, alpha, delta, mu, h, sigma)
+          val (mu1, h1) = GaussianActor.computeActorTarget(action, eta, delta, mu, h, sigma)
 
           it("should return mu' > mu") {
             mu1.getDouble(0L) should be > mu.getDouble(0L)
@@ -98,7 +98,7 @@ class GaussianActorTest extends FunSpec with Matchers {
 
         describe("with delta < 0") {
           val delta = create(Array[Double](-1))
-          val (mu1, h1) = GaussianActor.computeActorTarget(action, alpha, delta, mu, h, sigma)
+          val (mu1, h1) = GaussianActor.computeActorTarget(action, eta, delta, mu, h, sigma)
 
           it("should return mu' < mu") {
             mu1.getDouble(0L) should be < mu.getDouble(0L)
@@ -113,7 +113,7 @@ class GaussianActorTest extends FunSpec with Matchers {
         val action = mu.sub(1)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
-          val (mu1, h1) = GaussianActor.computeActorTarget(action, alpha, delta, mu, h, sigma)
+          val (mu1, h1) = GaussianActor.computeActorTarget(action, eta, delta, mu, h, sigma)
 
           it("should return mu' < mu") {
             mu1.getDouble(0L) should be < mu.getDouble(0L)
@@ -125,7 +125,7 @@ class GaussianActorTest extends FunSpec with Matchers {
 
         describe("with delta < 0") {
           val delta = create(Array[Double](-1))
-          val (mu1, h1) = GaussianActor.computeActorTarget(action, alpha, delta, mu, h, sigma)
+          val (mu1, h1) = GaussianActor.computeActorTarget(action, eta, delta, mu, h, sigma)
 
           it("should return mu' > mu") {
             mu1.getDouble(0L) should be > mu.getDouble(0L)
@@ -140,7 +140,7 @@ class GaussianActorTest extends FunSpec with Matchers {
         val action = mu.add(4)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
-          val (mu1, h1) = GaussianActor.computeActorTarget(action, alpha, delta, mu, h, sigma)
+          val (mu1, h1) = GaussianActor.computeActorTarget(action, eta, delta, mu, h, sigma)
 
           it("should return mu' > mu") {
             mu1.getDouble(0L) should be > mu.getDouble(0L)
@@ -152,7 +152,7 @@ class GaussianActorTest extends FunSpec with Matchers {
 
         describe("with delta < 0") {
           val delta = create(Array[Double](-1))
-          val (mu1, h1) = GaussianActor.computeActorTarget(action, alpha, delta, mu, h, sigma)
+          val (mu1, h1) = GaussianActor.computeActorTarget(action, eta, delta, mu, h, sigma)
 
           it("should return mu' < mu") {
             mu1.getDouble(0L) should be < mu.getDouble(0L)
@@ -167,7 +167,7 @@ class GaussianActorTest extends FunSpec with Matchers {
         val action = mu.sub(4)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
-          val (mu1, h1) = GaussianActor.computeActorTarget(action, alpha, delta, mu, h, sigma)
+          val (mu1, h1) = GaussianActor.computeActorTarget(action, eta, delta, mu, h, sigma)
 
           it("should return mu' < mu") {
             mu1.getDouble(0L) should be < mu.getDouble(0L)
@@ -179,7 +179,7 @@ class GaussianActorTest extends FunSpec with Matchers {
 
         describe("with delta < 0") {
           val delta = create(Array[Double](-1))
-          val (mu1, h1) = GaussianActor.computeActorTarget(action, alpha, delta, mu, h, sigma)
+          val (mu1, h1) = GaussianActor.computeActorTarget(action, eta, delta, mu, h, sigma)
 
           it("should return mu' > mu") {
             mu1.getDouble(0L) should be > mu.getDouble(0L)
