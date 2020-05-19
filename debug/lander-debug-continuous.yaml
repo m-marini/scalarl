@@ -2,7 +2,7 @@
 version: "4"
 env:
   type: LanderContinuous
-  actionConfig: ContinuousActions
+  actionConfig: DiscreteActions
   dt: 0.25
   h0Range: 5
   z0: 1
@@ -47,10 +47,7 @@ agent:
       max: [1, 1, 1, 1, 1, 1]
       tiles: [32, 32, 32, 32, 32, 32]
     actionsKey:
-      type: Tiles
-      offset: [0,0,0]
-      max: [4,4,4]
-      tiles: [8,8,8]
+      type: Identity
     #modelPath: lander-model
   network:
     numHiddens:
@@ -68,17 +65,14 @@ agent:
     maxAbsParameters: 10e3
     dropOut: 0.8
   actors:
-    - type: GaussianActor
-      alphaMu: 1e-7
-      alphaSigma: 1e-7
-    - type: GaussianActor
-      alphaMu: 1e-7
-      alphaSigma: 1e-7
-    - type: GaussianActor
-      alphaMu: 1e-7
-      alphaSigma: 1e-7
+    - type: PolicyActor
+      alpha: 0.1
+    - type: PolicyActor
+      alpha: 0.1
+    - type: PolicyActor
+      alpha: 0.1
 session:
-  numSteps: 1000
+  numSteps: 3000
   seed: 1234
   #trace: debug/lander-trace.csv
   dump: debug/lander-dump.csv
