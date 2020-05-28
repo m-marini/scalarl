@@ -22,7 +22,8 @@ env:
   crashReward: -10
   outOfRangeReward: -10
   outOfFuelReward: -10
-  rewardDistanceScale: 3
+  rewardDistanceScale: 0
+  flyingReward: -1
 agent:
   type: ActorCritic
   avgReward: 0
@@ -30,33 +31,13 @@ agent:
   valueDecay: 0.99
   planner:
     planningSteps: 5
-    scoreThreshold: 0.1
-    model:
-      minModelSize: 20
-      maxModelSize: 100
+    threshold: 0.1
+    minModelSize: 20
+    maxModelSize: 100
     stateKey:
-      type: Identity
-      dimensions:
-        - min: -1
-          max: 1
-          tiles: 0
-        - min: -1
-          max: 1
-          tiles: 0
-        - min: -1
-          max: 1
-          tiles: 0
-        - min: -1
-          max: 1
-          tiles: 0
-        - min: -1
-          max: 1
-          tiles: 0
-        - min: -1
-          max: 1
-          tiles: 0
+      type: Binary
     actionsKey:
-      type: Identity
+      type: Discrete
     #modelPath: lander-model
   network:
     numHiddens: []

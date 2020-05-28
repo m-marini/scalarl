@@ -49,14 +49,6 @@ case class PolicyActor(dimension: Int,
                        alpha: INDArray) extends Actor with LazyLogging {
 
   /**
-   * Returns the preferences
-   *
-   * @param outputs the outputs
-   */
-  def preferences(outputs: Array[INDArray]): INDArray =
-    normalize(outputs(dimension + 1))
-
-  /**
    * Returns the action choosen by the actor
    *
    * @param outputs the network outputs
@@ -84,6 +76,14 @@ case class PolicyActor(dimension: Int,
     val actorLabels = computeActorLabel(prefs, actions.getInt(dimension), alpha, delta)
     actorLabels
   }
+
+  /**
+   * Returns the preferences
+   *
+   * @param outputs the outputs
+   */
+  def preferences(outputs: Array[INDArray]): INDArray =
+    normalize(outputs(dimension + 1))
 }
 
 object PolicyActor {

@@ -40,8 +40,8 @@ import org.nd4j.linalg.factory.Nd4j
  *
  */
 class LanderTilesEncoder(hash: Option[Int]) extends LanderEncoder {
-  private val tilesCoder: Tiles = hash.map(h => Tiles.withHash(h, 1, 1, 1, 1, 1, 1)).getOrElse(Tiles(1, 1, 1, 1, 1, 1))
   /** Returns the number of signals */
+  private val tilesCoder: Tiles = hash.map(h => Tiles.withHash(h, 1, 1, 1, 1, 1, 1)).getOrElse(Tiles(1, 1, 1, 1, 1, 1))
   override val noSignals: Int = tilesCoder.noFeatures.toInt
   private val Size = 6
   //  private val vhOffset = VHPrecision * tilesCoder.tilings / 2

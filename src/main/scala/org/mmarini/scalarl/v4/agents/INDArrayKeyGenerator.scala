@@ -30,7 +30,7 @@
 package org.mmarini.scalarl.v4.agents
 
 import io.circe.ACursor
-import org.mmarini.scalarl.v4.Utils
+import org.mmarini.scalarl.v4.Utils._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.ops.transforms.Transforms
@@ -39,24 +39,13 @@ import org.nd4j.linalg.ops.transforms.Transforms._
 /** The factory object for [[INDArrayKeyGenerator]] */
 object INDArrayKeyGenerator {
 
-  /**
-   * Returns the tiles key generator from json
-   *
-   * @param cursor the json tiles configuration
-   * @param noDims the number of dimensions
-   */
-  def tilesFromJson(cursor: ACursor)(noDims: Int): INDArray => INDArray = {
-    val offset = create(cursor.get[Array[Double]]("offset").toTry.get)
-    require(offset.shape() sameElements Array(1L, noDims))
-    val max = create(cursor.get[Array[Double]]("max").toTry.get)
-    require(max.shape() sameElements Array(1L, noDims))
-    val tiles = create(cursor.get[Array[Int]]("tiles").toTry.get.map(_.toDouble))
-    require(tiles.shape() sameElements Array(1L, noDims))
-    INDArrayKeyGenerator(
-      min = offset,
-      max = max,
-      noTiles = tiles)
-  }
+  val binary: INDArray => Array[Int] = x => find(x).map(_.toInt).toArray
+
+  val discrete: INDArray => Array[Int] = x => (for {
+    i <- 0 until x.columns()
+  } yield {
+    x.getInt(i)
+  }).toArray
 
   /**
    * Returns the key generator from json configuration
@@ -64,11 +53,30 @@ object INDArrayKeyGenerator {
    * @param cursor the configuration
    * @param noDims the number of dimension
    */
-  def fromJson(cursor: ACursor)(noDims: Int): INDArray => INDArray = cursor.get[String]("type").toTry.get match {
-    case "Identity" => x => x
-    case "Sparse" => x => create(Utils.find(x).map(_.toDouble).toArray)
+  def fromJson(cursor: ACursor)(noDims: Int): INDArray => Array[Int] = cursor.get[String]("type").toTry.get match {
+    case "Binary" => binary
+    case "Discrete" => discrete
     case "Tiles" => tilesFromJson(cursor)(noDims)
     case x => throw new IllegalArgumentException(s"Unrecognized key generator type '$x'")
+  }
+
+  /**
+   * Returns the tiles key generator from json
+   *
+   * @param cursor the json tiles configuration
+   * @param noDims the number of dimensions
+   */
+  def tilesFromJson(cursor: ACursor)(noDims: Int): INDArray => Array[Int] = {
+    val offset = create(cursor.get[Array[Double]]("offset").toTry.get)
+    require(offset.shape() sameElements Array(1L, noDims))
+    val max = create(cursor.get[Array[Double]]("max").toTry.get)
+    require(max.shape() sameElements Array(1L, noDims))
+    val noTiles = create(cursor.get[Array[Int]]("tiles").toTry.get.map(_.toDouble))
+    require(noTiles.shape() sameElements Array(1L, noDims))
+    tiles(
+      min = offset,
+      max = max,
+      noTiles = noTiles)
   }
 
   /**
@@ -78,9 +86,9 @@ object INDArrayKeyGenerator {
    * @param max     the state maximum values
    * @param noTiles the state tiles number
    */
-  def apply(min: INDArray,
+  def tiles(min: INDArray,
             max: INDArray,
-            noTiles: INDArray): INDArray => INDArray = {
+            noTiles: INDArray): INDArray => Array[Int] = {
     require(min.equalShapes(max))
     require(min.equalShapes(noTiles))
     require(noTiles.minNumber().intValue() > 0)
@@ -89,7 +97,12 @@ object INDArrayKeyGenerator {
     values => {
       val key1 = values.sub(min).muli(scale1)
       val key2 = round(Transforms.min(Transforms.max(zeros(noTiles.shape(): _*), key1), noTiles))
-      key2
+      val result = for {
+        i <- 0 until key2.columns()
+      } yield {
+        key2.getInt(i)
+      }
+      result.toArray
     }
   }
 }

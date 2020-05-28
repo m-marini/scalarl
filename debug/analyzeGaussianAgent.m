@@ -1,100 +1,107 @@
-function analyzeGaussianAgent(X, EPS=1e-6, PRC = 50 : 10 : 90, T=20, EPSMU=1, EPSHS=1)
-  #EPS = 1e-3;
-  #PRC = 50 : 10 : 100;
-  #T = 20;
+function analyzeGaussianAgent(
+  X,                  # the indicators dump
+  K0 = 0.7,           # the K threshold for C1 class
+  Cd = 0.1,           # the C threshold for C0 class
+  Ci = 0.5,           # the C threshold for C1 class
+  EPS = 1e-3,         # the minimu J value to be considered
+  PRC = 50 : 10 : 90, # the percentiles in the chart
+  BINS = 20,          # the number of bins in histogram
+  EPSMU = 0.5,          # the averege range of delta mu
+  EPSHS = 0.2)          # the average range of delta h sigma
+
+  NR = 4;             # number of rows
   # Number of actors
-  NA = 3;
+  NA = floor((size(X, 2) - 2) / 4);
   # Number of steps
   n = size(X, 1);
   # Number of charts per row
-  NC = 7;
-  NR = 3;
+  NC = NA + 1;
+  JV = X(:, 1 : 2).^2;
+  for actor = 0 : NA - 1
+    j = actor * 2 + 3;
+    JV = JV + X(:, j : j + 1).^2 + X(:, j + 2 : j + 3).^2;
+  endfor
+  JV = JV(find(abs(JV(:, 1)) >= EPS), 1 : 2);
 
-  JV = X(find(abs(X(:, 1)) >= EPS), 1 : 2).^2;
   # Number of valid steps
-  cm = size(JV, 1);
   KV = JV(:, 2) ./ JV(:, 1);
-  KVP = prctile(KV, PRC);
-  ETAV = 1 ./ KVP;
-  ce = sum(KV >= 1);
-  cv = cm - ce;
-  cf = n - cm;
+  C0 = sum(KV > 1);
+  C1 = sum(KV <= 1 & KV > K0);
+  C2 = n - C0 - C1;
 
+  if C0 > Cd * n
+    advpie = [1 0 0];
+    advice = "Reduce alpha";
+    colorV = [0 1 0];
+  elseif C1 >  Ci * n
+    advpie = [0 1 0];
+    advice = "Increment alpha";
+    colorV = [1 1 0];
+  else
+    advpie = [0 0 1];
+    advice = "No changes";
+    colorV = [0 0 1];
+  endif
+
+  clf;
   subplot(NR, NC, 1);
-  pie([ce, cv, cf]);
-  title("v");
-  #legend("unoptimizable", "optimizing", "optimized");
-
-  subplot(NR, NC, 1 + NC);
-  plot(PRC, ETAV);
+  hist(KV, BINS);
   grid on;
-  grid minor on;
-  title(sprintf("eta v"));
-  xlabel("% corrected samples");
-  ylabel("eta v");
+  title(sprintf("Kv distribution"));
+  xlabel("Kv");
+  ylabel("# samples");
   
+  subplot(NR, NC, 1 + NC);
+  ph = pie([C0, C1, C2]);
+  colormap([1 0 0; 1 1 0; 0 1 0]);
+  title("Step classes");
+  text(-1, -1.25, sprintf("Advice: %s", advice));
 
-  for actor = 1 : NA
-    j = (actor - 1) * 4 + 3;
-    i = (actor - 1) * 2 + 2;
+  for actor = 0 : NA - 1
+    j = actor * 4 + 3;
+    col = actor + 2;
     
-    JMU = X(find(abs(X(:, j)) > EPS), j : j + 1).^2;
-    JHS = X(find(abs(X(:, j)) > EPS), j + 2 : j + 3).^2;
-    mmu = size(JMU, 1);
-    mhs = size(JHS, 1);
-    KMU = JMU(:, 2) ./ JMU(:, 1);
-    KHS = JHS(:, 2) ./ JHS(:, 1);
-    KMUP = prctile(KMU, PRC);
-    KHSP = prctile(KHS, PRC);
-    ETAMU= 1 ./ KMUP;
-    ETAHS= 1 ./ KHSP;
-    emu = sum(KMU >= 1);
-    vmu = mmu - emu;
-    fmu = n - mmu;
-    GAMMAMU = EPSMU ./ prctile(X(:, j), PRC);
+    XMU = X(find(X(:, j) > EPS), j);
+    XHS = X(find(X(:, j + 2) > EPS), j + 2);
+    JMU = XMU .^2;
+    JHS = XHS .^2;
+    PCMU = prctile(XMU, PRC);
+    GAMMAMU = EPSMU ./ PCMU;
+    GAMMAMUM = ones(size(GAMMAMU)) * EPSMU ./ mean(XMU);
+    GAMMAHS = EPSHS ./ prctile(XHS, PRC);
+    GAMMAHSM = ones(size(GAMMAHS)) * EPSHS ./ mean(XHS);
     
-    subplot(NR, NC, i);
-    pie([emu vmu fmu]);
-    title(sprintf("mu %d", actor));
-
-    subplot(NR, NC, i + NC);
-    plot(PRC, ETAMU);
-    #semilogy(PRC, C);
+    subplot(NR, NC, col);
+    hist(JMU, BINS);
     grid on;
-    grid minor on;
-    title(sprintf("eta mu %d", actor));
-    xlabel("% corrected samples");
-    ylabel("eta mu");
- 
-    subplot(NR, NC, i + 2 * NC);
+    title(sprintf("J mu%d distribution", actor));
+    xlabel(sprintf("J mu%d distribution", actor));
+    ylabel("# samples");
+
+    subplot(NR, NC, col + NC);
 #    plot(PRC, GAMMAH);
-    semilogy(PRC, GAMMAMU);
+    semilogy(PRC, [GAMMAMU; GAMMAMUM]);
     grid on;
     grid minor on;
     title(sprintf("gamma mu %d", actor));
     xlabel("% corrected samples");
-    ylabel("gamma mu");
-
-    subplot(NR, NC, i + 1);
-    pie([emu vmu fmu]);
-    title(sprintf("hs %d", actor));
-
-    subplot(NR, NC, i + NC + 1);
-    plot(PRC, ETAMU);
-    #semilogy(PRC, C);
-    grid on;
-    grid minor on;
-    title(sprintf("eta hs %d", actor));
-    xlabel("% corrected samples");
-    ylabel("eta hs");
+    ylabel(sprintf("gamma mu %d", actor));
  
-    subplot(NR, NC, i + 2 * NC + 1);
+    subplot(NR, NC, col + NC * 2);
+    hist(JHS, BINS);
+    grid on;
+    title(sprintf("J hs%d distribution", actor));
+    xlabel(sprintf("J hs%d distribution", actor));
+    ylabel("# samples");
+
+    subplot(NR, NC, col + NC * 3);
 #    plot(PRC, GAMMAH);
-    semilogy(PRC, GAMMAMU);
+    semilogy(PRC, [GAMMAHS; GAMMAHSM]);
     grid on;
     grid minor on;
     title(sprintf("gamma hs %d", actor));
     xlabel("% corrected samples");
-    ylabel("gamma hs");
+    ylabel(sprintf("gamma hs %d", actor));
+
   endfor
 endfunction

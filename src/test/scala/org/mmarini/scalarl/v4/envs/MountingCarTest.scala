@@ -29,6 +29,8 @@
 
 package org.mmarini.scalarl.v4.envs
 
+import java.io.File
+
 import com.typesafe.scalalogging.LazyLogging
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -38,13 +40,17 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.weights.WeightInit
+import org.mmarini.scalarl.v4.agents.ActorCriticAgent.v
 import org.mmarini.scalarl.v4.agents._
-import org.mmarini.scalarl.v4.{Feedback, Session}
+import org.mmarini.scalarl.v4.reactive.Implicits._
+import org.mmarini.scalarl.v4.{Feedback, Session, Step}
 import org.nd4j.linalg.activations.Activation
+import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.learning.config.Sgd
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
+import org.nd4j.linalg.ops.transforms.Transforms._
 import org.scalatest.{FunSpec, Matchers}
 
 class MountingCarTest extends FunSpec with Matchers with LazyLogging {
@@ -52,25 +58,43 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
   val NoSteps = 1000
   val Hiddens = 10
   val NoInputs: Long = Tiles(1, 1).noFeatures
-  private implicit val s = Scheduler.global
+  private implicit val s: Scheduler = Scheduler.global
 
   create()
+
   val random: Random =
     getRandomFactory.getNewRandomInstance(Seed)
 
-  val events = PublishSubject[AgentEvent]()
+  val events: PublishSubject[AgentEvent] = PublishSubject[AgentEvent]()
+  val Range: INDArray = create(Array(Array(-10.0, 10.0), Array(-3.0, 3.0)))
 
   def agent: ActorCriticAgent = ActorCriticAgent(
-    network = critic,
+    network = network,
     avg = zeros(1),
     rewardDecay = ones(1).muli(0.97),
     valueDecay = ones(1).muli(0.99),
     actors = Array(GaussianActor(dimension = 0,
-      eta = ones(2).muli(0.1))),
-    planner = None,
+      eta = create(Array(300e-6, 3e-6)),
+      Range)),
+    planner = planner,
     agentObserver = events)
 
-  def critic: ComputationGraph = {
+  def planner: Option[PriorityPlanner[Array[Int], Array[Int]]] =
+  //None
+    Some(PriorityPlanner(
+      stateKeyGen = INDArrayKeyGenerator.binary,
+      actionsKeyGen = INDArrayKeyGenerator.tiles(
+        min = ones(1).negi(),
+        max = ones(1),
+        noTiles = ones(1).muli(100)),
+      planningSteps = 5,
+      minModelSize = 100,
+      maxModelSize = 300,
+      threshold = 0.1,
+      model = Map()
+    ))
+
+  def network: ComputationGraph = {
     val criticOutLayer = new OutputLayer.Builder().
       nIn(NoInputs).
       nOut(1).
@@ -88,7 +112,7 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
     val conf = new NeuralNetConfiguration.Builder().
       seed(Seed).
       weightInit(WeightInit.XAVIER).
-      updater(new Sgd(1.0e-3)).
+      updater(new Sgd(30.0e-3)).
       //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
       //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
@@ -108,6 +132,36 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
     net
   }
 
+  def trace(step: Step): Unit = {
+    val Feedback(s0, a, r, s1) = step.feedback
+    val ag0 = step.agent0.asInstanceOf[ActorCriticAgent]
+    val ac0 = ag0.actors.head.asInstanceOf[GaussianActor]
+    val o0 = ag0.network.output(s0.signals)
+    val (mu0, h0, sigma0) = ac0.muHSigma(o0)
+    val ag1 = step.agent1.asInstanceOf[ActorCriticAgent]
+    val ac1 = ag1.actors.head.asInstanceOf[GaussianActor]
+    val o1 = ag1.network.output(s0.signals)
+    val (mu1, h1, sigma1) = ac1.muHSigma(o1)
+    val s = ag0.score(step.feedback)
+
+    val v0 = v(o0)
+    val o01 = ag0.network.output(s1.signals)
+    val v1 = v(o01)
+
+    val (delta, v0start, _) = ag0.computeDelta(v0, v1, r)
+
+    val ev = step.env0.asInstanceOf[MountingCarEnv]
+    val actorLabels = ac0.computeLabels(o0, a, delta, random)
+    val muStar = actorLabels.getColumn(0)
+    val hStar = actorLabels.getColumn(1)
+    val sigmaStart = exp(hStar)
+
+    logger.debug("ev={}, a={}, r={}, score={}, delta={}", (ev.x, ev.v), a, r, s, delta)
+    logger.debug("    mu={},  sigma={},  h={}", mu0, sigma0, h0)
+    logger.debug("   mu*={}, sigma*={}, h*={}", muStar, sigmaStart, hStar)
+    logger.debug("   mu'={}, sigma'={}, h'={}", mu1, sigma1, h1)
+  }
+
   describe("TestEnv") {
     val s0 = MountingCarEnv.initial(random)
 
@@ -117,10 +171,12 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
       agent = agent)
 
     session.steps.doOnNext(step => Task.eval {
-      val e0 = step.env0.asInstanceOf[MountingCarEnv]
-      val Feedback(s0, a, r, s1) = step.feedback
-      //logger.debug("x={}, v={}, a={}", e0.x, e0.v, a)
+      trace(step)
     }).subscribe()
+    //  monitorInfo().logInfo().subscribe()
+    val kpiFile = new File("mc-kpi.csv")
+    kpiFile.delete()
+    events.kpis().writeCsv(kpiFile).subscribe()
 
     val (_, agent1: ActorCriticAgent) = session.run(random)
 
@@ -140,8 +196,7 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
         ones(1).muli(0.07), zeros(1))
       val outs = agent1.network.output(s.observation.signals)
       val (mu, _, _) = actor.muHSigma(outs)
-      // TODO Check for error
-      //      mu.getDouble(0L) should be > 0.0
+      mu.getDouble(0L) should be > 0.0
     }
   }
 }

@@ -30,3 +30,4 @@
 /docs/*.aux
 /docs/*.log
 /docs/*.synctex.gz
+/v4/*.csv

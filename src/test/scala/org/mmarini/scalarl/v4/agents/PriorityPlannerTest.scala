@@ -60,23 +60,14 @@ class PriorityPlannerTest extends FunSpec with Matchers with MockitoSugar {
   describe("A PriorityPlanner") {
     val stateKeyGen = (x: INDArray) => x
     val actionsKeyGen = (x: INDArray) => x
-    val fo = Ordering.by((p: ((INDArray, INDArray), Feedback)) => p match {
-      case (_, f) => f.s0.time.getDouble(0L)
-    }).reverse
 
-    val model = Model[(INDArray, INDArray), Feedback](minModelSize = 1,
-      maxModelSize = 10,
-      data = Map(),
-      ordering = fo)
-
-    val queue = PriorityQueue[(INDArray, INDArray)](threshold = 0.1,
-      queue = Map())
-
-    val planner = PriorityPlanner(stateKeyGen = stateKeyGen,
+    val planner = PriorityPlanner[INDArray, INDArray](stateKeyGen = stateKeyGen,
       actionsKeyGen = actionsKeyGen,
       planningSteps = 1,
-      model = model,
-      queue = queue)
+      minModelSize = 1,
+      maxModelSize = 10,
+      threshold = 0.1,
+      model = Map())
 
     val s0 = state(0)
     val s1 = state(1)
@@ -90,10 +81,9 @@ class PriorityPlannerTest extends FunSpec with Matchers with MockitoSugar {
       val r = planner.learn(feedback = f0, agent = agent).asInstanceOf[PriorityPlanner[INDArray, INDArray]]
 
       it("should learn model") {
-        r.model.data should contain((s0, a0) -> f0)
-      }
-      it("should not include for planning") {
-        r.queue.queue shouldBe empty
+        r.model.get((s0, a0)) should matchPattern {
+          case Some((f, _)) if f == f0 =>
+        }
       }
       it("should call score to agent") {
         verify(agent).score(any())
@@ -107,10 +97,9 @@ class PriorityPlannerTest extends FunSpec with Matchers with MockitoSugar {
       val r = planner.learn(feedback = f0, agent = agent).asInstanceOf[PriorityPlanner[INDArray, INDArray]]
 
       it("should learn model") {
-        r.model.data should contain((s0, a0) -> f0)
-      }
-      it("should include for planning") {
-        r.queue.queue should contain((s0, a0) -> 1.0)
+        r.model.get((s0, a0)) should matchPattern {
+          case Some((f, _)) if f == f0 =>
+        }
       }
       it("should call score to agent") {
         verify(agent).score(any())
@@ -127,11 +116,12 @@ class PriorityPlannerTest extends FunSpec with Matchers with MockitoSugar {
         learn(f1, agent).asInstanceOf[PriorityPlanner[INDArray, INDArray]]
 
       it("should learn model") {
-        r.model.data should contain((s0, a0) -> f0)
-        r.model.data should contain((s1, a0) -> f1)
-      }
-      it("should include for planning") {
-        r.queue.queue should contain((s1, a0) -> 1.0)
+        r.model.get((s0, a0)) should matchPattern {
+          case Some((f, _)) if f == f0 =>
+        }
+        r.model.get((s1, a0)) should matchPattern {
+          case Some((f, _)) if f == f1 =>
+        }
       }
       it("should call score to agent") {
         verify(agent).score(f0)
@@ -160,20 +150,8 @@ class PriorityPlannerTest extends FunSpec with Matchers with MockitoSugar {
       val p1 = planner.learn(feedback = f0, agent = agent0).
         learn(f1, agent0).asInstanceOf[PriorityPlanner[INDArray, INDArray]]
 
-      it("should contain initial queue with 2 elements") {
-        p1.queue.queue should have size (2)
-        p1.queue.queue should contain((s0, a0) -> 2.0)
-        p1.queue.queue should contain((s1, a0) -> 1.0)
-      }
-
       val (_, p2) = p1.plan(agent0, random)
       val p3 = p2.asInstanceOf[PriorityPlanner[INDArray, INDArray]]
-
-      it("should contain queue with 2 elements") {
-        p3.queue.queue should have size (2)
-        p3.queue.queue should contain((s0, a0) -> 0.75)
-        p3.queue.queue should contain((s1, a0) -> 1.0)
-      }
 
       it("should call directLearn to agent") {
         verify(agent0).directLearn(f0, random)
@@ -199,20 +177,8 @@ class PriorityPlannerTest extends FunSpec with Matchers with MockitoSugar {
       val p1 = planner.learn(feedback = f0, agent = agent0).
         learn(f1, agent0).asInstanceOf[PriorityPlanner[INDArray, INDArray]]
 
-      it("should contain initial queue with 2 elements") {
-        p1.queue.queue should have size (2)
-        p1.queue.queue should contain((s0, a0) -> 1.0)
-        p1.queue.queue should contain((s1, a0) -> 2.0)
-      }
-
       val (_, p2) = p1.plan(agent0, random)
       val p3 = p2.asInstanceOf[PriorityPlanner[INDArray, INDArray]]
-
-      it("should contain queue with 2 elements") {
-        p3.queue.queue should have size (2)
-        p3.queue.queue should contain((s0, a0) -> 0.5)
-        p3.queue.queue should contain((s1, a0) -> 1.0)
-      }
 
       it("should call directLearn to agent") {
         verify(agent0).directLearn(f1, random)
@@ -239,20 +205,8 @@ class PriorityPlannerTest extends FunSpec with Matchers with MockitoSugar {
       val p1 = planner.learn(feedback = f0, agent = agent0).
         learn(f1, agent0).asInstanceOf[PriorityPlanner[INDArray, INDArray]]
 
-      it("should contain initial queue with 2 elements") {
-        p1.queue.queue should have size (2)
-        p1.queue.queue should contain((s0, a0) -> 1.0)
-        p1.queue.queue should contain((s1, a0) -> 2.0)
-      }
-
       val (_, p2) = p1.plan(agent0, random)
       val p3 = p2.asInstanceOf[PriorityPlanner[INDArray, INDArray]]
-
-      it("should contain queue with 2 elements") {
-        p3.queue.queue should have size (2)
-        p3.queue.queue should contain((s0, a0) -> 7.0 / 8)
-        p3.queue.queue should contain((s1, a0) -> 0.75)
-      }
 
       it("should call directLearn to agent") {
         verify(agent0).directLearn(f1, random)
@@ -261,12 +215,6 @@ class PriorityPlannerTest extends FunSpec with Matchers with MockitoSugar {
       describe("when planning second time") {
         val (_, p4) = p2.plan(agent1, random)
         val p5 = p4.asInstanceOf[PriorityPlanner[INDArray, INDArray]]
-
-        it("should contain queue with 2 elements") {
-          p5.queue.queue should have size (2)
-          p5.queue.queue should contain((s0, a0) -> 0.5)
-          p5.queue.queue should contain((s1, a0) -> 0.75)
-        }
 
         it("should call directLearn to agent") {
           verify(agent1).directLearn(f0, random)

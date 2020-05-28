@@ -40,43 +40,43 @@ class INDArrayKeyGeneratorTest extends FunSpec with Matchers {
     val sMin = create(Array[Double](0, -10.0, 0, -10.0))
     val sMax = create(Array[Double](1, 10.0, 10.0, 5.0))
     val sNo = create(Array[Double](1, 4.0, 2, 3))
-    val kg = INDArrayKeyGenerator.apply(sMin, sMax, sNo)
+    val kg = INDArrayKeyGenerator.tiles(sMin, sMax, sNo)
 
     it("should generate key for (0,0,0,0)") {
       val s = zeros(4)
       val r = kg(s)
-      r shouldBe create(Array[Double](0, 2, 0, 2))
+      r shouldBe Seq(0, 2, 0, 2)
     }
 
     it("should generate key for (1,-10, 10,-10)") {
       val s = create(Array[Double](1, -10.0, 10.0, -10.0))
       val r = kg(s)
-      r shouldBe create(Array[Double](1, 0, 2, 0))
+      r shouldBe Seq(1, 0, 2, 0)
     }
 
     it("should generate key for (0.50,-7.51,7.50,-7.51)") {
       val s = create(Array[Double](0.50, -7.51, 7.50, -7.51))
       val r = kg(s)
-      r shouldBe create(Array[Double](1, 0, 2, 0))
+      r shouldBe Seq(1, 0, 2, 0)
     }
 
     it("should generate key for (0.49,-7.51,7.50,-7.51)") {
       val s = create(Array[Double](0.49, -7.50, 7.49, -7.50))
       val r = kg(s)
-      r shouldBe create(Array[Double](0, 1, 1, 1))
+      r shouldBe Seq(0, 1, 1, 1)
     }
 
     it("should generate key for (-20,-20,-20,-20)") {
       val s = ones(4).muli(-20.0)
       val r = kg(s)
-      r shouldBe create(Array[Double](0, 0, 0, 0))
+      r shouldBe Seq(0, 0, 0, 0)
     }
 
     it("should generate key for (20,20,20,20)") {
       val s = ones(4).muli(20.0)
       val r = kg(s)
 
-      r shouldBe create(Array[Double](1, 4.0, 2, 3))
+      r shouldBe Seq(1, 4, 2, 3)
     }
   }
 }

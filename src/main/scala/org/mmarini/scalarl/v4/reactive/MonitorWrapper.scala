@@ -44,14 +44,13 @@ class MonitorWrapper(val observable: Observable[(Step, INDArray)]) extends Obser
   /** Returns the observable that log as info the monitor data */
   def logInfo(): MonitorWrapper = new MonitorWrapper(observable.doOnNext(data => Task.eval {
     val (step, avg) = data
-    val (modelSize, queueSize) = step.agent0 match {
+    val modelSize = step.agent0 match {
       case a: ActorCriticAgent => a.planner match {
         case Some(planner: PriorityPlanner[INDArray, INDArray]) => (
-          planner.model.data.size,
-          planner.queue.queue.size)
-        case _ => (0, 0)
+          planner.model.size)
+        case _ => 0
       }
-      case _ => (0, 0)
+      case _ => 0
     }
     logger.info(f"Epoch ${
       step.epoch
@@ -61,6 +60,6 @@ class MonitorWrapper(val observable: Observable[(Step, INDArray)]) extends Obser
       avg.getDouble(0L)
     }%12g, avgScore=${
       avg.getDouble(1L)
-    }%12g, model=${modelSize}%4d, queue=$queueSize%d")
+    }%12g, model=${modelSize}%4d")
   }))
 }

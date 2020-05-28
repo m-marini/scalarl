@@ -40,6 +40,8 @@ import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.v4.{ActionConfig, Agent, DiscreteAction}
 import org.nd4j.linalg.factory.Nd4j._
 
+import scala.math._
+
 /**
  *
  */
@@ -157,9 +159,16 @@ object AgentBuilder extends LazyLogging {
                                       modelPath: Option[String]): GaussianActor = {
     val alphaMu = conf.get[Double]("alphaMu").toTry.get
     val alphaSigma = conf.get[Double]("alphaSigma").toTry.get
+    val muRange = conf.get[Array[Double]]("muRange").toTry.get
+    require(muRange.length == 2, s"muRange must have 2 values")
+    require(muRange(0) < muRange(1), s"muRange must have min < max")
+    val sigmaRange = conf.get[Double]("sigmaRange").toTry.get
+    require(sigmaRange > 0, s"sigmaRange must be positive")
+    val range = vstack(create(muRange), create(Array(-log(sigmaRange), log(sigmaRange))))
     GaussianActor(
       dimension = dimension,
-      eta = create(Array(alphaMu, alphaSigma)))
+      eta = create(Array(alphaMu, alphaSigma)),
+      range)
   }
 
   /**

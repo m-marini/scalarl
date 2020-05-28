@@ -39,6 +39,7 @@ import org.deeplearning4j.nn.weights.WeightInit
 import org.mmarini.scalarl.v4.Session
 import org.mmarini.scalarl.v4.agents.{ActorCriticAgent, AgentEvent, GaussianActor}
 import org.nd4j.linalg.activations.Activation
+import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.learning.config.Sgd
@@ -55,7 +56,8 @@ class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
   val random: Random =
     getRandomFactory.getNewRandomInstance(Seed)
 
-  val events = PublishSubject[AgentEvent]()
+  val events: PublishSubject[AgentEvent] = PublishSubject[AgentEvent]()
+  val Range: INDArray = create(Array(Array(-10.0, 10.0), Array(-7.0, 7 - 0)))
 
   def agent: ActorCriticAgent = ActorCriticAgent(
     network = network,
@@ -63,7 +65,9 @@ class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
     rewardDecay = ones(1).muli(0.97),
     valueDecay = ones(1).muli(0.99),
     actors = Array(GaussianActor(dimension = 0,
-      eta = ones(2).muli(0.03))),
+      eta = ones(2).muli(0.03),
+      range = Range
+    )),
     planner = None,
     agentObserver = events)
 

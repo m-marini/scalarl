@@ -31,8 +31,7 @@ package org.mmarini.scalarl.v4.reactive
 
 import monix.reactive.Observable
 import org.mmarini.scalarl.v4.Feedback
-import org.mmarini.scalarl.v4.agents.{ActorCriticAgent, AgentEvent, GaussianActor, PolicyActor, PriorityPlanner}
-import org.nd4j.linalg.api.ndarray.INDArray
+import org.mmarini.scalarl.v4.agents.{ActorCriticAgent, AgentEvent, GaussianActor, PolicyActor}
 import org.nd4j.linalg.factory.Nd4j._
 
 /**
@@ -74,8 +73,9 @@ class AgentEventWrapper(val observable: Observable[AgentEvent]) extends Observab
             Seq(deltaActor, deltaActor1)
           case (actor: GaussianActor, actor1: GaussianActor) =>
             val (mu, h, sigma) = actor.muHSigma(outs0)
-            val (muStar, hStar) = GaussianActor.computeActorTarget(actions.getColumn(actor.dimension),
-              actor.eta, delta, mu, h, sigma)
+            val (muStar, hStar) = GaussianActor.computeActorTarget(
+              actions.getColumn(actor.dimension),
+              actor.eta, delta, mu, h, sigma, actor.range)
             val (mu1, h1, _) = actor.muHSigma(outs0)
             val deltaMu = mu.distance2(muStar)
             val deltaMu1 = mu1.distance2(muStar)
@@ -85,11 +85,12 @@ class AgentEventWrapper(val observable: Observable[AgentEvent]) extends Observab
           case _ => Seq()
         }
       }).flatten
-      val plannerKpis = agent.planner match {
-        case Some(pl: PriorityPlanner[INDArray, INDArray]) =>
-          Seq(pl.model.data.size.toDouble, pl.queue.queue.size.toDouble)
-        case _ => Seq()
-      }
+      val plannerKpis = Seq()
+      //      val plannerKpis = agent.planner match {
+      //        case Some(pl: PriorityPlanner[INDArray, INDArray]) =>
+      //          Seq(pl.model.data.size.toDouble, pl.queue.queue.size.toDouble)
+      //        case _ => Seq()
+      //      }
       val kpis = create((
         deltaCritic +:
           deltaCritic1 +:
