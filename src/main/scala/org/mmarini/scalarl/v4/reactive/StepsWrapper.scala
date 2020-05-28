@@ -34,7 +34,7 @@ import java.io.File
 import monix.eval.Task
 import monix.reactive.Observable
 import org.mmarini.scalarl.v4.Utils._
-import org.mmarini.scalarl.v4.agents.{ActorCriticAgent, PolicyActor, PriorityPlanner}
+import org.mmarini.scalarl.v4.agents.{ActorCriticAgent, PolicyActor}
 import org.mmarini.scalarl.v4.envs.LanderStatus
 import org.mmarini.scalarl.v4.{Feedback, Step}
 import org.nd4j.linalg.api.ndarray.INDArray
@@ -60,57 +60,6 @@ class StepsWrapper(val observable: Observable[Step]) extends ObservableWrapper[S
     }
     new MonitorWrapper(kpi)
   }
-
-  /**
-   * Returns the kpis
-   * The kpis consists of
-   * - critic eta
-   * - actors
-   *  - alpha
-   *  - eta
-   */
-  def kpis(): INDArrayWrapper = new INDArrayWrapper(observable.map(step => {
-    val Feedback(s0, actions, reward, s1) = step.feedback
-    val agent = step.agent0.asInstanceOf[ActorCriticAgent]
-    val agent1 = step.agent1.asInstanceOf[ActorCriticAgent]
-    val outs0 = agent.network.output(s0.signals)
-    val outs1 = agent.network.output(s1.signals)
-    val outs01 = agent1.network.output(s0.signals)
-    val v0 = ActorCriticAgent.v(outs0)
-    val v1 = ActorCriticAgent.v(outs1)
-    val v01 = ActorCriticAgent.v(outs01)
-    val (delta, vStar, _) = agent.computeDelta(v0, v1, reward)
-    val deltaCritic = vStar.distance2(v0)
-    val deltaCritic1 = vStar.distance2(v01)
-    val actorsKpis = (for {
-      ((a0, a1), action) <- agent.actors.zip(agent1.actors).zipWithIndex
-    } yield {
-      (a0, a1) match {
-        case (actor: PolicyActor, actor1: PolicyActor) =>
-          val pr = actor.preferences(outs0)
-          val prStar = PolicyActor.computeActorLabel(pr, actions.getInt(action), actor.alpha, delta)
-          val pr1 = actor1.preferences(outs01)
-          val deltaActor = prStar.distance2(pr)
-          val deltaActor1 = prStar.distance2(pr1)
-          Seq(deltaActor * deltaActor, deltaActor1 * deltaActor1)
-        case _ => Seq()
-      }
-    }).flatten
-    val plannerKpis = agent.planner match {
-      case Some(pl: PriorityPlanner[INDArray, INDArray]) =>
-        Seq(pl.model.data.size.toDouble, pl.queue.queue.size.toDouble)
-      case _ => Seq()
-    }
-    val kpis = create((
-      step.epoch.toDouble +:
-        step.step.toDouble +:
-        deltaCritic * deltaCritic +:
-        deltaCritic1 * deltaCritic1 +:
-        (actorsKpis ++
-          plannerKpis)).toArray)
-
-    kpis
-  }))
 
   /**
    * Returns the trace observable

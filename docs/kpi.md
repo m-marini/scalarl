@@ -16,8 +16,6 @@ The kpis format is
 |      1 |      5 | Y Actor sqrt(J') |
 |      1 |      6 | Z Actor sqrt(J)  |
 |      1 |      7 | Z Actor sqrt(J') |
-|      1 |      8 | Model size       |
-|      1 |      9 | Queue size       |
 
 ## KPIs File Continuous Actor Agent
 
@@ -39,5 +37,3 @@ The kpis format is
 |      1 |     11 | Z Actor sqrt(J' mu) |
 |      1 |     12 | Z Actor sqrt(J h)   |
 |      1 |     13 | Z Actor sqrt(J' h)  |
-|      1 |     14 | Model size          |
-|      1 |     15 | Queue size          |

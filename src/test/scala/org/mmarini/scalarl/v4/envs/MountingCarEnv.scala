@@ -33,7 +33,7 @@ import org.mmarini.scalarl.v4._
 import org.mmarini.scalarl.v4.envs.MountingCarEnv._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
-import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.ops.transforms.Transforms._
 
 case class MountingCarEnv(x: INDArray,
@@ -52,7 +52,7 @@ case class MountingCarEnv(x: INDArray,
    */
   override def change(action: INDArray, random: Random): (Env, INDArray) = {
     if (x.getDouble(0L) >= XRight) {
-      (initial(random, t), Nd4j.zeros(1))
+      (initial(random, t.add(1)), zeros(1))
     } else {
       val clipAction = Utils.clip(action, -1, 1)
       // v' = v + 1e-3 action - 2.5e-3 cos(3 x)
@@ -61,8 +61,8 @@ case class MountingCarEnv(x: INDArray,
       // x' = x + v'
       val x1 = x.add(v1Clip)
       val x1Clip = Utils.clip(x1, XLeft, XRight)
-      val v2 = if (x1Clip.getDouble(0L) > XLeft) v1Clip else Nd4j.zeros(1)
-      val reward = if (x1Clip.getDouble(0L) >= XRight) Nd4j.ones(1) else Nd4j.ones(1).negi()
+      val v2 = if (x1Clip.getDouble(0L) > XLeft) v1Clip else zeros(1)
+      val reward = if (x1Clip.getDouble(0L) >= XRight) ones(1) else ones(1).negi()
       (copy(x = x1Clip, v = v2, t = t.add(1)), reward)
     }
   }
@@ -74,7 +74,7 @@ case class MountingCarEnv(x: INDArray,
   override def observation: Observation = {
     val vx = x.sub(XLeft).divi(XRight - XLeft)
     val vv = v.sub(VMin).divi(VMax - VMin)
-    val point = Nd4j.hstack(vx, vv)
+    val point = hstack(vx, vv)
 
     val signals = Utils.features(TilesEncoder.features(point), TilesEncoder.noFeatures)
     INDArrayObservation(
@@ -88,7 +88,7 @@ case class MountingCarEnv(x: INDArray,
 
 object MountingCarEnv {
   val XLeft: Double = -1.2
-  val XRight: Double = -0.5
+  val XRight: Double = 0.5
   val VMin: Double = -0.07
   val VMax = 0.07
   val X0Min: Double = -0.6
@@ -98,14 +98,14 @@ object MountingCarEnv {
    *
    * @param random the random generator
    */
-  def initial(random: Random): MountingCarEnv = initial(random, Nd4j.zeros(1))
+  def initial(random: Random): MountingCarEnv = initial(random, zeros(1))
 
   /**
    *
    * @param random the random generator
    */
   def initial(random: Random, t: INDArray): MountingCarEnv = {
-    val x0 = Nd4j.create(Array(random.nextDouble() * (XRight - XLeft) + XLeft))
-    MountingCarEnv(x = x0, v = Nd4j.zeros(1), t = t)
+    val x0 = create(Array(random.nextDouble() * (XRight - XLeft) + XLeft))
+    MountingCarEnv(x = x0, v = zeros(1), t = t)
   }
 }

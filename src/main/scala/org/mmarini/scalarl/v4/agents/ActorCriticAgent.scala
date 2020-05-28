@@ -93,15 +93,6 @@ case class ActorCriticAgent(actors: Seq[Actor],
   }
 
   /**
-   *
-   * @param v0     initail state value
-   * @param v1     final state value
-   * @param reward reward
-   */
-  def computeDelta(v0: INDArray, v1: INDArray, reward: INDArray): (INDArray, INDArray, INDArray) =
-    ActorCriticAgent.computeDelta(v0, v1, reward, avg, valueDecay, rewardDecay)
-
-  /**
    * Returns the fit agent and the score
    * Optimizes the policy based on a single feedback
    *
@@ -129,6 +120,15 @@ case class ActorCriticAgent(actors: Seq[Actor],
     agentObserver.onNext(event);
     (newAgent, score)
   }
+
+  /**
+   *
+   * @param v0     initail state value
+   * @param v1     final state value
+   * @param reward reward
+   */
+  def computeDelta(v0: INDArray, v1: INDArray, reward: INDArray): (INDArray, INDArray, INDArray) =
+    ActorCriticAgent.computeDelta(v0, v1, reward, avg, valueDecay, rewardDecay)
 
   /**
    * Returns the score for a feedback

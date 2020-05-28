@@ -2,6 +2,7 @@
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{amssymb}
+\usepackage{graphicx}
 %opening
 \title{Actor Critic Agent}
 \author{Marco Marini}
@@ -136,9 +137,9 @@ the partial derivative by $\mu$ is
 	\\
 	& = \frac{1}{p \sigma \sqrt{2 \pi} } e^{\frac{-(a-\mu)^2}{\sigma^2}} \frac{\partial}{\partial \mu} \left[ -\frac{(a-\mu)^2}{\sigma^2} \right]
 	\\
-	& = - \frac{1}{\sigma^2}[2 (x-\mu) (-1))]
+	& = - \frac{1}{\sigma^2}[2 (a - \mu) (-1))]
 	\\
-	& = \frac{2}{\sigma^2}(x-\mu)
+	& = \frac{2}{\sigma^2}(a - \mu)
 	\\
 	\frac{\partial}{\partial h_\sigma} \ln p& = \frac{1}{p} \frac{\partial p}{\partial \sigma} \frac{\partial \sigma}{\partial h_\sigma}
 	\\
@@ -155,7 +156,7 @@ the partial derivative by $\mu$ is
 	\left\{
 		\sigma \frac{\partial}{\partial \sigma}
 		\left[
-			-(x - \mu)^2\sigma^{-2}
+			-(a - \mu)^2\sigma^{-2}
 		\right] - 1
 	\right\}
 	\\
@@ -183,10 +184,10 @@ the partial derivative by $\mu$ is
 
 The backward propagated TD errors to the output network layer are
 \begin{align}
-	\delta_\mu(t)&		= \frac{2}{\sigma^2}(x-\mu) \delta (t)
+	\delta_\mu(t)&		= \frac{2}{\sigma^2}(a - \mu) \delta (t)
 	\\
 	\delta_{h_\sigma}(t)&	= \left[
-		2\frac{(x-\mu)^2}{\sigma^2} - 1
+		2\frac{(a - \mu)^2}{\sigma^2} - 1
 	\right] \delta(t)
 \end{align}
 
@@ -202,84 +203,114 @@ The agent has a lot of iper parameters to tune and optimize the learning rate.
 
 In this section we define performance indicators to tune such  parameters.
 
-\subsection{Critic Indicator}
+\subsection{Neural Network Indicator}
+
+Both the critic and actors aproximate the value function and policy function with neural network.
+To monitor the learning activity of neural network we compute the MSE of extimated functions.
 
 The critic computes the updated value of current state by appling the the bootstrap equation:
 \begin{align*}
 	v^*(s_t)&	= v(s_{t+1}) + r_t - r_\pi 
 \end{align*}
 
-The ratio of MSE after and before the learning activity indicates the quality of such activity.
+The square error of critic output is
+\begin{align*}
+	J_v(t)&	= [v^*(s_t) - v(s_{t+1})]^2
+	\\
+	&		= \delta^2(t)
+\end{align*}
+
+The square error of policy actors outputs are
+\begin{align*}
+	J_{h, i}&	= \sum_a (h_{a,i}^*(s_t) - h_{a,i}(s_t))^2
+\end{align*}
+where $ i $ is index of the actor dimension and $ a $ is the action value preference index
+
+The square error of gaussian actors outputs are
+\begin{align*}
+	J_{\mu, i}&			= (\mu_i^*(s_t) - \mu_i(s_t))^2
+	\\
+	J_{h_\sigma, i}&	= (h_{\sigma, i}^*(s_t) - h_{\sigma, i}(s_t))^2
+\end{align*}
+where $ i $ is index of the actor dimension.
+
+In the same way we define the square error of outputs for fitted actor:
+\begin{align*}
+	J_{v'}(t)&				= [v^*(s_t) - v'(s_{t+1})]^2
+	\\
+	J_{h',i}(t)&			= \sum_a (h_{a,i}^*(s_t) - h'_{a,i}(s_t))^2
+	\\
+	J_{\mu', i}(t)&			= (\mu_i^*(s_t) - \mu'_i(s_t))^2
+	\\
+	J_{h'_\sigma, i}(t)&	= (h_{\sigma, i}^*(s_t) - h'_{\sigma, i}(s_t))^2
+\end{align*}
+
+The ratio between the total MSE after and before the learning activity indicates the quality of such activity.
 \begin{align}
 \begin{split}
-	J_v(s_t)&	= [ v^*(s_t) - v(s_t) ]^2
+	J(t)&		= J_v(t) + \sum_i [J_{h, i}(t) + J_{\mu, i}(t)+ J_{h_\sigma, i}(t)]
 	\\
-	J_v'(s_t)&	= [v^*(s_t) - v'(s_t)]^2
+	J'(t)&	= J_{v'}(t) + \sum_i [J_{h', i}(t) + J_{\mu', i}(t)+ J_{h'_\sigma, i}(t)]
 	\\
-	K_v(s_t)&	= \frac{J_v'(s_t)}{J_v(s_t)}
+	K(t)&	= \frac{J'(t)}{J(t)}
 \end{split}
 \end{align}
 
-A ratio $ K_v(s_t) \ge 1 $ means a step-size parameter $ \alpha $ too high and a ratio $ K_v(s_t) \ll 1 $  means a step-size parameter too low with very poor capacity of learning.
+A ratio $ K(t) \ge 1 $ means the error after learning gets worst due a step-size parameter $ \alpha $ too high.
+A ratio $ K(t) = 1 $  means no change on error and therfore no improvement,. This can be affacted by a local minimum reached or a step-size parameter too low with very poor capacity of learning.
+A ratio $ K(t) < 1 $ means an improvement of neural network due to correct step-size parameter.
+A ratio $ K(t) = 0 $ means a perfect fit of neural network.
 
-Because the $ J(s_t) $ should approach to $ 0 $ in optimal conditions, we should take into consideration only the steps that have a $ J(s_t) > \varepsilon $.
+We can classify the steps in three class:
+\begin{description}
 
-In learning session we can evaluate the value of perfomance indicator and adjust the step-size parameter accordingly.
-We want that a fraction $ p $ of all the steps have a $ K_v $ indicator less than 1, we calculate $	K_{v,p} $ the $ p $ centile of $ K_v $ and correct the step-size parameter by a factor
-\begin{align}
-	\eta_v&	= \frac{1}{K_{v,p}}
-\end{align}
+	\item[$ C_0 $]
+	The steps that created a bad approximation with an increased of MSE ($ J > \varepsilon \cup K > 1$)
+
+	\item[$ C_1 $]
+	The steps that create a trivial approximation with a small reduction of MSE ($ J > \varepsilon \cup K_0 \le K \le 1 $ with $ K_0 = 0.9$ )
+
+	\item[$ C_2 $]
+	The remaining steps that have a small MSE or that have reduced significantly the MSE
+\end{description}
+
+If the steps in $ C_0 $ is greater that a threshold (10\% of total steps) the step parameter should be reduced, if the steps in $ C_1 $ is greater than a threshold, (50\%) of steos, the step parameter may be increased.
+The figure (\ref{fig:steps}) represents the classification of steps.
+
+It is difficult to determine the effetcs of step parameter changes on the result MSE so an empirical way to reduce or increment the parameter is applied, for example mulipling by exponential factors  ($ \times 3, \times 10, \times 30, \times 100, ...$ ) or ($ \times 0.3, \times 0.1, \times 0.03, \times 0.01, ...$ ) until the steps in $ C_0 $ and $ C_1 $ are below the thresholds.
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=\linewidth]{ann.png}
+	\caption{Step classification}
+	\label{fig:steps}
+\end{figure}
 
 \subsection{Policy Actor Indicators}
 
 The actor computes the updated preferernces of current state by adding a step-size parameter to gradient and TD error
 
 \begin{align*}
-	h_a^*(s_t)&	= h_a(s_t) + \alpha_h \delta_{h_a}(t)
+	h_{a, i}^*(s_t)&	= h_{a, i}(s_t) + \alpha_{h, i} \delta_{h_a, i}(t)
 \end{align*}
 
-To avoid comuptation overflow the preferences are constratints to a limited range e.g. $ (-7, +7) $.
+To avoid computation overflow the preferences are constratints to a limited range e.g. $ (-7, +7) $.
 The changes of preferences should also be limited to a fraction of the range $ (-\varepsilon_h, \varepsilon_h) $, so we can measure the squared distance of changes of preferences:
 \begin{align}
 \begin{split}
-	J_h(s_t)&		= \sum_a
-		\left[
-			h_a^*(s_t) - h_a(s_t)
-		\right] ^2
-	\\
-	&	 = \alpha_h^2 \sum_a \delta_{h_a}^2
+	J_{h,i}(t)&		= \alpha_{h, i}^2 \sum_a \delta_{h_a, i}^2(t)
 \end{split}
 \end{align}
 
-A $ J_h(s_t) \ge \varepsilon_h^2 $ means a $ \alpha_h $ parameter value too high and $ J_h(s_t) \ll \varepsilon_h^2 $ means a $ \alpha_h $ parameter value too small, producing an uneffective changes on preferences.
+A $ J_{h,i}(t) \ge \varepsilon_h^2 $ means a $ \alpha_{h,i} $ parameter value too high and $ J_{h,i}(t) \ll \varepsilon_h^2 $ means a $ \alpha_{h_i} $ parameter value too small, producing an uneffective changes on preferences.
 
-We can correct the $ \alpha_h $ parameter multiplying it by a $ \gamma_h $ factor so that the corrected $ J_h(s_t) $ is equal to $ \varepsilon_h^2 $, we have
-\begin{align*}
+Asserting we want to have a $ p $ fraction of samples with a $ J_{h,i}(t) < \varepsilon_h^2 $, we calculate $ J_{h, i, p} $ the $ p $ centile of $ J_{h, i}(t) $ and comupute the $ \gamma_{h,i} $ scale parameter
+\begin{align}
 \begin{split}
-	\varepsilon_h^2&	= (\gamma_h \alpha_h)^2 \sum_a \delta_{h_a}^2
+	\varepsilon_h^2&	= \gamma_{h,i}^2 J_{h,i,p}
 	\\
-	&					= \gamma_h^2 J_h(s_t)
-	\\
-	\gamma_h&			= \frac{\varepsilon_h}{\sqrt{J_h(s_t)}}
+	\gamma_{h,i}&			= \frac{\varepsilon_h}{\sqrt{J_{h,i}(t)}}
 \end{split}
-\end{align*}
-
-Asserting we want to have a $ p $ fraction of samples with a $ J_h(s_t) < \varepsilon_h^2 $, we calculate $ J_{h, p} $ the $ p $ centile of $ J_h(s_t) $ and comupute the $ \gamma_h $
-\begin{align}
-	\gamma_h&	= \frac{\varepsilon_h}{\sqrt{J_{h, p} } }
-\end{align}
-
-The actor than adjusts the network to fit the updated preferences.
-The same performace indicator defined for the critic is used for each action prference of actor:
-\begin{align*}
-	J_h(s_t)&		= \sum_a (h_a^*(s_t) - h_a(s_t))^2
-	\\
-	J_h'(s_t)&	= \sum_a (h_a^*(s_t) - h_a'(s_t))^2
-	\\
-	K_h(s_t)&		= \frac{J_h'(s_t)}{J_h(s_t)}
-\end{align*}
-\begin{align}
-	\eta_h&		= \frac{1}{K_{h, p}}
 \end{align}
 
 \subsection{Gaussian Policy Actor Indicators}
@@ -331,29 +362,6 @@ Asserting we want to have a $ p $ fraction of samples with a $ J_\mu(s_t) < \var
 In the same way we have 
 \begin{align}
 	\gamma_{h_\sigma}&	= \frac{\varepsilon_{h\sigma}}{\sqrt{J_{h_\sigma, p} } }
-\end{align}
-
-For the agent network we have:
-\begin{align*}
-	J_\mu(s_t)&		= (\mu^*(\mu_t) - \mu(s_t))^2
-	\\
-	J_\mu'(s_t)&	= (\mu^*(s_t) - \mu'(s_t))^2
-	\\
-	K_\mu(s_t)&		= \frac{J_\mu'(s_t)}{J_\mu(s_t)}
-\end{align*}
-\begin{align}
-	\eta_\mu&		= \frac{1}{K_{\mu, p}}
-\end{align}
-and
-\begin{align*}
-	J_{h_\sigma}(s_t)&		= (h_\sigma^*(\mu_t) - h_\sigma(s_t))^2
-	\\
-	J_{h_\sigma}'(s_t)&		= (h_\sigma^*(s_t) - h_\sigma'(s_t))^2
-	\\
-	K_{h_\sigma}(s_t)&		= \frac{J_{h_\sigma}'(s_t)}{J_{h_\sigma}(s_t)}
-\end{align*}
-\begin{align}
-	\eta_{h_\sigma}&		= \frac{1}{K_{h_\sigma, p}}
 \end{align}
 
 \end{document}

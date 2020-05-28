@@ -37,17 +37,19 @@ agent:
   valueDecay: 0.99
   planner:
     planningSteps: 5
-    scoreThreshold: 0.1
-    model:
-      minModelSize: 30
-      maxModelSize: 200
+    threshold: 0.1
+    minModelSize: 30
+    maxModelSize: 200
     stateKey:
       type: Tiles
       offset: [-1, -1, 0, -1, -1, -1]
       max: [1, 1, 1, 1, 1, 1]
       tiles: [32, 32, 32, 32, 32, 32]
     actionsKey:
-      type: Identity
+      type: Discrete
+      offset: [0, 0, 0]
+      max: [5, 5, 5]
+      tiles: [100, 100, 100]
     #modelPath: lander-model
   network:
     numHiddens:
@@ -57,7 +59,7 @@ agent:
       - [ 0, 3 ]
     seed: 1234
     updater: Sgd
-    autoScaleLearningRate: 30
+    learningRate: 10e-3
     beta1: 0.9
     beta2: 0.999
     epsilonAdam: 0.1

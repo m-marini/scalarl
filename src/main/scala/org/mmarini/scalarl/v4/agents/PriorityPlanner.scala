@@ -43,15 +43,16 @@ import scala.annotation.tailrec
  * @param actionsKeyGen the actions key generator
  * @param planningSteps the number of step to plan
  * @param model         the model
- * @param queue         the sweeping queue
  * @tparam KS the status key type
  * @tparam KA the actions key type
  */
 case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
                                    actionsKeyGen: INDArray => KA,
                                    planningSteps: Int,
-                                   model: Model[(KS, KA), Feedback],
-                                   queue: PriorityQueue[(KS, KA)]) extends Planner {
+                                   threshold: Double,
+                                   minModelSize: Int,
+                                   maxModelSize: Int,
+                                   model: Map[(KS, KA), (Feedback, Double)]) extends Planner {
 
   /**
    * Returns the mode updated by a new feedback
@@ -62,19 +63,33 @@ case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
     val skey = stateKeyGen(feedback.s0.signals)
     val akey = actionsKeyGen(feedback.actions)
     val key = (skey, akey)
-    // Adds the feedback to the model
-    val m1 = model + (key, feedback)
     // Compute the score for the feedback
     val score = agent.score(feedback).getDouble(0L)
 
-    val newQueue1 = if (m1.data.size < model.data.size) {
-      queue.keep(m1.data.keySet)
-    } else {
-      queue
-    }
+    // Adds the feedback to the model
+    val m1 = enqueue(key -> (feedback, score))
+
     // Adds the feedback to the updating queue
-    val newQueue = newQueue1 + (key, score)
-    val result = copy(queue = newQueue, model = m1)
+    val result = copy(model = m1)
+    result
+  }
+
+  /**
+   * Returns the model with a new entry
+   *
+   * @param entry the entry
+   */
+  def enqueue(entry: ((KS, KA), (Feedback, Double))): Map[(KS, KA), (Feedback, Double)] = {
+    val model1 = model + entry
+    val result = if (model1.size >= maxModelSize) {
+      // shrink data removing the lower ones
+      val ordering = Ordering.by((t: ((KS, KA), (Feedback, Double))) => t._2._2).reverse
+      val sorted = model1.toSeq.sorted(ordering)
+      val shrunk = sorted.take(minModelSize)
+      shrunk.toMap
+    } else {
+      model1
+    }
     result
   }
 
@@ -91,24 +106,28 @@ case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
     } else {
       val (agent, planner) = ctx
       // get the feedback with higher score
-      val (targetKey, newQueue) = planner.queue.dequeue()
-      val planner1 = copy(queue = newQueue)
-      val ctx3 = targetKey match {
+      planner.max() match {
         case None => ctx
-        case Some(key) =>
-          val ctx2 = model.get(key).map(feedback => {
-            val (agent1, score) = agent.directLearn(feedback, random)
-            val newQueue = planner1.queue + (key, score.getDouble(0L))
-            val planner2 = planner1.copy(queue = newQueue).
-              sweepBackward(feedback.s0.signals, agent1)
-            (agent1, planner2)
-          }).getOrElse(ctx)
-          ctx2
+        case Some((_, (_, score))) if score < threshold => ctx
+        case Some((targetKey, (feedback, _))) =>
+          val (agent1, score) = agent.directLearn(feedback, random)
+          val newModel = planner.model + (targetKey -> (feedback, score.getDouble(0L)))
+          val planner1 = planner.copy(model = newModel).
+            sweepBackward(feedback.s0.signals, agent1)
+          planLoop((agent1, planner1), n - 1)
       }
-      planLoop(ctx3, n - 1)
     }
 
     planLoop((agent, this), planningSteps)
+  }
+
+  /** Returns the entry with maximum priority */
+  def max(): Option[((KS, KA), (Feedback, Double))] = if (model.isEmpty) {
+    None
+  } else {
+    Some(model.maxBy {
+      case (_, (_, score)) => score
+    })
   }
 
   /**
@@ -121,11 +140,11 @@ case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
   def sweepBackward(signals: INDArray, agent: Agent): PriorityPlanner[KS, KA] = {
     // For each feedback bringing yo the target status
     val planner = predecessors(signals).foldLeft(this) {
-      case (planner1, (key, feedback)) =>
+      case (planner1, (key, (feedback, _))) =>
         // enqueues the feedback with the score
         val score = agent.score(feedback).getDouble(0L)
-        val newQueue = planner1.queue + (key, score)
-        planner1.copy(queue = newQueue)
+        val newModel = planner1.model + (key -> (feedback, score))
+        planner1.copy(model = newModel)
     }
     planner
   }
@@ -135,9 +154,11 @@ case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
    *
    * @param status the target status
    */
-  def predecessors(status: INDArray): Map[(KS, KA), Feedback] = {
+  def predecessors(status: INDArray): Map[(KS, KA), (Feedback, Double)] = {
     val key = stateKeyGen(status)
-    val result = model.filterValues(feedback => stateKeyGen(feedback.s1.signals).equals(key))
+    val result = model.filter {
+      case (_, (feedback, _)) => stateKeyGen(feedback.s1.signals) == key
+    }
     result
   }
 }
@@ -152,17 +173,20 @@ object PriorityPlanner {
    * @param noInputs  the number of inputs
    * @param noOutputs the number of outputs
    */
-  def fromJson(conf: ACursor)(noInputs: Int, noOutputs: Int): PriorityPlanner[INDArray, INDArray] = {
+  def fromJson(conf: ACursor)(noInputs: Int, noOutputs: Int): PriorityPlanner[Array[Int], Array[Int]] = {
     val planningSteps = conf.get[Int]("planningSteps").toTry.get
-    val model = Model.fromJson(conf.downField("model"))
-    val queue = PriorityQueue.fromJson(conf)
+    val minModelSize = conf.get[Int]("minModelSize").toTry.get
+    val maxModelSize = conf.get[Int]("maxModelSize").toTry.get
+    val threshold = conf.get[Double]("threshold").toTry.get
     val stateKeyGen = INDArrayKeyGenerator.fromJson(conf.downField("stateKey"))(noInputs)
     val actionsKeyGen = INDArrayKeyGenerator.fromJson(conf.downField("actionsKey"))(noOutputs)
     PriorityPlanner(
       stateKeyGen = stateKeyGen,
       actionsKeyGen = actionsKeyGen,
       planningSteps = planningSteps,
-      model = model,
-      queue = queue)
+      minModelSize = minModelSize,
+      maxModelSize = maxModelSize,
+      threshold = threshold,
+      model = Map())
   }
 }

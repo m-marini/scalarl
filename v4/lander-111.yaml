@@ -4,9 +4,9 @@ env:
   type: LanderTiles
   actionConfig: DiscreteActions
   dt: 0.25
-  h0Range: 5
-  z0: 1
-  fuel: 10
+  h0Range: 10
+  z0: 3
+  fuel: 30
   zMax: 150
   hRange: 500
   zRange: 150
@@ -22,39 +22,31 @@ env:
   crashReward: -10
   outOfRangeReward: -10
   outOfFuelReward: -10
-  rewardDistanceScale: 1
+  rewardDistanceScale: 0
+  flyingReward: -1
 agent:
   type: ActorCritic
   avgReward: 0
   rewardDecay: 0.99
   valueDecay: 0.99
-  planner:
-    planningSteps: 5
-    scoreThreshold: 0.1
-    model:
-      minModelSize: 30
-      maxModelSize: 100
-    stateKey:
-      type: Identity
-    actionsKey:
-      type: Identity
   network:
-    numHiddens: []
+    numHiddens:
+    - 100
+    - 100
+    shortcuts:
+      - [ 0, 3 ]
     updater: Sgd
     autoScaleLearningRate: 10
-    beta1: 0.9
-    beta2: 0.999
-    epsilonAdam: 0.1
     maxAbsGradients: 1
     maxAbsParameters: 10e3
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 3
+      alpha: 10
     - type: PolicyActor
-      alpha: 3
+      alpha: 10
     - type: PolicyActor
-      alpha: 3
+      alpha: 10
 session:
   numSteps: 3000
   dump: v4/dump-111.csv

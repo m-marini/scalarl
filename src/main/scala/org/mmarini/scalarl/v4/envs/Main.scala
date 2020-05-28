@@ -65,6 +65,7 @@ object Main extends LazyLogging {
         getRandom
       )
       val env = EnvBuilder.fromJson(jsonConf.hcursor.downField("env"))(random)
+      env.actionConfig
       val (agent, agentObs) = AgentBuilder.fromJson(jsonConf.hcursor.downField("agent"))(env.signalsSize, env.actionConfig)
       val session = SessionBuilder.fromJson(jsonConf.hcursor.downField("session"))(epoch, env = env, agent = agent, agentEvents = agentObs)
 

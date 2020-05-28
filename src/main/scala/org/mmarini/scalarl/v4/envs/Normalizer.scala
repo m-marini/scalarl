@@ -35,9 +35,6 @@ import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j._
 
 object Normalizer {
-  def apply(offset: INDArray, scale: INDArray, clipMin: INDArray, clipMax: INDArray): INDArray => INDArray =
-    x => clip(x, clipMin, clipMax, true).subi(offset).muli(scale)
-
   /**
    *
    * @param conf
@@ -56,4 +53,7 @@ object Normalizer {
     val scale = ones(noDims).divi(max.sub(offset))
     Normalizer(offset, scale, clipMin, clipMax)
   }
+
+  def apply(offset: INDArray, scale: INDArray, clipMin: INDArray, clipMax: INDArray): INDArray => INDArray =
+    x => clip(x, clipMin, clipMax, true).subi(offset).muli(scale)
 }

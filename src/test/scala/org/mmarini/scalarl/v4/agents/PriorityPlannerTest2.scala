@@ -31,7 +31,7 @@ package org.mmarini.scalarl.v4.agents
 
 import org.mmarini.scalarl.v4.{Agent, Feedback, INDArrayObservation}
 import org.mockito.ArgumentMatchers._
-import org.mockito.Mockito._
+import org.mockito.Mockito.{atLeastOnce, _}
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j.{ones, _}
 import org.scalatest.mockito.MockitoSugar
@@ -58,32 +58,38 @@ class PriorityPlannerTest2 extends FunSpec with Matchers with MockitoSugar {
     INDArrayObservation(time = ones(1).muli(time), signals = s)
 
   describe("A PriorityPlanner") {
-    val stateKeyGen = (x: INDArray) => x
-    val actionsKeyGen = (x: INDArray) => x
-    val fo = Ordering.by((p: ((INDArray, INDArray), Feedback)) => p match {
-      case (_, f) => f.s0.time.getDouble(0L)
-    }).reverse
 
-    val model = Model[(INDArray, INDArray), Feedback](minModelSize = 1,
-      maxModelSize = 10,
-      data = Map(),
-      ordering = fo)
+    val stateKeyGen = INDArrayKeyGenerator.binary
 
-    val queue = PriorityQueue[(INDArray, INDArray)](threshold = 0.1,
-      queue = Map())
+    val actionsKeyGen = INDArrayKeyGenerator.binary
 
-    val planner = PriorityPlanner(stateKeyGen = stateKeyGen,
+    val planner = PriorityPlanner[Array[Int], Array[Int]](stateKeyGen = stateKeyGen,
       actionsKeyGen = actionsKeyGen,
       planningSteps = 10,
-      model = model,
-      queue = queue)
+      minModelSize = 1,
+      maxModelSize = 10,
+      threshold = 0.1,
+      model = Map())
 
     val s0 = state(0)
     val s1 = state(1)
     val s2 = state(2)
     val a0 = action(0)
 
-    describe("when planning backward twice") {
+    describe(
+      """when planning backward twice
+        |learn(f0, ag0)
+        |  ag0.score(f0)=1
+        |learn(f1, ag0)
+        |  ag0.score(f1)=2
+        |model = f0->1, f1->2
+        |plan(ag0)
+        |  ag0.directLearn(f1) = (ag1, 0.75)
+        |    ag1.score(f0) = 1
+        |  model = (f0->1, f1->0.75)
+        |  ag1.directLearn(f0) = (ag1, 0)
+        |model = (f0->0, f1->0.75)
+        |""".stripMargin) {
       val f0 = feedback(0, s0, a0, 1, s1)
       val f1 = feedback(1, s1, a0, 1, s2)
       val random = getRandomFactory.getNewRandomInstance(1234)
@@ -96,30 +102,20 @@ class PriorityPlannerTest2 extends FunSpec with Matchers with MockitoSugar {
       val r0 = (agent1, ones(1).muli(0.75))
       when(agent0.directLearn(f1, random)).thenReturn(r0)
 
-      when(agent1.score(f0)).thenReturn(zeros(1))
-      when(agent1.score(f0)).thenReturn(zeros(1))
+      when(agent1.score(f0)).thenReturn(ones(1))
+      when(agent1.score(f1)).thenReturn(zeros(1))
       val r1 = (agent1, zeros(1))
       when(agent1.directLearn(any(), any())).thenReturn(r1)
 
       val p1 = planner.learn(feedback = f0, agent = agent0).
         learn(f1, agent0).asInstanceOf[PriorityPlanner[INDArray, INDArray]]
 
-      it("should contain initial queue with 2 elements") {
-        p1.queue.queue should have size (2)
-        p1.queue.queue should contain((s0, a0) -> 1.0)
-        p1.queue.queue should contain((s1, a0) -> 2.0)
-      }
-
       val (_, p2) = p1.plan(agent0, random)
       val p3 = p2.asInstanceOf[PriorityPlanner[INDArray, INDArray]]
 
-      it("should contain queue with 2 elements") {
-        p3.queue.queue shouldBe empty
-      }
-
       it("should call directLearn to agent") {
-        verify(agent0).directLearn(f1, random)
-        verify(agent1).directLearn(f0, random)
+        verify(agent0, atLeastOnce()).directLearn(f1, random)
+        verify(agent1, atLeastOnce()).directLearn(f0, random)
       }
     }
   }

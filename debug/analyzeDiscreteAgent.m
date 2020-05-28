@@ -1,94 +1,83 @@
-function analyzeDiscreteAgent(X, EPS=1e-3, PRC = 50 : 10 : 90, T=20, EPSH=1)
-  #EPS = 1e-3;
-  #PRC = 50 : 10 : 100;
-  #T = 20;
+function analyzeDiscreteAgent(
+  X,                  # the indicators dump
+  K0 = 0.7,           # the K threshold for C1 class
+  Cd = 0.1,           # the C threshold for C0 class
+  Ci = 0.5,           # the C threshold for C1 class
+  EPS = 1e-3,         # the minimu J value to be considered
+  PRC = 50 : 10 : 90, # the percentiles in the chart
+  BINS = 20,          # the number of bins in histogram
+  EPSH = 1)           # the optimal range of h to be considered
+  
+  NR = 2;             # number of rows
+ 
+  # Number of steps, number of values
+  [n m] = size(X);
   # Number of actors
-  NA = 3;
-  # Number of steps
-  n = size(X, 1);
-  # Number of charts
-  NC = 5;
+  NA = floor((m - 2 ) / 2);
+  NC = 1 + NA;
 
-  JV = X(find(abs(X(:, 1)) >= EPS), 1 : 2).^2;
+  JV = X(:, 1 : 2).^2;
+  for actor = 0 : NA - 1
+    j = actor * 2 + 3;
+    JV = JV + X(:, j : j + 1).^2;
+  endfor
+  JV = JV(find(abs(JV(:, 1)) >= EPS), 1 : 2);
+
   # Number of valid steps
-  cm = size(JV, 1);
   KV = JV(:, 2) ./ JV(:, 1);
-  KVP = prctile(KV, PRC);
-  ETAV = 1 ./ KVP;
-  ce = sum(KV >= 1);
-  cv = cm - ce;
-  cf = n - cm;
+  C0 = sum(KV > 1);
+  C1 = sum(KV <= 1 & KV > K0);
+  C2 = n - C0 - C1;
 
-  subplot(NA + 1, NC, 1);
-  #hist(CK, T);
+  if C0 > Cd * n
+    advpie = [1 0 0];
+    advice = "Reduce alpha";
+    colorV = [0 1 0];
+  elseif C1 >  Ci * n
+    advpie = [0 1 0];
+    advice = "Increment alpha";
+    colorV = [1 1 0];
+  else
+    advpie = [0 0 1];
+    advice = "No changes";
+    colorV = [0 0 1];
+  endif
+
+  clf;
+  subplot(NR, NC, 1);
+  hist(KV, BINS);
   grid on;
-  title(sprintf("Kv"));
+  title(sprintf("Kv distribution"));
   xlabel("Kv");
   ylabel("# samples");
   
-  subplot(NA + 1, NC, 2);
-  plot(PRC, ETAV);
-  grid on;
-  grid minor on;
-  title(sprintf("\eta v"));
-  xlabel("% corrected samples");
-  ylabel("Correction factor alpha v");
-  
-  subplot(NA + 1, NC, 3);
-  pie([ce, cv, cf]);
-  title("Critic Steps");
-  #legend("unoptimizable", "optimizing", "optimized");
-
-  for actor = 1 : NA
-    j = (actor - 1) * 2 + 3;
-    i = actor * NC + 1;
-    
-    JH = X(find(abs(X(:, j)) > EPS), j : j + 1).^2;
-    m = size(JH, 1);
-    KH = JH(:, 2) ./ JH(:, 1);
-    KHP = prctile(KH, PRC);
-    ETAH= 1 ./ KHP;
-    e = sum(KH >= 1);
-    v = m - e;
-    f = n - m;
-    GAMMAH = EPSH ./ prctile(X(:, j), PRC);
-    
-    subplot(NA + 1, NC, i + 0);
-    hist(KV, T);
-    title(sprintf("Actor %d Kh", actor));
-    xlabel("Kh");
-    ylabel("# samples");
-    grid on;
-    
-    subplot(NA + 1, NC, i + 1);
-    plot(PRC, ETAH);
-    #semilogy(PRC, C);
-    grid on;
-    grid minor on;
-    title(sprintf("Actor %d eta h", actor));
-    xlabel("% corrected samples");
-    ylabel("eta h");
-
-    subplot(NA + 1, NC, i + 2);
-    pie([e v f]);
-    title(sprintf("Actor %d Steps", actor));
-    #legend(["unoptimizable"; "optimizing"; "optimized"]);
+  subplot(NR, NC, 1 + NC);
+  ph = pie([C0, C1, C2]);
+  colormap([1 0 0; 1 1 0; 0 1 0]);
+  title("Step classes");
+  text(-1, -1.25, sprintf("Advice: %s", advice));
  
-    subplot(NA + 1, NC, i + 3);
-    hist(X(:, j).^2, T);
-    title(sprintf("Actor %d Jh", actor));
-    xlabel("Jh");
+  for actor = 0 : NA - 1
+    j = actor * 2 + 3;
+    col = actor + 2;
+    
+    GAMMAH = EPSH ./ prctile(X(:, j), PRC);
+    GAMMAHM = ones(size(PRC)) * EPSH / mean(X(:, j));
+    
+    subplot(NR, NC, col);
+    hist(X(:, j), BINS);
+    title(sprintf("J h%d", actor));
+    xlabel(sprintf("J h%d", actor));
     ylabel("# samples");
     grid on;
 
-    subplot(NA + 1, NC, i + 4);
-#    plot(PRC, GAMMAH);
-    semilogy(PRC, GAMMAH);
+    subplot(NR, NC, col + NC);
+    semilogy(PRC, [GAMMAH; GAMMAHM]);
     grid on;
     grid minor on;
-    title(sprintf("Actor %d gamma h", actor));
+    title(sprintf("gamma h%d", actor));
     xlabel("% corrected samples");
-    ylabel("gamma h");
+    ylabel(sprintf("gamma h%d", actor));
 
   endfor
 endfunction
