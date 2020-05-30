@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #76: Cleaning up priority sweeping model by priority
 - Issue #78: int array key for key generator is not unique
 - Issue #80: Optimize model key
+- Issue #82: more detailed crash states
 
 ## [0.1.0] - 2019-01-28
 

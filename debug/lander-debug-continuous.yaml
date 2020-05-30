@@ -19,12 +19,14 @@ env:
   g: 1.6
   maxAH: 1
   maxAZ: 3.2
-  landedReward: 10
-  crashReward: -10
-  outOfRangeReward: -10
-  outOfFuelReward: -10
+  landedReward: 1
+  vCrashReward: -1
+  hCrashReward: -100e-3
+  outOfPlatformReward: -30e-3
+  outOfRangeReward: -1
+  outOfFuelReward: -1
   rewardDistanceScale: 0
-  flyingReward: -1
+  flyingReward: -10e-3
   normalize:
     clipMin: [-500, -500, -150, -24, -24, -12]
     clipMax: [500, 500, 150, 24, 24, 12]

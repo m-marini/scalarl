@@ -51,10 +51,12 @@ import org.nd4j.linalg.ops.transforms.Transforms._
  * @param maxAH               the maximum horizontal acceleration reactor
  * @param maxAZ               the maximum vertical acceleration reactor
  * @param landedReward        the reward when landed
- * @param crashReward         the reward when crashed
+ * @param hCrashReward        the reward when crashed horizontaly
+ * @param vCrashReward        the reward when crashed verticaly
  * @param outOfRangeReward    the reward when out of range
  * @param outOfFuelReward     the rewaord when out of fuel
  * @param rewardDistanceScale the reward by distance
+ * @param outOfPlatformReward the reward when out of platform
  * @param flyingReward        the reward when flying
  * @param fuel                the initial available fuel
  */
@@ -71,9 +73,11 @@ class LanderConf(val dt: INDArray,
                  val maxAH: INDArray,
                  val maxAZ: INDArray,
                  val landedReward: INDArray,
-                 val crashReward: INDArray,
+                 val hCrashReward: INDArray,
+                 val vCrashReward: INDArray,
                  val outOfRangeReward: INDArray,
                  val outOfFuelReward: INDArray,
+                 val outOfPlatformReward: INDArray,
                  val flyingReward: INDArray,
                  val rewardDistanceScale: INDArray) {
 
@@ -133,9 +137,9 @@ class LanderConf(val dt: INDArray,
       // has touched ground
       val vhSquare = speed.getColumns(0, 1).norm2()
       if (not(lessThanOrEqual(vhSquare, landingVH)).getInt(0) > 0) {
-        Crashed
+        HCrash
       } else if (not(greaterThanOrEqual(speed.getColumn(2), landingVZ.neg())).getInt(0) > 0) {
-        Crashed
+        VCrash
       } else {
         val landPosition = lessThanOrEqual(pos.getColumns(0, 1).norm2(), landingRadius).getInt(0) > 0
         if (landPosition) {
@@ -205,9 +209,11 @@ object LanderConf {
     maxAH = conf.get[Double]("maxAH").toTry.map(ones(1).mul(_)).get,
     maxAZ = conf.get[Double]("maxAZ").toTry.map(ones(1).mul(_)).get,
     landedReward = conf.get[Double]("landedReward").toTry.map(ones(1).mul(_)).get,
-    crashReward = conf.get[Double]("crashReward").toTry.map(ones(1).mul(_)).get,
+    vCrashReward = conf.get[Double]("vCrashReward").toTry.map(ones(1).mul(_)).get,
+    hCrashReward = conf.get[Double]("hCrashReward").toTry.map(ones(1).mul(_)).get,
     outOfRangeReward = conf.get[Double]("outOfRangeReward").toTry.map(ones(1).mul(_)).get,
     outOfFuelReward = conf.get[Double]("outOfFuelReward").toTry.map(ones(1).mul(_)).get,
+    outOfPlatformReward = conf.get[Double]("outOfPlatformReward").toTry.map(ones(1).mul(_)).get,
     flyingReward = conf.get[Double]("flyingReward").toTry.map(ones(1).mul(_)).get,
     rewardDistanceScale = conf.get[Double]("rewardDistanceScale").toTry.map(ones(1).mul(_)).get,
     fuel = conf.get[Int]("fuel").toTry.map(ones(1).mul(_)).get)
@@ -217,5 +223,5 @@ object LanderConf {
  * Lander status
  */
 object StatusCode extends Enumeration {
-  val Flying, Landed, OutOfPlatform, Crashed, OutOfRange, OutOfFuel = Value
+  val Flying, Landed, OutOfPlatform, VCrash, HCrash, OutOfRange, OutOfFuel = Value
 }
