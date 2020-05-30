@@ -39,9 +39,9 @@ import org.nd4j.linalg.ops.transforms.Transforms._
 /** The factory object for [[INDArrayKeyGenerator]] */
 object INDArrayKeyGenerator {
 
-  val binary: INDArray => Array[Int] = x => find(x).map(_.toInt).toArray
+  val binary: INDArray => Seq[Int] = x => find(x).map(_.toInt).toArray
 
-  val discrete: INDArray => Array[Int] = x => (for {
+  val discrete: INDArray => Seq[Int] = x => (for {
     i <- 0 until x.columns()
   } yield {
     x.getInt(i)
@@ -53,7 +53,7 @@ object INDArrayKeyGenerator {
    * @param cursor the configuration
    * @param noDims the number of dimension
    */
-  def fromJson(cursor: ACursor)(noDims: Int): INDArray => Array[Int] = cursor.get[String]("type").toTry.get match {
+  def fromJson(cursor: ACursor)(noDims: Int): INDArray => Seq[Int] = cursor.get[String]("type").toTry.get match {
     case "Binary" => binary
     case "Discrete" => discrete
     case "Tiles" => tilesFromJson(cursor)(noDims)
@@ -66,7 +66,7 @@ object INDArrayKeyGenerator {
    * @param cursor the json tiles configuration
    * @param noDims the number of dimensions
    */
-  def tilesFromJson(cursor: ACursor)(noDims: Int): INDArray => Array[Int] = {
+  def tilesFromJson(cursor: ACursor)(noDims: Int): INDArray => Seq[Int] = {
     val offset = create(cursor.get[Array[Double]]("offset").toTry.get)
     require(offset.shape() sameElements Array(1L, noDims))
     val max = create(cursor.get[Array[Double]]("max").toTry.get)
@@ -88,7 +88,7 @@ object INDArrayKeyGenerator {
    */
   def tiles(min: INDArray,
             max: INDArray,
-            noTiles: INDArray): INDArray => Array[Int] = {
+            noTiles: INDArray): INDArray => Seq[Int] = {
     require(min.equalShapes(max))
     require(min.equalShapes(noTiles))
     require(noTiles.minNumber().intValue() > 0)

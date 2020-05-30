@@ -63,7 +63,7 @@ class PriorityPlannerTest2 extends FunSpec with Matchers with MockitoSugar {
 
     val actionsKeyGen = INDArrayKeyGenerator.binary
 
-    val planner = PriorityPlanner[Array[Int], Array[Int]](stateKeyGen = stateKeyGen,
+    val planner = PriorityPlanner[Seq[Int], Seq[Int]](stateKeyGen = stateKeyGen,
       actionsKeyGen = actionsKeyGen,
       planningSteps = 10,
       minModelSize = 1,

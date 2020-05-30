@@ -57,8 +57,6 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
 
   private val random: Random = getRandomFactory.getNewRandomInstance(Seed)
   private val events: PublishSubject[AgentEvent] = PublishSubject[AgentEvent]()
-  private val sKey = INDArrayKeyGenerator.binary
-  private val aKey = INDArrayKeyGenerator.binary
 
   def agent: Agent = ActorCriticAgent(
     network = network,
@@ -72,9 +70,9 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
     planner = Some(planner),
     agentObserver = events)
 
-  def planner: PriorityPlanner[Array[Int], Array[Int]] = PriorityPlanner(
-    stateKeyGen = sKey,
-    actionsKeyGen = aKey,
+  def planner: PriorityPlanner[Seq[Int], Seq[Int]] = PriorityPlanner(
+    stateKeyGen = INDArrayKeyGenerator.binary,
+    actionsKeyGen = INDArrayKeyGenerator.discrete,
     planningSteps = PlanningSteps,
     minModelSize = MinModelSize,
     maxModelSize = MaxModelSize,
