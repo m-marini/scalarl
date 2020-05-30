@@ -70,7 +70,7 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
     planner = Some(planner),
     agentObserver = events)
 
-  def planner: PriorityPlanner[Seq[Int], Seq[Int]] = PriorityPlanner(
+  def planner: PriorityPlanner[ModelKey, ModelKey] = PriorityPlanner(
     stateKeyGen = INDArrayKeyGenerator.binary,
     actionsKeyGen = INDArrayKeyGenerator.discrete,
     planningSteps = PlanningSteps,
