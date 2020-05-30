@@ -96,12 +96,14 @@ case class LanderStatus(encoder: LanderEncoder,
       val reward = newEnv.status match {
         case OutOfRange =>
           conf.outOfRangeReward
-        case Crashed =>
-          conf.crashReward
+        case VCrash =>
+          conf.vCrashReward
+        case HCrash =>
+          conf.hCrashReward
         case Landed =>
           conf.landedReward
         case OutOfPlatform =>
-          conf.crashReward
+          conf.outOfPlatformReward
         case OutOfFuel =>
           conf.outOfFuelReward
         case Flying =>
