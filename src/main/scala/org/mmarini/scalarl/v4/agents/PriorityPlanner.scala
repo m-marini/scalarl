@@ -173,7 +173,7 @@ object PriorityPlanner {
    * @param noInputs  the number of inputs
    * @param noOutputs the number of outputs
    */
-  def fromJson(conf: ACursor)(noInputs: Int, noOutputs: Int): PriorityPlanner[Array[Int], Array[Int]] = {
+  def fromJson(conf: ACursor)(noInputs: Int, noOutputs: Int): PriorityPlanner[Seq[Int], Seq[Int]] = {
     val planningSteps = conf.get[Int]("planningSteps").toTry.get
     val minModelSize = conf.get[Int]("minModelSize").toTry.get
     val maxModelSize = conf.get[Int]("maxModelSize").toTry.get
