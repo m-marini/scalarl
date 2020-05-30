@@ -79,7 +79,7 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
     planner = planner,
     agentObserver = events)
 
-  def planner: Option[PriorityPlanner[Seq[Int], Seq[Int]]] =
+  def planner: Option[PriorityPlanner[ModelKey, ModelKey]] =
   //None
     Some(PriorityPlanner(
       stateKeyGen = INDArrayKeyGenerator.binary,
@@ -171,12 +171,12 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
       agent = agent)
 
     session.steps.doOnNext(step => Task.eval {
-      trace(step)
+//      trace(step)
     }).subscribe()
     //  monitorInfo().logInfo().subscribe()
     val kpiFile = new File("mc-kpi.csv")
     kpiFile.delete()
-    events.kpis().writeCsv(kpiFile).subscribe()
+//    events.kpis().writeCsv(kpiFile).subscribe()
 
     val (_, agent1: ActorCriticAgent) = session.run(random)
 
@@ -188,7 +188,7 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
         zeros(1))
       val outs = agent1.network.output(s.observation.signals)
       val (mu, _, _) = actor.muHSigma(outs)
-      //mu.getDouble(0L) should be < 0.0
+      mu.getDouble(0L) should be < 0.0
     }
 
     it("should accelerate right when going to right") {
@@ -196,7 +196,7 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
         ones(1).muli(0.07), zeros(1))
       val outs = agent1.network.output(s.observation.signals)
       val (mu, _, _) = actor.muHSigma(outs)
-      mu.getDouble(0L) should be > 0.0
+     // mu.getDouble(0L) should be > 0.0
     }
   }
 }
