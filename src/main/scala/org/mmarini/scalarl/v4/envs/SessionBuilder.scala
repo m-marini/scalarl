@@ -56,12 +56,19 @@ object SessionBuilder extends LazyLogging {
    * @param agent       the agent
    * @param agentEvents the agent event observable
    */
-  def fromJson(conf: ACursor)(epoch: Int, env: => Env, agent: => Agent, agentEvents: Observable[AgentEvent]): Session = {
+  def fromJson(conf: ACursor)(
+    epoch: Int,
+    kpiFileParm: Option[String],
+    dumpFileParm: Option[String],
+    env: => Env,
+    agent: => Agent,
+    agentEvents: Observable[AgentEvent]): Session = {
+
     val numSteps = conf.get[Int]("numSteps").toTry.get
-    val dump = conf.get[String]("dump").toOption
+    val dump = dumpFileParm.orElse(conf.get[String]("dump").toOption)
     val trace = conf.get[String]("trace").toOption
     val saveModel = conf.get[String]("modelFile").toOption
-    val kpiFile = conf.get[String]("kpiFile").toOption
+    val kpiFile = kpiFileParm.orElse(conf.get[String]("kpiFile").toOption)
 
     // Clean up all files
     if (epoch == 0) {

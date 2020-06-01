@@ -44,6 +44,18 @@ import scala.concurrent.duration.DurationInt
 object Main extends LazyLogging {
   private implicit val scheduler: Scheduler = global
 
+  def parseArgs(args: Array[String]): Map[String, String] = {
+    val r = "--(.*)=(.*)".r
+    val c = for {
+      arg <- args
+      s <- r.findAllMatchIn(arg)
+      if s.groupCount == 2
+    } yield {
+      s.group(1) -> s.group(2)
+    }
+    c.toMap
+  }
+
   /**
    *
    * @param args the line command arguments
@@ -51,9 +63,14 @@ object Main extends LazyLogging {
   def main(args: Array[String]) {
     create()
 
+    val cfgParms = parseArgs(args)
+
     try {
-      val file = if (args.isEmpty) "maze.yaml" else args(0)
-      val epoch = if (args.length >= 2) args(1).toInt else 0
+      val file = cfgParms.get("conf").getOrElse("maze.yaml")
+      val epoch = cfgParms.get("epoch").map(_.toInt).getOrElse(0)
+      val kpiFile = cfgParms.get("kpiFile")
+      val dumpFile = cfgParms.get("dumpFile")
+
       logger.info("File {} epoch {}", file, epoch)
 
       val jsonConf = Configuration.jsonFromFile(file)
@@ -67,7 +84,13 @@ object Main extends LazyLogging {
       val env = EnvBuilder.fromJson(jsonConf.hcursor.downField("env"))(random)
       env.actionConfig
       val (agent, agentObs) = AgentBuilder.fromJson(jsonConf.hcursor.downField("agent"))(env.signalsSize, env.actionConfig)
-      val session = SessionBuilder.fromJson(jsonConf.hcursor.downField("session"))(epoch, env = env, agent = agent, agentEvents = agentObs)
+      val session = SessionBuilder.fromJson(jsonConf.hcursor.downField("session"))(
+        epoch,
+        dumpFileParm = dumpFile,
+        kpiFileParm = kpiFile,
+        env = env,
+        agent = agent,
+        agentEvents = agentObs)
 
       session.lander().filterFinal().logInfo().subscribe()
       session.steps.monitorInfo().observable.sample(2 seconds).logInfo().subscribe()
