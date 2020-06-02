@@ -136,10 +136,10 @@ class LanderConf(val dt: INDArray,
     if (pos.getDouble(2L) <= 0) {
       // has touched ground
       val vhSquare = speed.getColumns(0, 1).norm2()
-      if (not(lessThanOrEqual(vhSquare, landingVH)).getInt(0) > 0) {
-        HCrash
-      } else if (not(greaterThanOrEqual(speed.getColumn(2), landingVZ.neg())).getInt(0) > 0) {
+      if (not(greaterThanOrEqual(speed.getColumn(2), landingVZ.neg())).getInt(0) > 0) {
         VCrash
+      } else if (not(lessThanOrEqual(vhSquare, landingVH)).getInt(0) > 0) {
+        HCrash
       } else {
         val landPosition = lessThanOrEqual(pos.getColumns(0, 1).norm2(), landingRadius).getInt(0) > 0
         if (landPosition) {
