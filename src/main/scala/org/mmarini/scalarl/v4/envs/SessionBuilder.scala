@@ -86,19 +86,23 @@ object SessionBuilder extends LazyLogging {
       epoch = epoch)
 
     dump.foreach(filename => {
+      logger.info("Dump file {}", filename);
       session.landerDump().writeCsv(new File(filename)).subscribe()
     })
 
     trace.foreach(filename => {
+      logger.info("Trace file {}", filename);
       session.landerTrace().writeCsv(new File(filename)).subscribe()
     })
 
     kpiFile.foreach(filename => {
+      logger.info("Kpi file {}", filename);
       agentEvents.kpis().writeCsv(new File(filename)).subscribe()
     })
 
     // Save model every 10 steps
     saveModel.foreach(file => {
+      logger.info("Model file {}", file);
       val path = new File(file)
       session.steps.takeEveryNth(SaveStepInterval).saveAgent(path).subscribe()
       session.steps.last.saveAgent(path).subscribe()

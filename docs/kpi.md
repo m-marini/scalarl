@@ -24,7 +24,7 @@ The kpis format is
 | Length | Offset | Field               |
 |-------:|-------:|---------------------|
 |      1 |      0 | Critic sqrt(J)      |
-|      1 |      1 | Critik sqrt(J')     |
+|      1 |      1 | Critic sqrt(J')     |
 |      1 |      2 | X Actor sqrt(J mu)  |
 |      1 |      3 | X Actor sqrt(J' mu) |
 |      1 |      4 | X Actor sqrt(J h)   |

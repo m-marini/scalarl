@@ -82,24 +82,25 @@ case class ActorCriticAgent(actors: Seq[Actor],
    * @param random   the random generator
    */
   override def fit(feedback: Feedback, random: Random): (Agent, INDArray) = {
-    val result = directLearn(feedback, random)
-    planner.map(mod => {
+    val (agent: ActorCriticAgent, ar, score) = directLearn(feedback, random)
+    val agent1 = agent.copy(avg = ar)
+    val res = planner.map(mod => {
       // Model learn and planning fase
-      val (agent1, score) = result
       val (agent2, model1) = mod.learn(feedback, agent1).plan(agent1, random)
       val agent3 = agent2.asInstanceOf[ActorCriticAgent].copy(planner = Some(model1))
       (agent3, score)
-    }).getOrElse(result)
+    }).getOrElse((agent1, score))
+    res
   }
 
   /**
-   * Returns the fit agent and the score
+   * Returns the fit agent, ythe average reward and and the score
    * Optimizes the policy based on a single feedback
    *
    * @param feedback the feedback from the last step
    * @param random   the random generator
    */
-  override def directLearn(feedback: Feedback, random: Random): (Agent, INDArray) = {
+  override def directLearn(feedback: Feedback, random: Random): (Agent, INDArray, INDArray) = {
     val Feedback(s0, actions, reward, s1) = feedback
     val outputs0 = network.output(s0.signals)
     val v0 = v(outputs0)
@@ -115,10 +116,10 @@ case class ActorCriticAgent(actors: Seq[Actor],
     val labels = (criticLabel +: actorLabels).toArray
     newNet.fit(Array(s0.signals), labels)
     val score = pow(delta, 2)
-    val newAgent = copy(network = newNet, avg = newAvg)
+    val newAgent = copy(network = newNet)
     val event = AgentEvent(feedback, this, newAgent, score)
-    agentObserver.onNext(event);
-    (newAgent, score)
+    agentObserver.onNext(event)
+    (newAgent, newAvg, score)
   }
 
   /**

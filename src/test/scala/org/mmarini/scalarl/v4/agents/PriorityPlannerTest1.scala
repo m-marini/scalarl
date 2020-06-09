@@ -83,18 +83,17 @@ class PriorityPlannerTest1 extends FunSpec with Matchers with MockitoSugar {
 
       when(agent0.score(f0)).thenReturn(ones(1).muli(1))
       when(agent0.score(f1)).thenReturn(ones(1).muli(2))
-      val r0 = (agent1, ones(1).muli(0.75))
+      val r0 = (agent1, ones(1), ones(1).muli(0.75))
       when(agent0.directLearn(f1, random)).thenReturn(r0)
 
       when(agent1.score(f0)).thenReturn(ones(1).muli(7.0 / 8))
-      val r1 = (agent1, ones(1).muli(0.5))
+      val r1 = (agent1, ones(1), ones(1).muli(0.5))
       when(agent1.directLearn(f0, random)).thenReturn(r1)
 
       val p1 = planner.learn(feedback = f0, agent = agent0).
         learn(f1, agent0).asInstanceOf[PriorityPlanner[INDArray, INDArray]]
 
       val (_, p2) = p1.plan(agent0, random)
-      val p3 = p2.asInstanceOf[PriorityPlanner[INDArray, INDArray]]
 
       it("should call directLearn to agent") {
         verify(agent0).directLearn(f1, random)

@@ -4,17 +4,16 @@ env:
   type: LanderContinuous
   actionConfig: DiscreteActions
   dt: 0.25
-  h0Range: 5
-  z0: 1
-  fuel: 10
+  h0Range: 14
+  z0: 20
+  fuel: 100
   zMax: 150
   hRange: 500
   zRange: 150
   vhRange: 24
   vzRange: 12
   landingRadius: 10
-  #landingVH: 0.5
-  landingVH: 4
+  landingVH: 1
   landingVZ: 4
   g: 1.6
   maxAH: 1
@@ -28,10 +27,10 @@ env:
   rewardDistanceScale: 0
   flyingReward: -10e-3
   normalize:
-    clipMin: [-500, -500, -150, -24, -24, -12]
-    clipMax: [500, 500, 150, 24, 24, 12]
+    clipMin: [-10, -10, -10, -24, -24, -12]
+    clipMax: [10, 10, 10, 24, 24, 12]
     offset: [0, 0, 0, 0, 0, 0]
-    max: [4, 4, 4, 0.4, 0.4, 0.5]
+    max: [10, 10, 10, 0.4, 0.4, 0.5]
 agent:
   type: ActorCritic
   avgReward: 0
@@ -39,46 +38,39 @@ agent:
   valueDecay: 0.99
   planner:
     planningSteps: 5
-    threshold: 0.1
-    minModelSize: 30
-    maxModelSize: 200
+    threshold: 1e-3
+    minModelSize: 300
+    maxModelSize: 1000
     stateKey:
       type: Tiles
-      offset: [-1, -1, 0, -1, -1, -1]
+      offset: [-1, -1, -1, -1, -1, -1]
       max: [1, 1, 1, 1, 1, 1]
-      tiles: [32, 32, 32, 32, 32, 32]
+      tiles: [100, 100, 100, 100, 100, 100]
     actionsKey:
       type: Discrete
-      offset: [0, 0, 0]
-      max: [5, 5, 5]
-      tiles: [100, 100, 100]
-    #modelPath: lander-model
   network:
     numHiddens:
-      - 100
-      - 100
+    - 100
+    - 30
+    - 30
     shortcuts:
-      - [ 0, 3 ]
-    seed: 1234
+      - [ 1, 4 ]
     updater: Sgd
-    learningRate: 100e-6
+    learningRate: 1000e-6
     beta1: 0.9
     beta2: 0.999
-    epsilonAdam: 0.1
+    epsilonAdam: 1e-8
     maxAbsGradients: 30
     maxAbsParameters: 10e3
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 10e-6
+      alpha: 1
     - type: PolicyActor
-      alpha: 10e-6
+      alpha: 1
     - type: PolicyActor
-      alpha: 10e-6
+      alpha: 1
 session:
-  numSteps: 1000
-  seed: 1234
-  #trace: debug/lander-trace.csv
-  dump: v4/lander-dump.csv
-  #modelFile: debug/lander-model
+  numSteps: 3000
+  dump: v4/dump.csv
   kpiFile: v4/kpi.csv

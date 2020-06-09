@@ -1,0 +1,67 @@
+---
+version: "4"
+env:
+  type: LanderContinuous
+  actionConfig: DiscreteActions
+  dt: 0.25
+  h0Range: 10
+  z0: 3
+  fuel: 30
+  zMax: 150
+  hRange: 500
+  zRange: 150
+  vhRange: 24
+  vzRange: 12
+  landingRadius: 10
+  landingVH: 0.5
+  landingVZ: 4
+  g: 1.6
+  maxAH: 1
+  maxAZ: 3.2
+  landedReward: 1
+  vCrashReward: -1
+  hCrashReward: -100e-3
+  outOfPlatformReward: -30e-3
+  outOfRangeReward: -1
+  outOfFuelReward: -1
+  rewardDistanceScale: 0
+  flyingReward: -10e-3
+  normalize:
+    clipMin: [-10, -10, -10, -24, -24, -12]
+    clipMax: [10, 10, 10, 24, 24, 12]
+    offset: [0, 0, 0, 0, 0, 0]
+    max: [10, 10, 10, 0.4, 0.4, 0.5]
+agent:
+  type: ActorCritic
+  avgReward: 0
+  rewardDecay: 0.99
+  valueDecay: 0.99
+  network:
+    numHiddens:
+    - 30
+    - 30
+    - 30
+    - 30
+    shortcuts:
+      - [ 0, 5 ]
+      - [ 0, 3 ]
+      - [ 3, 5 ]
+    updater: Adam
+    learningRate: 3e-3
+    beta1: 0.9
+    beta2: 0.999
+    epsilonAdam: 1e-8
+    maxAbsGradients: 1
+    maxAbsParameters: 10e3
+    dropOut: 0.8
+  actors:
+    - type: PolicyActor
+      alpha: 1000e-3
+    - type: PolicyActor
+      alpha: 1000e-3
+    - type: PolicyActor
+      alpha: 1000e-3
+session:
+  numSteps: 10000
+  dump: v4/dump-312.csv
+  kpiFile: debug/kpi-312.csv

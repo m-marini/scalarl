@@ -2,6 +2,7 @@
 version: "4"
 env:
   type: LanderTiles
+  hash: 300
   actionConfig: DiscreteActions
   dt: 0.25
   h0Range: 10
@@ -18,12 +19,14 @@ env:
   g: 1.6
   maxAH: 1
   maxAZ: 3.2
-  landedReward: 10
-  crashReward: -10
-  outOfRangeReward: -10
-  outOfFuelReward: -10
+  landedReward: 1
+  vCrashReward: -1
+  hCrashReward: -100e-3
+  outOfPlatformReward: -30e-3
+  outOfRangeReward: -1
+  outOfFuelReward: -1
   rewardDistanceScale: 0
-  flyingReward: -1
+  flyingReward: -10e-3
 agent:
   type: ActorCritic
   avgReward: 0
@@ -32,31 +35,21 @@ agent:
   network:
     numHiddens:
     - 100
-    - 100
+    - 30
+    - 30
     shortcuts:
-      - [ 0, 3 ]
+      - [ 1, 4 ]
     updater: Sgd
-    learningRate: 300e-6
-    maxAbsGradients: 1
+    learningRate: 10e-3
+    maxAbsGradients: 10
     maxAbsParameters: 10e3
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 0.1
+      alpha: 30
     - type: PolicyActor
-      alpha: 0.1
+      alpha: 30
     - type: PolicyActor
-      alpha: 0.1
-  planner:
-    planningSteps: 5
-    threshold: 0.1
-    minModelSize: 100
-    maxModelSize: 300
-    stateKey:
-      type: Binary
-    actionsKey:
-      type: Discrete
+      alpha: 30
 session:
-  numSteps: 3000
-  dump: v4/dump-121.csv
-  kpiFile: debug/kpi-121.csv
+  numSteps: 10000
