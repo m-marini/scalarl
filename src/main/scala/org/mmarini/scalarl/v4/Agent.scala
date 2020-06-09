@@ -31,6 +31,7 @@ package org.mmarini.scalarl.v4
 
 import java.io.File
 
+import org.deeplearning4j.nn.api.NeuralNetwork
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 
@@ -64,13 +65,13 @@ trait Agent {
   def fit(feedback: Feedback, random: Random): (Agent, INDArray)
 
   /**
-   * Returns the fit agent and the score
+   * Returns the fit network, the averageReward and, the score
    * Optimizes the policy based on the feedback for a single feedback
    *
    * @param feedback the feedback from the last step
    * @param random   the random generator
    */
-  def directLearn(feedback: Feedback, random: Random): (Agent, INDArray)
+  def directLearn(feedback: Feedback, random: Random): (Agent, INDArray, INDArray)
 
 
   /**

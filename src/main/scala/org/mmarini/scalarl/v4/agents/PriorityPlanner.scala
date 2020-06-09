@@ -110,7 +110,7 @@ case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
         case None => ctx
         case Some((_, (_, score))) if score < threshold => ctx
         case Some((targetKey, (feedback, _))) =>
-          val (agent1, score) = agent.directLearn(feedback, random)
+          val (agent1, _,  score) = agent.directLearn(feedback, random)
           val newModel = planner.model + (targetKey -> (feedback, score.getDouble(0L)))
           val planner1 = planner.copy(model = newModel).
             sweepBackward(feedback.s0.signals, agent1)

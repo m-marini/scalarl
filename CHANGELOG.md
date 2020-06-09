@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #84: Multiprocess benchmark
 - Issue #86: VCrash priority
 
+### Fixed
+
+- Issue #73: Mounting car error
+
 ## [0.1.0] - 2019-01-28
 
 ### Added
