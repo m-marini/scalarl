@@ -60,6 +60,7 @@ class AgentEventWrapper(val observable: Observable[AgentEvent]) extends Observab
       val (delta, vStar, _) = agent.computeDelta(v0, v1, reward)
       val deltaCritic = v0.distance2(vStar)
       val deltaCritic1 = v01.distance2(vStar)
+      val avg = agent1.avg
       val actorsKpis = (for {
         ((a0, a1), action) <- agent.actors.zip(agent1.actors).zipWithIndex
       } yield {
@@ -70,7 +71,7 @@ class AgentEventWrapper(val observable: Observable[AgentEvent]) extends Observab
             val pr1 = actor1.preferences(outs01)
             val deltaActor = pr.distance2(prStar)
             val deltaActor1 = pr1.distance2(prStar)
-            Seq(deltaActor, deltaActor1)
+            Seq(actor.alpha.getDouble(0L), deltaActor, deltaActor1)
           case (actor: GaussianActor, actor1: GaussianActor) =>
             val (mu, h, sigma) = actor.muHSigma(outs0)
             val (muStar, hStar) = GaussianActor.computeActorTarget(
@@ -81,21 +82,16 @@ class AgentEventWrapper(val observable: Observable[AgentEvent]) extends Observab
             val deltaMu1 = mu1.distance2(muStar)
             val deltaH = h.distance2(hStar)
             val deltaH1 = h1.distance2(hStar)
-            Seq(deltaMu, deltaMu1, deltaH, deltaH1)
+            Seq(actor.eta.getDouble(0L), deltaMu, deltaMu1,
+              actor.eta.getDouble(1L), deltaH, deltaH1)
           case _ => Seq()
         }
       }).flatten
-      val plannerKpis = Seq()
-      //      val plannerKpis = agent.planner match {
-      //        case Some(pl: PriorityPlanner[INDArray, INDArray]) =>
-      //          Seq(pl.model.data.size.toDouble, pl.queue.queue.size.toDouble)
-      //        case _ => Seq()
-      //      }
       val kpis = create((
         deltaCritic +:
           deltaCritic1 +:
-          (actorsKpis ++
-            plannerKpis)).toArray)
+          avg.getDouble(0L) +:
+          actorsKpis).toArray)
 
       kpis
     case _ => zeros(0)

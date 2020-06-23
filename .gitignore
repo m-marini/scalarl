@@ -32,3 +32,4 @@
 /docs/*.synctex.gz
 /v4/*.csv
 /stop
+/docs/*.toc

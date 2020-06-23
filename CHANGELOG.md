@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #82: more detailed crash states
 - Issue #84: Multiprocess benchmark
 - Issue #86: VCrash priority
+- Issue #89: KPI review
 
 ### Fixed
 

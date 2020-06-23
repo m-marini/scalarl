@@ -9,20 +9,21 @@ function analyzeDiscreteAgent(
   # Number of steps, number of values
   [n m] = size(X);
   # Number of actors
-  NA = floor((m - 2 ) / 2);
+  NA = floor((m - 3 ) / 3);
 
   # Compute J value of network (sum over the J values of critics and actors)
-  J = X(:, 1 : 2).^2;
+  TD = X(:, 1 : 2).^2;
+  J = TD;
   for actor = 0 : NA - 1
-    j = actor * 2 + 3;
-    J = J + X(:, j : j + 1).^2;
+    j = actor * 3 + 4;
+    J = J + X(:, j + 1 : j + 2).^2;
   endfor
   # Filter the J values greater than threshold EPS
   J = J(find(abs(J(:, 1)) >= EPS), 1 : 2);
   # Compute the K values
   K = J(:, 2) ./ J(:, 1);
-  KTREND = expRegression(K);
-  J1TREND = expRegression(J(:, 2));
+  TDTREND = expRegression(TD(:, 1));
+  RTREND = logRegression(X(:, 3));
   
   # Number of invalid steps
   C0 = sum(K > 1);
@@ -33,14 +34,15 @@ function analyzeDiscreteAgent(
   
   hChart = {};
   for actor = 0 : NA - 1
-    j = actor * 2 + 3;
-    # Computes the J mu values
-    hChart{actor + 1 , 1} =  X(:, j) .^2;
-    # Compute Gamma mu for percetile
-    PCH = prctile(X(:, j), PRC);
-    hChart{actor + 1, 2} = EPSH ./ PCH;
+    alpha = X(1, j);
+    j = actor * 3 + 4;
+    # Computes the J values
+    hChart{actor + 1 , 1} =  X(:, j + 1) .^2;
+    # Compute Gamma for percetile
+    PCH = prctile(X(:, j + 1), PRC);
+    hChart{actor + 1, 2} = EPSH ./ PCH * alpha;
     # Compute mean
-    hChart{actor + 1, 3} = ones(size(PRC, 1), 1) * EPSH ./ mean(X(:, j));
+    hChart{actor + 1, 3} = ones(size(PRC, 1), 1) * EPSH ./ mean(X(:, j + 1)) * alpha;
   endfor
  
   NR = 2;             # number of rows
@@ -48,6 +50,11 @@ function analyzeDiscreteAgent(
 
   clf;
   subplot(NR, NC, 1);
+  pie([C0, C1, C2]);
+  colormap([1 0 0; 1 1 0; 0 1 0]);
+  title("Step classes");
+  
+  subplot(NR, NC, 2);
   hist(K, BINS);
   grid on;
   title(sprintf("K distribution"));
@@ -55,22 +62,17 @@ function analyzeDiscreteAgent(
   ylabel("# samples");
   
   subplot(NR, NC, 1 + NC);
-  pie([C0, C1, C2]);
-  colormap([1 0 0; 1 1 0; 0 1 0]);
-  title("Step classes");
-  
-  subplot(NR, NC, 2);
-  plot([KTREND]);
+  plot([RTREND]);
   grid on;
-  title(sprintf("K trend"));
-  ylabel("K");
+  title(sprintf("Average reward"));
+  ylabel("Reward");
   xlabel("Step");
   
   subplot(NR, NC, 2 + NC);
-  semilogy([J1TREND]);
+  semilogy([TDTREND]);
   grid on;
-  title(sprintf("Prediction error trend", actor));
-  ylabel("J'");
+  title(sprintf("Squared TD Error trend", actor));
+  ylabel("delta^2");
   xlabel("Step");
   
   for actor = 0 : NA - 1
@@ -86,9 +88,9 @@ function analyzeDiscreteAgent(
     semilogy(PRC, [hChart{actor + 1, 2}, hChart{actor + 1, 3}]);
     grid on;
     grid minor on;
-    title(sprintf("gamma mu %d", actor));
+    title(sprintf("alpha %d", actor));
     xlabel("% corrected samples");
-    ylabel(sprintf("gamma mu %d", actor));
+    ylabel(sprintf("alpha %d", actor));
   endfor
 
 endfunction
