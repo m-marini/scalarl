@@ -12,20 +12,33 @@
 \maketitle
 
 \begin{abstract}
-
+Description of Actor Critic Agent and definitions of performance indicators
 \end{abstract}
 
-\section{TD Error}
+\tableofcontents
 
-The TD error is defined as
+\section{Actor Critic Agent}
+
+The Policy Actor Critic Agent is composed by an artificial neural network (ANN) that generates the differential state value of critic component and the policy parameters for action selection of each actor (the action dimensions) from the state input signals.
+At each iteration with the environment, the agent computes the average reward $r_\pi$ and the differential TD error $ \delta_t $
 \begin{equation}
 \delta_t = r_t - r_\pi + v_\pi(s_{t+1}) - v_\pi(s_t)	
 \end{equation}
 
-\section{Policy actor}
+The differential TD error indicate how different is the differential state value determined by the current reward from the estimated differential state value.
 
-The policy actor estimate the probabilities $ \pi_a(s) $ of choose action $ a $ at status $ s $.
-The function is the softmax of the actions preferences $ h_a(s) $
+If the error is positive the agent changes the policy reinforcing the current strategy. It increments the probabilities of selected actions and at the same time reduces the probabilities of the other actions.
+
+If the error is negative the agent changes the policy weakening the current strategy. It reduces the probabilities of selected actions and increments the probabilities of the other actions.
+
+The magnitude of changes is proportional to the TD Error by a $ \alpha_a $ parameter that allows to control the convergence of the algorithm.
+
+The TD error is used to determine the updated  output values and train the AAN with these expected outputs.
+
+\subsection{Discrete Policy Actor}
+
+The policy actor computes the probabilities $ \pi_a(s) $ of choose action $ a $ at status $ s $.
+The function is the softmax of the actions preferences $ h_a(s) $ given by the ANN 
 \begin{equation}
 	\pi(a, s) = \frac{e^{h_a(s)}}{\sum_k e^{h_k(s)}}
 \end{equation}
@@ -36,7 +49,15 @@ simplifying the notation with
 	h_a(s) & = h_a
 \end{align*}
 
-The update of policy gradient is
+To train the ANN the agent computes the updated actor preferences at each step $ t $
+\begin{align}
+h^*_a(s_t) = h_a(s_t) + \alpha_a \delta_{h_a}(t) 
+\end{align}
+where $ \delta_{h_a}(t) $ is the TD error back-propagated to the preference $ h_a $ 
+\begin{align*}
+\delta_{h_a}(t)&	= \delta(t) \nabla \ln \pi_a
+\end{align*}
+The policy gradient function is
 \begin{align*}
 \begin{split}
 	\nabla \ln \pi_a& = \frac{1}{\pi_a}
@@ -80,184 +101,207 @@ then
 \end{split}
 \end{align*}
 
-The backwork propagated TD error to the output neural network is
+Finally
 \begin{align}
-\begin{split}
-    \delta_{h_a}(t)& = \delta(t) \nabla \ln \pi_a
-    \\
-    & = \delta(s_t) \sum_i \left[
-		\frac{A_i(a_t)}{\sum_k e^{h_k}} - \pi_i
-	\right]
-\end{split}
+\delta_{h_a}(t)&	= \delta(s_t) \sum_i \left[
+\frac{A_i(a_t)}{\sum_k e^{h_k}} - \pi_i
+\right]
 \end{align}
 
-The updated actor preferences are
-\begin{align}
-	h^*_a(s_t) = h_a(s_t) + \alpha_h \delta_{h_a}(t) 
-\end{align}
+\subsection{Gaussian policy actor}
 
-\section{Gaussian policy actor}
-
-The Gaussian policy actor estimate the probabilities $ \pi(a, s) $ of choose a continuous action $ a $ at status $ s $ as a normal distributed function of two parameters $ \mu(s) $ and $ \sigma(s) $.
+The Gaussian policy actor computes the probabilities $ \pi(a, s) $ of choose a continuous action $ a $ at status $ s $ as a normal distributed function of two parameters $ \mu(s) $ and $ \sigma(s) $.
 
 We change the notation to avoid ambiguity between the constant $ \pi = 3.14 \dots $ and the policy $ \pi(a,s) $:
 \begin{align}
 \begin{split}
-	\pi(a, s)&	= p(a, s)
-	\\
-	&			= \frac{1}{\sigma(s) \sqrt{2 \pi}} e^{-\frac{(a-\mu(s))^2}{\sigma(s)^2}}
-	\\
+\pi(a, s)&	= p(a, s)
+\\
+&			= \frac{1}{\sigma(s) \sqrt{2 \pi}} e^{-\frac{(a-\mu(s))^2}{\sigma(s)^2}}
+\\
 \end{split}
 \end{align}
 \begin{align}
-	\sigma(s)&	= e^{h_\sigma(s)}	
+\sigma(s)&	= e^{h_\sigma(s)}	
 \end{align}
 
 Futhermore we change the notation to simplifying the equation:
 \begin{align*}
-	p(a, s)& = p
-	\\
-	\mu(s)& = \mu
-	\\
-	\sigma(s)& = \sigma
-	\\
-	h_\sigma(s)& = h_\sigma
+p(a, s)& = p
+\\
+\mu(s)& = \mu
+\\
+\sigma(s)& = \sigma
+\\
+h_\sigma(s)& = h_\sigma
 \end{align*}
 to infere the gradient of logarithm of $ p $
 \begin{align*}
 \nabla \ln p = \left(
-	\frac{\partial}{\partial \mu} + \frac{\partial}{\partial h_\sigma}
-	\right)
-	\ln p
+\frac{\partial}{\partial \mu} + \frac{\partial}{\partial h_\sigma}
+\right)
+\ln p
 \end{align*}
 the partial derivative by $\mu$ is 
 \begin{align*}
 \\
-	\frac{\partial}{\partial \mu} \ln p& = \frac{1}{p} \frac{\partial p}{\partial \mu}
-	\\
-	& = \frac{1}{p \sigma \sqrt{2 \pi} } e^{\frac{-(a-\mu)^2}{\sigma^2}} \frac{\partial}{\partial \mu} \left[ -\frac{(a-\mu)^2}{\sigma^2} \right]
-	\\
-	& = - \frac{1}{\sigma^2}[2 (a - \mu) (-1))]
-	\\
-	& = \frac{2}{\sigma^2}(a - \mu)
-	\\
-	\frac{\partial}{\partial h_\sigma} \ln p& = \frac{1}{p} \frac{\partial p}{\partial \sigma} \frac{\partial \sigma}{\partial h_\sigma}
-	\\
-	\frac{\partial p}{\partial \sigma}& = \frac{1}{\sigma^2 \sqrt{2 \pi}}
-	\left\{
-		\sigma \frac{\partial}{\partial \sigma}
-		\left[
-			e^{-\frac{(a-\mu)^2}{\sigma^2}}
-		\right]
-		- e^{-\frac{(a-\mu)^2}{\sigma^2}}
-	\right\}
-	\\
-	& = \frac{p}{\sigma}
-	\left\{
-		\sigma \frac{\partial}{\partial \sigma}
-		\left[
-			-(a - \mu)^2\sigma^{-2}
-		\right] - 1
-	\right\}
-	\\
-	& = \frac{p}{\sigma}
-	\left[
-		-\sigma (a - \mu)^2 (-2 \sigma^{-3}) - 1)
-	\right]
-	\\
-	& = \frac{p}{\sigma}
-	\left[
-		2(a-\mu)^2 \sigma^{-2} - 1
-	\right]
-	\\
-	\frac{\partial \sigma}{\partial h_\sigma}& = \sigma
-	\frac{\partial}{\partial h_\sigma} \ln p
-	\\
-	& = \frac{1}{p}
-	\frac{p}{\sigma}
-	\left[
-		2(a-\mu)^2 \sigma^{-2} - 1
-	\right] \sigma
-	\\
-	& = 2(a-\mu)^2 \sigma^{-2} - 1
+\frac{\partial}{\partial \mu} \ln p& = \frac{1}{p} \frac{\partial p}{\partial \mu}
+\\
+& = \frac{1}{p \sigma \sqrt{2 \pi} } e^{\frac{-(a-\mu)^2}{\sigma^2}} \frac{\partial}{\partial \mu} \left[ -\frac{(a-\mu)^2}{\sigma^2} \right]
+\\
+& = - \frac{1}{\sigma^2}[2 (a - \mu) (-1))]
+\\
+& = \frac{2}{\sigma^2}(a - \mu)
+\\
+\frac{\partial}{\partial h_\sigma} \ln p& = \frac{1}{p} \frac{\partial p}{\partial \sigma} \frac{\partial \sigma}{\partial h_\sigma}
+\\
+\frac{\partial p}{\partial \sigma}& = \frac{1}{\sigma^2 \sqrt{2 \pi}}
+\left\{
+\sigma \frac{\partial}{\partial \sigma}
+\left[
+e^{-\frac{(a-\mu)^2}{\sigma^2}}
+\right]
+- e^{-\frac{(a-\mu)^2}{\sigma^2}}
+\right\}
+\\
+& = \frac{p}{\sigma}
+\left\{
+\sigma \frac{\partial}{\partial \sigma}
+\left[
+-(a - \mu)^2\sigma^{-2}
+\right] - 1
+\right\}
+\\
+& = \frac{p}{\sigma}
+\left[
+-\sigma (a - \mu)^2 (-2 \sigma^{-3}) - 1)
+\right]
+\\
+& = \frac{p}{\sigma}
+\left[
+2(a-\mu)^2 \sigma^{-2} - 1
+\right]
+\\
+\frac{\partial \sigma}{\partial h_\sigma}& = \sigma
+\frac{\partial}{\partial h_\sigma} \ln p
+\\
+& = \frac{1}{p}
+\frac{p}{\sigma}
+\left[
+2(a-\mu)^2 \sigma^{-2} - 1
+\right] \sigma
+\\
+& = 2(a-\mu)^2 \sigma^{-2} - 1
 \end{align*}
 
 The backward propagated TD errors to the output network layer are
 \begin{align}
-	\delta_\mu(t)&		= \frac{2}{\sigma^2}(a - \mu) \delta (t)
-	\\
-	\delta_{h_\sigma}(t)&	= \left[
-		2\frac{(a - \mu)^2}{\sigma^2} - 1
-	\right] \delta(t)
+\delta_\mu(t)&		= \frac{2}{\sigma^2}(a - \mu) \delta (t)
+\\
+\delta_{h_\sigma}(t)&	= \left[
+2\frac{(a - \mu)^2}{\sigma^2} - 1
+\right] \delta(t)
 \end{align}
 
 The updated actor parameters are:
 \begin{align}
-	\mu^*(s_t)&			= \mu(s_t) + \alpha_\mu \delta_\mu(t)
-	\\
-	h^*_\sigma(s_t)&	= h_\sigma(s_t) + \alpha_{h_\sigma} \delta_{h_\sigma}(t)
+\mu^*(s_t)&			= \mu(s_t) + \alpha_\mu \delta_\mu(t)
+\\
+h^*_\sigma(s_t)&	= h_\sigma(s_t) + \alpha_{h_\sigma} \delta_{h_\sigma}(t)
 \end{align}
-\section{Performance Indicators}
 
-The agent has a lot of iper parameters to tune and optimize the learning rate.
+\subsection{Learning process}
 
-In this section we define performance indicators to tune such  parameters.
+Initially the agent do not have any experience and the differential state value generated by the ANN starts from a random initial estimation. The same is for the behavior generated by the actors where the preferences are random initialized.
 
-\subsection{Neural Network Indicator}
+Since the very first interactions the agent generates wrong differential state value estimation with high value of TD Error. Consequently the agent easily changes the policy behavior, trying different policies with the exploration of both the policy and state space. It tries to improve the average reward, the value state estimation at the same time selecting better policies.
 
-Both the critic and actors aproximate the value function and policy function with neural network.
-To monitor the learning activity of neural network we compute the MSE of extimated functions.
+Different factors influence the learning process.
+External agent factors like the number of states, actions and policies not yet explored tent to generate high error rate.
+The error increases as the agent experiences new environment states or try new policies, but as the agent faces states already visited it can exploit the past experiences reducing the error and improving the state value estimation and the policy.
 
-The critic computes the updated value of current state by appling the the bootstrap equation:
+Instead the agent internal factor, such as the ANN approximation, generates errors that can be reduced only to a low-bound limit value.
+
+The ANN learning paramters can influence both in the quality of approximated functions and in the  speed of adaptation.
+
+High value of step-size parameter $ \eta $ increases the correction of weights increasing consequently the speed of adaptation, but can easily generate corrective value too big bringing the network to not converging behaviors.
+On the other hand small value of step-size parameter weakens the correction of weights decreasing the speed of adaptation.
+
+Also the actor parameters $ \alpha_a $, which modulate the policy changes from the critic, influence the improvement capacity.
+High value of $ \alpha_a $ determine strong policy changes even in the face of small errors, making it difficult a fine correction, the other way around very small value of $ \alpha_a $ bring very little variations on policy without improvement.
+
+If the actor parameters that govern the policy have a limited range of values we may choose an $ \alpha_a $ so that the average of corrections is $ \varepsilon_a $ a fraction of the limited range.
+\begin{align*}
+	\alpha_a &	= \frac{\varepsilon_a}{\sqrt{\frac{1}{n} \sum_i^n \delta^2_{h_a}(i)}}
+	\\
+	\delta_{h_a}(i) & = \frac{h^*_a(i) -h_a(i)}{\alpha'_a} 
+\end{align*}
+\begin{align}
+	\alpha_a &	= \frac{\varepsilon_a}{\sqrt{\frac{1}{n} \sum_i^n (h^*_a(i) - h_a(i))^{2}}}\alpha'_a
+\end{align}
+
+\subsection{Performance}
+
+The average reward is the main indicators of learning quality, since the agent interacts with the environment the average reward grows up.
+
+Because the process is adaptive the average reward can vary a lot during the interaction with the environment therefore it is necessary to evaluate the trend of the indicator. The logarithmic regression can be used to evaluate the performance
+\begin{align}
+	r_\pi(t) & = \ln (mt + q)
+\end{align}
+
+An increasing trend indicates the agent is selecting better policies and is getting higher and higher rewards.
+A decreasing trend indicates the agent is not selecting good policies, this may be caused by low $ \alpha_a $ or $ \eta $ parameters.
+
+Another indicator of performance is the squared TD error, as for the average reward it is necessary to evaluated the trend.
+The error has not negative values that should approach zero when the agent select the local best policy. The exponential regression can be used to evaluate the performance
+\begin{align}
+	\delta^2(t) & = e^{(mt + q)}
+\end{align}
+
+A decreasing trend indicates the estimation of value states is getting better.
+An increasing trend indicates the estimation of value states is getting worse it may be caused by the ANN which cannot correct the estimation due to $ \eta $ parameter too high.
+
+Both the critic and actors approximate the value function and policy function with neural network.
+To monitor the learning activity of ANN we compute the MSE of estimated functions.
+
+The critic computes the updated value of current state by applying the the bootstrap equation:
 \begin{align*}
 	v^*(s_t)&	= v(s_{t+1}) + r_t - r_\pi 
 \end{align*}
 
 The square error of critic output is
 \begin{align*}
-	J_v(t)&	= [v^*(s_t) - v(s_{t+1})]^2
-	\\
-	&		= \delta^2(t)
+	\delta^2(t)&	= [v^*(s_t) - v(s_{t+1})]^2
 \end{align*}
 
-The square error of policy actors outputs are
+The square error of actors outputs are
 \begin{align*}
-	J_{h, i}&	= \sum_a (h_{a,i}^*(s_t) - h_{a,i}(s_t))^2
+	J_i&	= \sum_i (h_i^*(s_t) - h_i(s_t))^2
 \end{align*}
-where $ i $ is index of the actor dimension and $ a $ is the action value preference index
+where $ i $ is index of the actor output.
 
-The square error of gaussian actors outputs are
+Every time the network is trained the label outputs are fed to correct the weights of ANN.
+The resulting network has therefore a MSE that should be less than the original.
+
 \begin{align*}
-	J_{\mu, i}&			= (\mu_i^*(s_t) - \mu_i(s_t))^2
+	\delta'^2(t)&	= [v^*(s_t) - v'(s_{t+1})]^2
 	\\
-	J_{h_\sigma, i}&	= (h_{\sigma, i}^*(s_t) - h_{\sigma, i}(s_t))^2
-\end{align*}
-where $ i $ is index of the actor dimension.
-
-In the same way we define the square error of outputs for fitted actor:
-\begin{align*}
-	J_{v'}(t)&				= [v^*(s_t) - v'(s_{t+1})]^2
-	\\
-	J_{h',i}(t)&			= \sum_a (h_{a,i}^*(s_t) - h'_{a,i}(s_t))^2
-	\\
-	J_{\mu', i}(t)&			= (\mu_i^*(s_t) - \mu'_i(s_t))^2
-	\\
-	J_{h'_\sigma, i}(t)&	= (h_{\sigma, i}^*(s_t) - h'_{\sigma, i}(s_t))^2
+	J'_i(t)&		= \sum_i (h_i^*(s_t) - h'_i(s_t))^2
 \end{align*}
 
-The ratio between the total MSE after and before the learning activity indicates the quality of such activity.
+The ratio between the total MSE after and before the training activity indicates the quality of such activity.
 \begin{align}
 \begin{split}
-	J(t)&		= J_v(t) + \sum_i [J_{h, i}(t) + J_{\mu, i}(t)+ J_{h_\sigma, i}(t)]
+	J(t)&		= \delta^2(t) + \sum_i J_i(t)
 	\\
-	J'(t)&	= J_{v'}(t) + \sum_i [J_{h', i}(t) + J_{\mu', i}(t)+ J_{h'_\sigma, i}(t)]
+	J'(t)&	= \delta'^2(t) + \sum_i J'_i(t)
 	\\
 	K(t)&	= \frac{J'(t)}{J(t)}
 \end{split}
 \end{align}
 
-A ratio $ K(t) \ge 1 $ means the error after learning gets worst due a step-size parameter $ \alpha $ too high.
-A ratio $ K(t) = 1 $  means no change on error and therfore no improvement,. This can be affacted by a local minimum reached or a step-size parameter too low with very poor capacity of learning.
+A ratio $ K(t) \ge 1 $ means the error after training gets worst due a step-size parameter $ \alpha $ too high.
+A ratio $ K(t) = 1 $  means no change on error and therefore no improvement. This can be affected by a local minimum reached or a step-size parameter too low with very poor capacity of learning.
 A ratio $ K(t) < 1 $ means an improvement of neural network due to correct step-size parameter.
 A ratio $ K(t) = 0 $ means a perfect fit of neural network.
 
@@ -274,10 +318,23 @@ We can classify the steps in three class:
 	The remaining steps that have a small MSE or that have reduced significantly the MSE
 \end{description}
 
-If the steps in $ C_0 $ is greater that a threshold (10\% of total steps) the step parameter should be reduced, if the steps in $ C_1 $ is greater than a threshold, (50\%) of steos, the step parameter may be increased.
-The figure (\ref{fig:steps}) represents the classification of steps.
+The ideal distribution should have 
 
-It is difficult to determine the effetcs of step parameter changes on the result MSE so an empirical way to reduce or increment the parameter is applied, for example mulipling by exponential factors  ($ \times 3, \times 10, \times 30, \times 100, ...$ ) or ($ \times 0.3, \times 0.1, \times 0.03, \times 0.01, ...$ ) until the steps in $ C_0 $ and $ C_1 $ are below the thresholds.
+\begin{align}
+\begin{split}
+	C_0 & = 0
+	\\
+	C_1 & = 0
+	\\
+	C_2 & = 1
+\end{split}
+\end{align}
+
+A step parameter $ \eta $ too high generates over correction increasing $ C_0 $ and reducing $ C_2 $.
+
+An $ \eta $ parameter too small generates under corrections increasing $ C_1 $ and reducing $ C_2 $.
+
+Because it is difficult to determine the effects of step parameter changes on the result MSE, an empirical way to reduce or increment the parameter is applied, for example increasing or reducing by exponential factors ($ \dots $, $ \times 0.01 $, $ \times 0.03 $, $ \times 0.1$, $\times 0.3 $, $ \times 3 $, $ \times 10 $, $ \times 30$, $\times 100 $, $ \dots $).
 
 \begin{figure}[ht]
 	\centering
@@ -285,83 +342,5 @@ It is difficult to determine the effetcs of step parameter changes on the result
 	\caption{Step classification}
 	\label{fig:steps}
 \end{figure}
-
-\subsection{Policy Actor Indicators}
-
-The actor computes the updated preferernces of current state by adding a step-size parameter to gradient and TD error
-
-\begin{align*}
-	h_{a, i}^*(s_t)&	= h_{a, i}(s_t) + \alpha_{h, i} \delta_{h_a, i}(t)
-\end{align*}
-
-To avoid computation overflow the preferences are constratints to a limited range e.g. $ (-7, +7) $.
-The changes of preferences should also be limited to a fraction of the range $ (-\varepsilon_h, \varepsilon_h) $, so we can measure the squared distance of changes of preferences:
-\begin{align}
-\begin{split}
-	J_{h,i}(t)&		= \alpha_{h, i}^2 \sum_a \delta_{h_a, i}^2(t)
-\end{split}
-\end{align}
-
-A $ J_{h,i}(t) \ge \varepsilon_h^2 $ means a $ \alpha_{h,i} $ parameter value too high and $ J_{h,i}(t) \ll \varepsilon_h^2 $ means a $ \alpha_{h_i} $ parameter value too small, producing an uneffective changes on preferences.
-
-Asserting we want to have a $ p $ fraction of samples with a $ J_{h,i}(t) < \varepsilon_h^2 $, we calculate $ J_{h, i, p} $ the $ p $ centile of $ J_{h, i}(t) $ and comupute the $ \gamma_{h,i} $ scale parameter
-\begin{align}
-\begin{split}
-	\varepsilon_h^2&	= \gamma_{h,i}^2 J_{h,i,p}
-	\\
-	\gamma_{h,i}&			= \frac{\varepsilon_h}{\sqrt{J_{h,i}(t)}}
-\end{split}
-\end{align}
-
-\subsection{Gaussian Policy Actor Indicators}
-
-The actor computes the updated parameters of current state by adding a step-size parameter to gradient and TD error
-\begin{align*}
-	\delta_\mu&		= \frac{2}{\sigma^2}(a - \mu) \delta
-	\\
-	\delta_{h_\sigma}&	= \left[
-		2\frac{(a - \mu)^2}{\sigma^2} - 1
-	\right] \delta
-\end{align*}
-
-The updated gaussian parameters are
-\begin{align*}
-	\mu^*(s_t)&		= \mu(s_t) + \alpha_\mu \delta_\mu(s_t)
-	\\
-	h_\sigma^*(s_t)&	= h_\sigma(s_t) + \alpha_{h_\sigma}\delta_{h_\sigma}(s_t)
-\end{align*}
-
-We may consider the changes to the gaussian policy parameter limited to a defined range
-\begin{align*}
-	J_\mu(s_t)&								< \varepsilon^2_\mu
-	\\
-	|\mu^*(s_t) - \mu(s_t)|&				< \varepsilon_\mu
-	\\
-	|\delta_\mu(s_t)|&						< \varepsilon_\mu
-	\\
-	J_{h_\sigma}(s_t)&						< \varepsilon^2_{h_\sigma}
-	\\
-	[h_\sigma^*(s_t) - h_\sigma(s_t)]^2&	< \varepsilon^2_{h_\sigma}
-	\\
-	|\delta_{h_\sigma}(s_t)|&				< \varepsilon_{h_\sigma}
-\end{align*}
-
-An indicator $ J_\mu(s_t) \ge \varepsilon_\mu^2 $ means an $ \alpha_\mu $ parameter value too high, on the other hand an indicator$ J_\mu(s_t) \ll \varepsilon_\mu^2 $ means an $ \alpha_\mu $ parameter value too small.
-An indicator $ J_{h_\sigma}(s_t) \ge \varepsilon_{h_\sigma}^2 $ means an $ \alpha_\sigma $ parameter value too high and an indicator $ J_{h_\sigma}(s_t) \ll \varepsilon_{h_\sigma}^2 $ means an $ \alpha_{h_\sigma} $ parameter value too small.
-
-Asserting we want to have a $ p $ fraction of samples with a $ J_\mu(s_t) < \varepsilon_\mu^2 $, we calculate $ J_{\mu, p} $ the $ p $ centile of $ J_\mu(s_t) $ and comupute the $ \gamma_\mu $
-\begin{align*}
-	\varepsilon^2_\mu&	= \gamma_\mu^2 \sigma^2_\mu
-	\\
-	&					= \gamma^2_\mu J_\mu(s_t)
-\end{align*}
-\begin{align}
-	\gamma_\mu&		= \frac{\varepsilon_\mu}{\sqrt{J_{\mu,p}}}
-\end{align}
-
-In the same way we have 
-\begin{align}
-	\gamma_{h_\sigma}&	= \frac{\varepsilon_{h\sigma}}{\sqrt{J_{h_\sigma, p} } }
-\end{align}
 
 \end{document}
