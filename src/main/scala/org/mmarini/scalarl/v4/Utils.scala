@@ -64,6 +64,21 @@ object Utils {
   }
 
   /**
+   * Returns the values of x cliped by scaling to desired max value
+   *
+   * @param x        the values
+   * @param maxValue the max value
+   */
+  def scaleClip(x: INDArray, maxValue: Double): INDArray = {
+    val max = abs(x).max().getDouble(0L)
+    val result = if (max > maxValue)
+      x.mul(maxValue / max)
+    else
+      x
+    result
+  }
+
+  /**
    * Returns random integer for a cdf
    *
    * @param x      the cumulative distribution function

@@ -112,5 +112,6 @@ object PolicyActor {
    *
    * @param data the preferences
    */
-  def normalize(data: INDArray): INDArray = clip(data.sub(data.mean()), -PreferenceRange, PreferenceRange)
+  def normalize(data: INDArray): INDArray =
+    scaleClip(data.sub(mean(data)), PreferenceRange)
 }

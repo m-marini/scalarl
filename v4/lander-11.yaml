@@ -5,15 +5,15 @@ env:
   actionConfig: DiscreteActions
   dt: 0.25
   h0Range: 10
-  z0: 3
-  fuel: 30
+  z0: 20
+  fuel: 100
   zMax: 150
   hRange: 500
   zRange: 150
   vhRange: 24
   vzRange: 12
   landingRadius: 10
-  landingVH: 0.5
+  landingVH: 2
   landingVZ: 4
   g: 1.6
   maxAH: 1
@@ -30,7 +30,7 @@ env:
     clipMin: [-10, -10, -10, -24, -24, -12]
     clipMax: [10, 10, 10, 24, 24, 12]
     offset: [0, 0, 0, 0, 0, 0]
-    max: [10, 10, 10, 0.4, 0.4, 0.5]
+    max: [20, 20, 20, 8, 8, 4]
 agent:
   type: ActorCritic
   avgReward: 0
@@ -45,17 +45,15 @@ agent:
       - [ 1, 4 ]
     updater: Sgd
     learningRate: 10e-3
-    maxAbsGradients: 10
+    maxAbsGradients: 100
     maxAbsParameters: 10e3
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 30
+      alpha: 500
     - type: PolicyActor
-      alpha: 30
+      alpha: 500
     - type: PolicyActor
-      alpha: 30
+      alpha: 500
 session:
   numSteps: 10000
-  dump: v4/dump-11.csv
-  kpiFile: v4/kpi-11.csv

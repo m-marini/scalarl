@@ -4,7 +4,7 @@ env:
   type: LanderContinuous
   actionConfig: DiscreteActions
   dt: 0.25
-  h0Range: 14
+  h0Range: 10
   z0: 20
   fuel: 100
   zMax: 150
@@ -13,7 +13,7 @@ env:
   vhRange: 24
   vzRange: 12
   landingRadius: 10
-  landingVH: 1
+  landingVH: 2
   landingVZ: 4
   g: 1.6
   maxAH: 1
@@ -30,24 +30,12 @@ env:
     clipMin: [-10, -10, -10, -24, -24, -12]
     clipMax: [10, 10, 10, 24, 24, 12]
     offset: [0, 0, 0, 0, 0, 0]
-    max: [10, 10, 10, 0.4, 0.4, 0.5]
+    max: [20, 20, 20, 8, 8, 4]
 agent:
   type: ActorCritic
   avgReward: 0
   rewardDecay: 0.99
   valueDecay: 0.99
-  planner:
-    planningSteps: 5
-    threshold: 1e-3
-    minModelSize: 300
-    maxModelSize: 1000
-    stateKey:
-      type: Tiles
-      offset: [-1, -1, -1, -1, -1, -1]
-      max: [1, 1, 1, 1, 1, 1]
-      tiles: [100, 100, 100, 100, 100, 100]
-    actionsKey:
-      type: Discrete
   network:
     seed: 1234
     numHiddens:
@@ -57,20 +45,17 @@ agent:
     shortcuts:
       - [ 1, 4 ]
     updater: Sgd
-    learningRate: 1e-6
-    beta1: 0.9
-    beta2: 0.999
-    epsilonAdam: 1e-8
+    learningRate: 30e-3
     maxAbsGradients: 100
     maxAbsParameters: 10e3
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 1e-3
+      alpha: 500
     - type: PolicyActor
-      alpha: 1e-3
+      alpha: 500
     - type: PolicyActor
-      alpha: 1e-3
+      alpha: 500
 session:
-  numSteps: 3000
+  numSteps: 10000
   seed: 1234

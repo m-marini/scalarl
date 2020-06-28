@@ -188,8 +188,9 @@ object ActorCriticAgent {
                    rewardDecay: INDArray): (INDArray, INDArray, INDArray) = {
     //    val newv0 = (v1 + reward - avg) * valueDecay + (1 - valueDecay) * avg
     val target = v1.add(reward).subi(avg)
-    val delta = target.sub(v0)
     val newv0 = target.mul(valueDecay).subi(valueDecay.sub(1).muli(avg))
+    //val delta = target.sub(v0)
+    val delta = newv0.sub(v0)
     //val newAvg = rewardDecay * avg + (1 - rewardDecay) * reward
     val newAvg = rewardDecay.mul(avg).subi(rewardDecay.sub(1).muli(reward))
     (delta, newv0, newAvg)
