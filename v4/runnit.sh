@@ -1,4 +1,5 @@
 #/bin/bash
+# runnit.sh testid instanceId epochs
 if [ -z "$3" ]; then
    n=99
 else

@@ -33,25 +33,33 @@ import org.nd4j.linalg.factory.Nd4j._
 import org.scalatest.{FunSpec, Matchers}
 
 class ActorCriticAgentTest extends FunSpec with Matchers {
+  val V0 = 1.1
+  val V1 = 3.0
+  val Reward = 2.0
+  val Average = 1.3
+  val ValueDecay = 0.9
+  val RewardDecay = 0.8
 
   create()
 
   describe("ActorCriticAgent") {
     it("should compute delta") {
-      val v0 = create(Array[Double](1))
-      val v1 = create(Array[Double](3))
-      val reward = create(Array[Double](2))
-      val avg = create(Array[Double](1))
-      val valueDecay = create(Array[Double](0.9))
-      val rewardDecay = create(Array[Double](0.8))
+      val v0 = ones(1).muli(V0)
+      val v1 = ones(1).muli(V1)
+      val reward = ones(1).muli(Reward)
+      val avg = ones(1).muli(Average)
+      val valueDecay = ones(1).muli(ValueDecay)
+      val rewardDecay = ones(1).muli(RewardDecay)
 
       val (delta, newv0, newAvg) = ActorCriticAgent.computeDelta(v0, v1, reward, avg, valueDecay, rewardDecay)
 
-      val ExpectedV0 = 0.9 * (5 - 1) + 0.1 * 1
-      val ExpectedDelta = 5 - 1 - 1
-      newv0 shouldBe create(Array[Double](ExpectedV0))
-      delta shouldBe create(Array[Double](ExpectedDelta))
-      newAvg shouldBe create(Array[Double](0.8 * 1 + 0.2 * 2))
+      val ExpectedV0 = ValueDecay * (V1 + Reward - Average) + (1 - ValueDecay) * Average
+      val ExpectedDelta = ExpectedV0 - V0
+      val ExpectedAverage = RewardDecay * Average + (1 - RewardDecay) * Reward
+
+      newv0 shouldBe ones(1).muli(ExpectedV0)
+      delta shouldBe ones(1).muli(ExpectedDelta)
+      newAvg shouldBe ones(1).muli(ExpectedAverage)
     }
   }
 }

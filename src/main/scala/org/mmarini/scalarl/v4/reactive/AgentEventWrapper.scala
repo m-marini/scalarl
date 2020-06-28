@@ -58,10 +58,8 @@ class AgentEventWrapper(val observable: Observable[AgentEvent]) extends Observab
       val v1 = ActorCriticAgent.v(outs1)
       val v01 = ActorCriticAgent.v(outs01)
       val (delta, vStar, _) = agent.computeDelta(v0, v1, reward)
-      val deltaCritic = v0.distance2(vStar)
-      val deltaCritic1 = v01.distance2(vStar)
       val avg = agent1.avg
-      val actorsKpis = (for {
+      val actorsKpis = for {
         ((a0, a1), action) <- agent.actors.zip(agent1.actors).zipWithIndex
       } yield {
         (a0, a1) match {
@@ -69,30 +67,19 @@ class AgentEventWrapper(val observable: Observable[AgentEvent]) extends Observab
             val pr = actor.preferences(outs0)
             val prStar = PolicyActor.computeActorLabel(pr, actions.getInt(action), actor.alpha, delta)
             val pr1 = actor1.preferences(outs01)
-            val deltaActor = pr.distance2(prStar)
-            val deltaActor1 = pr1.distance2(prStar)
-            Seq(actor.alpha.getDouble(0L), deltaActor, deltaActor1)
+            hstack(actor.alpha, pr, prStar, pr1)
           case (actor: GaussianActor, actor1: GaussianActor) =>
             val (mu, h, sigma) = actor.muHSigma(outs0)
             val (muStar, hStar) = GaussianActor.computeActorTarget(
               actions.getColumn(actor.dimension),
               actor.eta, delta, mu, h, sigma, actor.range)
-            val (mu1, h1, _) = actor.muHSigma(outs0)
-            val deltaMu = mu.distance2(muStar)
-            val deltaMu1 = mu1.distance2(muStar)
-            val deltaH = h.distance2(hStar)
-            val deltaH1 = h1.distance2(hStar)
-            Seq(actor.eta.getDouble(0L), deltaMu, deltaMu1,
-              actor.eta.getDouble(1L), deltaH, deltaH1)
-          case _ => Seq()
+            val (mu1, h1, _) = actor1.muHSigma(outs0)
+            hstack(actor.eta.getColumn(0), mu, muStar, mu1,
+              actor.eta.getColumn(1L), h, hStar, h1)
+          case _ => zeros(0)
         }
-      }).flatten
-      val kpis = create((
-        deltaCritic +:
-          deltaCritic1 +:
-          avg.getDouble(0L) +:
-          actorsKpis).toArray)
-
+      }
+      val kpis = hstack((v0 +: vStar +: v01 +: avg +: actorsKpis).toArray: _ *)
       kpis
     case _ => zeros(0)
   }))
