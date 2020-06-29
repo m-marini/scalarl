@@ -6,15 +6,15 @@ env:
   actionConfig: DiscreteActions
   dt: 0.25
   h0Range: 10
-  z0: 3
-  fuel: 30
+  z0: 20
+  fuel: 100
   zMax: 150
   hRange: 500
   zRange: 150
   vhRange: 24
   vzRange: 12
   landingRadius: 10
-  landingVH: 0.5
+  landingVH: 2
   landingVZ: 4
   g: 1.6
   maxAH: 1
@@ -40,16 +40,16 @@ agent:
     shortcuts:
       - [ 1, 4 ]
     updater: Sgd
-    learningRate: 10e-3
-    maxAbsGradients: 10
+    learningRate: 100e-6
+    maxAbsGradients: 100
     maxAbsParameters: 10e3
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 30
+      alpha: 70
     - type: PolicyActor
-      alpha: 30
+      alpha: 70
     - type: PolicyActor
-      alpha: 30
+      alpha: 70
 session:
   numSteps: 10000

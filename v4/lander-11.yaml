@@ -50,10 +50,10 @@ agent:
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 500
+      alpha: 800
     - type: PolicyActor
-      alpha: 500
+      alpha: 800
     - type: PolicyActor
-      alpha: 500
+      alpha: 800
 session:
   numSteps: 10000

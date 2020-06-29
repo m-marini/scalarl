@@ -19,7 +19,7 @@ Description of Actor Critic Agent and definitions of performance indicators
 
 \section{Actor Critic Agent}
 
-The Policy Actor Critic Agent is composed by an artificial neural network (ANN) that generates the differential state value of critic component and the policy parameters for action selection of each actor (the action dimensions) from the state input signals.
+The Policy Actor Critic Agent is composed by an artificial neural network (ANN) that generates the differential state value of critic component and the policy parameters for action selection of each actor (the action space dimensions) from the state input signals.
 At each iteration with the environment, the agent computes the average reward $r_\pi$ and the differential TD error $ \delta_t $
 \begin{equation}
 \delta_t = r_t - r_\pi + v_\pi(s_{t+1}) - v_\pi(s_t)	
@@ -31,51 +31,51 @@ If the error is positive the agent changes the policy reinforcing the current st
 
 If the error is negative the agent changes the policy weakening the current strategy. It reduces the probabilities of selected actions and increments the probabilities of the other actions.
 
-The magnitude of changes is proportional to the TD Error by a $ \alpha_a $ parameter that allows to control the convergence of the algorithm.
+The magnitude of changes is proportional to the TD Error by a $ \alpha_i $ parameter for each $ i $ actor that allows to control the convergence of the algorithm.
 
-The TD error is used to determine the updated  output values and train the AAN with these expected outputs.
+The TD error is used to determine the updated output values and train the AAN with these expected outputs.
 
 \subsection{Discrete Policy Actor}
 
-The policy actor computes the probabilities $ \pi_a(s) $ of choose action $ a $ at status $ s $.
-The function is the softmax of the actions preferences $ h_a(s) $ given by the ANN 
+The policy actor computes the probabilities $ \pi_i(a, s) $ of choose action $ a $ at status $ s $ for the actor $ i $.
+The function is the softmax of the actions preferences $ h_{ia}(s) $ given by the ANN 
 \begin{equation}
-	\pi(a, s) = \frac{e^{h_a(s)}}{\sum_k e^{h_k(s)}}
+	\pi_i(a, s) = \frac{e^{h_{ia}(s)}}{\sum_k e^{h_{ik}(s)}}
 \end{equation}
 simplifying the notation with
 \begin{align*}
-	\pi(a, s) & = \pi_a
+	\pi_i(a, s) & = \pi_{ia}
 	\\
-	h_a(s) & = h_a
+	h_{ia}(s) & = h_{ia}
 \end{align*}
 
 To train the ANN the agent computes the updated actor preferences at each step $ t $
 \begin{align}
-h^*_a(s_t) = h_a(s_t) + \alpha_a \delta_{h_a}(t) 
+h^*_{ia}(s_t) = h_{ia}(s_t) + \alpha_i \delta_{h_{ia}}(t) 
 \end{align}
-where $ \delta_{h_a}(t) $ is the TD error back-propagated to the preference $ h_a $ 
+where $ \delta_{h_{ia}}(t) $ is the TD error back-propagated to the preference $ h_{ia} $ 
 \begin{align*}
-\delta_{h_a}(t)&	= \delta(t) \nabla \ln \pi_a
+\delta_{h_{ia}}(t)&	= \delta(t) \nabla \ln \pi_{ia}
 \end{align*}
 The policy gradient function is
 \begin{align*}
 \begin{split}
-	\nabla \ln \pi_a& = \frac{1}{\pi_a}
-	\frac{\partial}{\partial h_a} \pi_a
+	\nabla \ln \pi_{ia}& = \frac{1}{\pi_{ia}}
+	\frac{\partial}{\partial h_{ia}} \pi_{ia}
 	\\
-	& = \frac{1}{\pi_a ( \sum_k e^{h_k} )^2}
+	& = \frac{1}{\pi_{ia} ( \sum_k e^{h_{ik}} )^2}
 	\left[
-		e^{h_a} \nabla h_a - e^{h_a} \nabla \sum_k e^{h_k}
+		e^{h_{ia}} \nabla h_{ia} - e^{h_{ia}} \nabla \sum_k e^{h_{ik}}
 	\right]
 	\\
-	& = \frac{1} { \sum_k e^{h_k}}
+	& = \frac{1} { \sum_k e^{h_{ik}}}
 	\left[
-		\nabla h_a - \sum_k \nabla e^{h_k}
+		\nabla h_{ia} - \sum_k \nabla e^{h_{ik}}
 	\right]
 	\\
-	& = \frac{1} { \sum_k e^{h_k}}
+	& = \frac{1} { \sum_k e^{h_{ik}}}
 	\left[
-		\nabla h_a - \sum_k e^{h_k} \nabla h_k
+		\nabla h_{ia} - \sum_k e^{h_{ik}} \nabla h_{ik}
 	\right]
 	\\
 \end{split}
@@ -83,131 +83,131 @@ The policy gradient function is
 
 Let be
 \begin{align*}
-	A_i(a) = 1, \Rightarrow i = a 
+	A_j(a) = 1, \Rightarrow j = a 
 	\\
-	A_i(a) = 0 \Rightarrow i \ne a 
+	A_j(a) = 0 \Rightarrow j \ne a 
 \end{align*}
 then
 \begin{align*}
 \begin{split}
-	\nabla \ln \pi_a& = \frac{1}{\sum_k e^{h_k}} \sum_i
+	\nabla \ln \pi_{ia}& = \frac{1}{\sum_k e^{h_{ik}}} \sum_j
 	\left[
-		A_i(a) - e^{h_i} 
-	\right] \nabla h_i
+		A_j(a) - e^{h_{ij}} 
+	\right] \nabla h_{ij}
 	\\
-	& = \sum_i
-	\left[ \frac{ A_i(a)}{\sum_k e^{h_k}} - \pi_i
-	\right] \nabla h_i
+	& = \sum_j
+	\left[ \frac{ A_j(a)}{\sum_k e^{h_{ik}}} - \pi_{ij}
+	\right] \nabla h_{ij}
 \end{split}
 \end{align*}
 
 Finally
 \begin{align}
-\delta_{h_a}(t)&	= \delta(s_t) \sum_i \left[
-\frac{A_i(a_t)}{\sum_k e^{h_k}} - \pi_i
+\delta_{h_{ia}}(t)&	= \delta(s_t) \sum_j \left[
+\frac{A_j(a_t)}{\sum_k e^{h_{ik}}} - \pi_{ij}
 \right]
 \end{align}
 
 \subsection{Gaussian policy actor}
 
-The Gaussian policy actor computes the probabilities $ \pi(a, s) $ of choose a continuous action $ a $ at status $ s $ as a normal distributed function of two parameters $ \mu(s) $ and $ \sigma(s) $.
+The Gaussian policy actor computes the probabilities $ \pi_i(a, s) $ of choose a continuous action $ a $ at status $ s $ as a normal distributed function of two parameters $ \mu_i(s) $ and $ \sigma_i(s) $.
 
-We change the notation to avoid ambiguity between the constant $ \pi = 3.14 \dots $ and the policy $ \pi(a,s) $:
+We change the notation to avoid ambiguity between the constant $ \pi = 3.14 \dots $ and the policy $ \pi_i(a,s) $:
 \begin{align}
 \begin{split}
-\pi(a, s)&	= p(a, s)
+\pi_i(a, s)&	= p_i(a, s)
 \\
-&			= \frac{1}{\sigma(s) \sqrt{2 \pi}} e^{-\frac{(a-\mu(s))^2}{\sigma(s)^2}}
+&			= \frac{1}{\sigma_i(s) \sqrt{2 \pi}} e^{-\frac{(a - \mu_i(s))^2}{\sigma_i(s)^2}}
 \\
 \end{split}
 \end{align}
 \begin{align}
-\sigma(s)&	= e^{h_\sigma(s)}	
+\sigma_i(s)&	= e^{h_{i\sigma}(s)}	
 \end{align}
 
 Futhermore we change the notation to simplifying the equation:
 \begin{align*}
-p(a, s)& = p
+p_i(a, s)& = p_i
 \\
-\mu(s)& = \mu
+\mu_i(s)& = \mu_i
 \\
-\sigma(s)& = \sigma
+\sigma_i(s)& = \sigma_i
 \\
-h_\sigma(s)& = h_\sigma
+h_{i\sigma}(s)& = h_{i\sigma}
 \end{align*}
-to infere the gradient of logarithm of $ p $
+to infere the gradient of logarithm of $ p_i $
 \begin{align*}
-\nabla \ln p = \left(
-\frac{\partial}{\partial \mu} + \frac{\partial}{\partial h_\sigma}
+\nabla \ln p_i = \left(
+\frac{\partial}{\partial \mu_i} + \frac{\partial}{\partial h_{i\sigma}}
 \right)
-\ln p
+\ln p_i
 \end{align*}
-the partial derivative by $\mu$ is 
+the partial derivative by $ \mu_i $ is 
 \begin{align*}
 \\
-\frac{\partial}{\partial \mu} \ln p& = \frac{1}{p} \frac{\partial p}{\partial \mu}
+\frac{\partial}{\partial \mu_i} \ln p_i& = \frac{1}{p_i} \frac{\partial p_i}{\partial \mu_i}
 \\
-& = \frac{1}{p \sigma \sqrt{2 \pi} } e^{\frac{-(a-\mu)^2}{\sigma^2}} \frac{\partial}{\partial \mu} \left[ -\frac{(a-\mu)^2}{\sigma^2} \right]
+& = \frac{1}{p_i \sigma_i \sqrt{2 \pi} } e^{\frac{-(a-\mu_i)^2}{\sigma_i^2}} \frac{\partial}{\partial \mu_i} \left[ -\frac{(a-\mu_i)^2}{\sigma_i^2} \right]
 \\
-& = - \frac{1}{\sigma^2}[2 (a - \mu) (-1))]
+& = - \frac{1}{\sigma_i^2}[2 (a - \mu_i) (-1))]
 \\
-& = \frac{2}{\sigma^2}(a - \mu)
+& = \frac{2}{\sigma_i^2}(a - \mu_i)
 \\
-\frac{\partial}{\partial h_\sigma} \ln p& = \frac{1}{p} \frac{\partial p}{\partial \sigma} \frac{\partial \sigma}{\partial h_\sigma}
+\frac{\partial}{\partial h_{i\sigma}} \ln p_i& = \frac{1}{p_i} \frac{\partial p_i}{\partial \sigma_i} \frac{\partial \sigma_i}{\partial h_{i\sigma}}
 \\
-\frac{\partial p}{\partial \sigma}& = \frac{1}{\sigma^2 \sqrt{2 \pi}}
+\frac{\partial p_i}{\partial \sigma_i}& = \frac{1}{\sigma_i^2 \sqrt{2 \pi}}
 \left\{
-\sigma \frac{\partial}{\partial \sigma}
+\sigma_i \frac{\partial}{\partial \sigma_i}
 \left[
-e^{-\frac{(a-\mu)^2}{\sigma^2}}
+e^{-\frac{(a-\mu_i)^2}{\sigma_i^2}}
 \right]
-- e^{-\frac{(a-\mu)^2}{\sigma^2}}
+- e^{-\frac{(a-\mu_i)^2}{\sigma_i^2}}
 \right\}
 \\
-& = \frac{p}{\sigma}
+& = \frac{p_i}{\sigma_i}
 \left\{
-\sigma \frac{\partial}{\partial \sigma}
+\sigma_i \frac{\partial}{\partial \sigma_i}
 \left[
--(a - \mu)^2\sigma^{-2}
+-(a - \mu_i)^2\sigma_i^{-2}
 \right] - 1
 \right\}
 \\
-& = \frac{p}{\sigma}
+& = \frac{p_i}{\sigma_i}
 \left[
--\sigma (a - \mu)^2 (-2 \sigma^{-3}) - 1)
+-\sigma_i (a - \mu_i)^2 (-2 \sigma_i^{-3}) - 1)
 \right]
 \\
-& = \frac{p}{\sigma}
+& = \frac{p_i}{\sigma_i}
 \left[
-2(a-\mu)^2 \sigma^{-2} - 1
+2(a-\mu_i)^2 \sigma_i^{-2} - 1
 \right]
 \\
-\frac{\partial \sigma}{\partial h_\sigma}& = \sigma
-\frac{\partial}{\partial h_\sigma} \ln p
+\frac{\partial \sigma_i}{\partial h_{i\sigma}}& = \sigma_i
+\frac{\partial}{\partial h_{i\sigma}} \ln p_i
 \\
-& = \frac{1}{p}
-\frac{p}{\sigma}
+& = \frac{1}{p_i}
+\frac{p_i}{\sigma_i}
 \left[
-2(a-\mu)^2 \sigma^{-2} - 1
-\right] \sigma
+2(a-\mu_i)^2 \sigma_i^{-2} - 1
+\right] \sigma_i
 \\
-& = 2(a-\mu)^2 \sigma^{-2} - 1
+& = 2(a-\mu_i)^2 \sigma_i^{-2} - 1
 \end{align*}
 
 The backward propagated TD errors to the output network layer are
 \begin{align}
-\delta_\mu(t)&		= \frac{2}{\sigma^2}(a - \mu) \delta (t)
+\delta_{i\mu}(t)&		= \frac{2}{\sigma_i^2}(a - \mu_i) \delta (t)
 \\
-\delta_{h_\sigma}(t)&	= \left[
-2\frac{(a - \mu)^2}{\sigma^2} - 1
+\delta_{ih_\sigma}(t)&	= \left[
+2\frac{(a - \mu_i)^2}{\sigma_i^2} - 1
 \right] \delta(t)
 \end{align}
 
 The updated actor parameters are:
 \begin{align}
-\mu^*(s_t)&			= \mu(s_t) + \alpha_\mu \delta_\mu(t)
-\\
-h^*_\sigma(s_t)&	= h_\sigma(s_t) + \alpha_{h_\sigma} \delta_{h_\sigma}(t)
+	\mu_i^*(s_t)&			= \mu_i(s_t) + \alpha_{i\mu} \delta_{i\mu}(t)
+	\\
+	h^*_{i\sigma}(s_t)&	= h_{i\sigma}(s_t) + \alpha_{ih_\sigma} \delta_{ih_\sigma}(t)
 \end{align}
 
 \subsection{Learning process}
@@ -227,17 +227,69 @@ The ANN learning paramters can influence both in the quality of approximated fun
 High value of step-size parameter $ \eta $ increases the correction of weights increasing consequently the speed of adaptation, but can easily generate corrective value too big bringing the network to not converging behaviors.
 On the other hand small value of step-size parameter weakens the correction of weights decreasing the speed of adaptation.
 
-Also the actor parameters $ \alpha_a $, which modulate the policy changes from the critic, influence the improvement capacity.
-High value of $ \alpha_a $ determine strong policy changes even in the face of small errors, making it difficult a fine correction, the other way around very small value of $ \alpha_a $ bring very little variations on policy without improvement.
+Also the actor parameters $ \alpha_i $, which modulate the policy changes from the critic, influence the improvement capacity.
+High value of $ \alpha_i $ determine strong policy changes even in the face of small errors, making it difficult a fine correction, the other way around very small value of $ \alpha_a $ bring very little variations on policy without improvement.
 
-If the actor parameters that govern the policy have a limited range of values we may choose an $ \alpha_a $ so that the average of corrections is $ \varepsilon_a $ a fraction of the limited range.
+If the actor parameters that govern the policy have a limited range of values we may choose an $ \alpha_i = \alpha^*_i $ so that the average of corrections is $ \varepsilon_i $ a fraction of the limited range.
+
+For the discrete policy actors we calculate the average of squared preferences variations $ \Delta^2h_{i} $
 \begin{align*}
-	\alpha_a &	= \frac{\varepsilon_a}{\sqrt{\frac{1}{n} \sum_i^n \delta^2_{h_a}(i)}}
+	h^*_{ia}(t) - h_{ia}(t)&=	\Delta h_{ia}(t)
 	\\
-	\delta_{h_a}(i) & = \frac{h^*_a(i) -h_a(i)}{\alpha'_a} 
+	&=	\alpha_i \delta_{h_{ia}}(t)
+	\\
+	\Delta^2h_{i}(t)&=			\frac{1}{m} \sum_a^m \Delta h_{ia}(t)
+	\\
+	\Delta^2h_{i}&=			\frac{1}{n} \sum_t^n \Delta^2 h_{i}(t)
+	\\
+	&=			\frac{1}{n}\frac{1}{m}\sum_t^n \sum_a^m \Delta^2 h_{ia}(t)
+	\\
+	&=	\alpha^2_i\frac{1}{n}\frac{1}{m}\sum_t^n \sum_a^m  \delta^2_{h_{ia}}(t)
+	\\
+	\Delta^2h_i &=	\varepsilon^2_i
+	\\
+	\alpha^*_i&=	\frac{\varepsilon_i}{\sqrt{\frac{1}{n} \frac{1}{m}\sum_t^n \sum_a^m \delta^2 h_{ia}(t)}}
 \end{align*}
+if $ \alpha_i $ is the value used in the session then
 \begin{align}
-	\alpha_a &	= \frac{\varepsilon_a}{\sqrt{\frac{1}{n} \sum_i^n (h^*_a(i) - h_a(i))^{2}}}\alpha'_a
+	\alpha^*_i&=	\frac{\varepsilon_i}{\sqrt{\frac{1}{n} \frac{1}{m} \sum_t^n \sum_a^m \Delta^2 h_{ia}(t)}} \alpha_i
+\end{align}
+
+For the Gaussian policy actors we calculate the average of squared parameter variations $ \Delta^2\mu_i$ and $ \Delta^2 h_{i\sigma} $
+\begin{align*}
+	\mu^*_i(t) - \mu_i(t)&=	\Delta \mu_i(t)
+	\\
+	&=	\alpha_{i\mu} \delta_{i\mu}(t)
+	\\
+	\Delta^2\mu_{i}&=			\frac{1}{n} \sum_t^n \Delta^2 \mu_i(t)
+	\\
+	&=	\alpha^2_{i\mu}\frac{1}{n}\sum_t^n  \delta^2_{\mu_{i}}(t)
+	\\
+	\Delta^2\mu_i &=	\varepsilon^2_{i\mu}
+	\\
+	\alpha^*_{i\mu}&=	\frac{\varepsilon_{i\mu}}{\sqrt{\frac{1}{n} \sum_t^n \delta^2 \mu_i(t)}}
+\end{align*}
+if $ \alpha_{i\mu} $ is the value used in the session then
+\begin{align}
+	\alpha^*_{i\mu}&=	\frac{\varepsilon_{i\mu}}{\sqrt{\frac{1}{n} \sum_t^n  \Delta^2 \mu_i(t)}} \alpha_{i\mu}
+\end{align}
+
+\begin{align*}
+	h^*_{i\sigma}(t) - h_{i\sigma}(t)&=	\Delta h_{i\sigma}(t)
+	\\
+	&=	\alpha_{i\sigma} \delta_{ih_\sigma}(t)
+	\\
+	\Delta^2h_{i\sigma}&=			\frac{1}{n} \sum_t^n \Delta^2 h_{i\sigma}(t)
+	\\
+	&=	\alpha^2_{i\sigma}\frac{1}{n}\sum_t^n  \delta^2_{ih_\sigma}(t)
+	\\
+	\Delta^2h_{i\sigma} &=	\varepsilon^2_{i\sigma}
+	\\
+	\alpha^*_{i\sigma}&=	\frac{\varepsilon_{i\sigma}}{\sqrt{\frac{1}{n} \sum_t^n \delta^2 h_{i\sigma}(t)}}
+\end{align*}
+if $ \alpha_{i\sigma} $ is the value used in the session then
+\begin{align}
+	\alpha^*_{i\sigma}&=	\frac{\varepsilon_{i\sigma}}{\sqrt{\frac{1}{n} \sum_t^n  \Delta^2 h_{i\sigma}(t)}} \alpha_{i\sigma}
 \end{align}
 
 \subsection{Performance}
@@ -274,27 +326,37 @@ The square error of critic output is
 	\delta^2(t)&	= [v^*(s_t) - v(s_{t+1})]^2
 \end{align*}
 
-The square error of actors outputs are
+The square error of discrete policy actor outputs are
 \begin{align*}
-	J_i&	= \sum_i (h_i^*(s_t) - h_i(s_t))^2
+	J_h(t)&	= \sum_i \sum_a^m (h_{ia}^*(s_t) - h_{ia}(s_t))^2
 \end{align*}
-where $ i $ is index of the actor output.
+and in case of Gaussian actor
+\begin{align*}
+	J_h(t)&	= \sum_i [\mu_i^*(s_t) - \mu_i(s_t)]^2 + [h_{i\sigma}^*(s_t) - h_{i\sigma}(s_t)]^2
+\end{align*}
+where $ i $ is index of the actor.
 
 Every time the network is trained the label outputs are fed to correct the weights of ANN.
-The resulting network has therefore a MSE that should be less than the original.
-
+The resulting network has therefore a MSE that should be less than the original
 \begin{align*}
 	\delta'^2(t)&	= [v^*(s_t) - v'(s_{t+1})]^2
-	\\
-	J'_i(t)&		= \sum_i (h_i^*(s_t) - h'_i(s_t))^2
 \end{align*}
+
+\begin{align*}
+	J'_h(t)&		= \sum_i \sum_a^m (h_{ia}^*(s_t) - h'_{ia}(s_t))^2
+\end{align*}
+for the discrete policy agent and
+\begin{align*}
+	J'_h(t)&	= \sum_i [\mu_i^*(s_t) - \mu'_i(s_t)]^2 + [h_{i\sigma}^*(s_t) - h'_{i\sigma}(s_t)]^2
+\end{align*}
+for the Gaussian actors.
 
 The ratio between the total MSE after and before the training activity indicates the quality of such activity.
 \begin{align}
 \begin{split}
-	J(t)&		= \delta^2(t) + \sum_i J_i(t)
+	J(t)&	= \delta^2(t) + J_h(t)
 	\\
-	J'(t)&	= \delta'^2(t) + \sum_i J'_i(t)
+	J'(t)&	= \delta'^2(t) + J'_h(t)
 	\\
 	K(t)&	= \frac{J'(t)}{J(t)}
 \end{split}
