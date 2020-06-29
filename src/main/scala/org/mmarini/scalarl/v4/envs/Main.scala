@@ -29,6 +29,8 @@
 
 package org.mmarini.scalarl.v4.envs
 
+import java.time.Clock
+
 import com.typesafe.scalalogging.LazyLogging
 import monix.execution.Scheduler
 import monix.execution.Scheduler.global
@@ -95,13 +97,48 @@ object Main extends LazyLogging {
       session.lander().filterFinal().logInfo().subscribe()
       session.steps.monitorInfo().observable.sample(2 seconds).logInfo().subscribe()
 
+      val start = Clock.systemDefaultZone().instant()
       session.run(random)
 
-      logger.info("Session completed.")
+      val end = Clock.systemDefaultZone().instant()
+      val elapsed = java.time.Duration.between(start, end)
+
+      dumpFile.foreach(filename => {
+        logger.info("Dump file {}", filename);
+      })
+
+      kpiFile.foreach(filename => {
+        logger.info("Kpi file {}", filename);
+      })
+
+      logger.info("Session completed in {}.", formatDuration(elapsed))
     } catch {
       case ex: Throwable =>
         logger.error(ex.getMessage, ex)
         throw ex
     }
+  }
+
+  def formatDuration(duration: java.time.Duration): String = {
+    val ms = duration.toMillis
+    val days = ms / (24 * 60 * 60 * 1000)
+    val ms1 = ms - days * (24 * 60 * 60 * 1000)
+    val hours = ms1 / (60 * 60 * 1000)
+    val ms2 = ms1 - hours * (60 * 60 * 1000)
+    val mins = ms2 / (60 * 1000)
+    val secs = (ms2 - mins * (60 * 1000)).toDouble / 1000.0
+    val sec = ms / 1000
+
+    val r = StringBuilder.newBuilder
+    if (days != 0) {
+      r.append(f"""${days}%d days ${hours}%dh ${mins}%d' ${secs}%.3f"""")
+    } else if (hours != 0) {
+      r.append(f"""${hours}%dh ${mins}%d' ${secs}%.3f"""")
+    } else if (mins != 0) {
+      r.append(f"""${mins}%d' ${secs}%.3f"""")
+    } else {
+      r.append(f"""${secs}%.3f"""")
+    }
+    r.toString
   }
 }
