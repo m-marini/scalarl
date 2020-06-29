@@ -50,11 +50,11 @@ agent:
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 1
+      alpha: 7
     - type: PolicyActor
-      alpha: 1
+      alpha: 7
     - type: PolicyActor
-      alpha: 1
+      alpha: 7
   planner:
     planningSteps: 5
     threshold: 10e-6
@@ -68,4 +68,4 @@ agent:
     actionsKey:
       type: Discrete
 session:
-  numSteps: 30000
+  numSteps: 10000
