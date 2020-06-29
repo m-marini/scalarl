@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #86: VCrash priority
 - Issue #89: KPI review
 - Issue #91: Dump output on kpi
+- Issue #93: Report session duration
 
 ### Fixed
 
