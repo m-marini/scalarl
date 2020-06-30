@@ -22,17 +22,20 @@ function comparativeCharts(FILES = [
     YR = movmean(X, LENGTH)(XR, :);
     REWARDS(:, (i - 1) * 2 + 1) = YR(:, 1);
     ERRORS(:, (i - 1) * 2 + 1) = YR(:, 2);
-    REWARDS(:, (i - 1) * 2 + 2) = logreg(XX, X(:, 1))(XR, :);
-    ERRORS(:, (i - 1) * 2 + 2)  = expreg(XX, X(:, 2))(XR, :);
-    LEGENDS{(i - 1) * 2 + 1} = [FILES(i, :) ""];
-    LEGENDS{(i - 1) * 2 + 2} = [FILES(i, :) " trend"];
+    [DATA AA MODE] = regression(X(:, 1));
+    REWARDS(:, (i - 1) * 2 + 2) = DATA(XR, :);
+    LEGENDS{1, (i - 1) * 2 + 1} = [FILES(i, :) ""];
+    LEGENDS{1, (i - 1) * 2 + 2} = [MODE " " FILES(i, :)];
+#    ERRORS(:, (i - 1) * 2 + 2)  = expreg(XX, X(:, 2))(XR, :);
+    [DATA AA MODE] = regression(X(:, 2));
+    ERRORS(:, (i - 1) * 2 + 2)  = DATA(XR, :);
+    LEGENDS{2, (i - 1) * 2 + 1} = [FILES(i, :) ""];
+    LEGENDS{2, (i - 1) * 2 + 2} = [MODE " " FILES(i, :)];
   endfor
-  
-  LEGENDS
   
   clf;
   subplot(1,2,1);
-  plot(XR, REWARDS);
+  autoplot(XR, REWARDS);
   grid on;
   title("Rewards");
   legend(LEGENDS{1,:});
@@ -41,6 +44,6 @@ function comparativeCharts(FILES = [
   semilogy(XR, ERRORS);
   grid on;
   title("Rewards");
-  legend(LEGENDS{1,:});
+  legend(LEGENDS{2,:});
 
 endfunction
