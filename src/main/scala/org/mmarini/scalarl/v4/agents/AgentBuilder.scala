@@ -101,8 +101,8 @@ object AgentBuilder extends LazyLogging {
       avg = avg,
       valueDecay = valueDecay,
       rewardDecay = rewardDecay,
-      transform = linearTransf(rewardRange),
-      invTransform = linearInverse(rewardRange),
+      denormalize = denormalize(rewardRange),
+      normalizer = normalize(rewardRange),
       planner = planner,
       agentObserver = subj
     )
@@ -147,13 +147,13 @@ object AgentBuilder extends LazyLogging {
                                          actionConfig: DiscreteAction,
                                          modelPath: Option[String]): PolicyActor = {
     val range = conf.get[List[Double]]("prefRange").toTry.map(x => create(x.toArray)).get.transpose()
-    val transfom = linearTransf(range)
-    val grad = linearInverse(range)
+    val transfom = denormalize(range)
+    val grad = normalize(range)
     PolicyActor(
       dimension = dimension,
       noOutputs = actionConfig.numValues,
-      transform = transfom,
-      inverse = grad,
+      denormalize = transfom,
+      normalize = grad,
       alpha = conf.get[Double]("alpha").toTry.map(ones(1).muli(_)).get)
   }
 
@@ -177,13 +177,13 @@ object AgentBuilder extends LazyLogging {
     require(sigmaRange.length == 2, s"sigmaRange must have 2 values")
     require(sigmaRange.min > 0, s"sigmaRange must be positive")
     val range = vstack(create(muRange), log(create(sigmaRange))).transpose
-    val denorm = linearTransf(range)
-    val normalize = linearInverse(range)
+    val denorm = denormalize(range)
+    val norm = normalize(range)
     GaussianActor(
       dimension = dimension,
       eta = create(Array(alphaMu, alphaSigma)),
       denormalize = denorm,
-      normalize = normalize)
+      normalize = norm)
   }
 
   /**

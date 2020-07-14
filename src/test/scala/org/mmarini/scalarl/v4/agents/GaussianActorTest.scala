@@ -32,7 +32,6 @@ package org.mmarini.scalarl.v4.agents
 import org.mmarini.scalarl.v4.Utils._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j._
-import org.nd4j.linalg.ops.transforms.Transforms._
 import org.scalatest.{FunSpec, Matchers}
 
 class GaussianActorTest extends FunSpec with Matchers {
@@ -42,19 +41,18 @@ class GaussianActorTest extends FunSpec with Matchers {
 
   create()
 
-
   private val Eta: INDArray = ones(2)
   private val Range = create(Array(
     Array(-MuRange, -HRange),
     Array(MuRange, HRange)
   ))
-  private val denormalize = linearTransf(Range)
-  private val normalize = linearInverse(Range)
+  private val denorm = denormalize(Range)
+  private val norm = normalize(Range)
 
   def actor(eta: INDArray): GaussianActor = GaussianActor(dimension = 0,
     eta = eta,
-    denormalize = denormalize,
-    normalize = normalize)
+    denormalize = denorm,
+    normalize = norm)
 
   describe("GaussianActor") {
     it("should compute mu h sigma") {
@@ -76,7 +74,7 @@ class GaussianActorTest extends FunSpec with Matchers {
 
       describe("with action = mu") {
         val actions = mu
-        val out = normalize(hstack(mu, h))
+        val out = norm(hstack(mu, h))
         val outs = Array(out, out)
 
         describe("with delta > 0") {
@@ -107,7 +105,7 @@ class GaussianActorTest extends FunSpec with Matchers {
 
       describe("whith action > mu") {
         val actions = mu.add(1)
-        val out = normalize(hstack(mu, h))
+        val out = norm(hstack(mu, h))
         val outs = Array(out, out)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
@@ -136,7 +134,7 @@ class GaussianActorTest extends FunSpec with Matchers {
 
       describe("whith action < mu") {
         val actions = mu.sub(1)
-        val out = normalize(hstack(mu, h))
+        val out = norm(hstack(mu, h))
         val outs = Array(out, out)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
@@ -165,7 +163,7 @@ class GaussianActorTest extends FunSpec with Matchers {
 
       describe("whith action >> mu") {
         val actions = mu.add(4.0)
-        val out = normalize(hstack(mu, h))
+        val out = norm(hstack(mu, h))
         val outs = Array(out, out)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
@@ -194,7 +192,7 @@ class GaussianActorTest extends FunSpec with Matchers {
 
       describe("whith action << mu") {
         val actions = mu.sub(4.0)
-        val out = normalize(hstack(mu, h))
+        val out = norm(hstack(mu, h))
         val outs = Array(out, out)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))

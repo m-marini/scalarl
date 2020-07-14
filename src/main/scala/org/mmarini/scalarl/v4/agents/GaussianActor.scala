@@ -39,8 +39,10 @@ import org.nd4j.linalg.ops.transforms.Transforms._
 /**
  * Gaussian Actor
  *
- * @param dimension the dimension index
- * @param eta       the eta (mu, sigma) parameters
+ * @param dimension   the dimension index
+ * @param eta         the eta (mu, sigma) parameters
+ * @param denormalize the output denormalizer function
+ * @param normalize   the output normalizer function
  */
 case class GaussianActor(dimension: Int,
                          eta: INDArray,

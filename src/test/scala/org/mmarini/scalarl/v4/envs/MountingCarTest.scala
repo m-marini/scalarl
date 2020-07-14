@@ -75,8 +75,8 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
   private val MidX: INDArray = ones(1).muli((MountingCarEnv.XLeft + MountingCarEnv.XRight) / 2)
   private val RewardRange: INDArray = create(Array(-2.0, 2.0)).transpose()
   private val Range: INDArray = create(Array(Array(-10.0, 10.0), Array(-3.0, 3.0)))
-  private val denorm = linearTransf(Range)
-  private val norm = linearInverse(Range)
+  private val denorm = denormalize(Range)
+  private val norm = normalize(Range)
 
   private val random: Random = getRandomFactory.getNewRandomInstance(Seed)
   private val events: PublishSubject[AgentEvent] = PublishSubject[AgentEvent]()
@@ -86,8 +86,8 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
     avg = zeros(1),
     rewardDecay = ones(1).muli(0.97),
     valueDecay = ones(1).muli(0.99),
-    transform = linearTransf(RewardRange),
-    invTransform = linearTransf(RewardRange),
+    denormalize = denormalize(RewardRange),
+    normalizer = denormalize(RewardRange),
     actors = Array(GaussianActor(dimension = 0,
       eta = create(Array(EtaMu, EtaHs)),
       denormalize = denorm,

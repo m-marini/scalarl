@@ -36,7 +36,7 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.weights.WeightInit
-import org.mmarini.scalarl.v4.Utils.{linearInverse, linearTransf}
+import org.mmarini.scalarl.v4.Utils.{normalize, denormalize}
 import org.mmarini.scalarl.v4.agents._
 import org.mmarini.scalarl.v4.{Agent, Session}
 import org.nd4j.linalg.activations.Activation
@@ -73,13 +73,13 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
     rewardDecay = ones(1).mul(RewardDecay),
     valueDecay = ones(1).mul(ValudeDecay),
     avg = zeros(1),
-    transform = linearTransf(RewardRange),
-    invTransform = linearInverse(RewardRange),
+    denormalize = denormalize(RewardRange),
+    normalizer = normalize(RewardRange),
     actors = Array(PolicyActor(
       dimension = 0,
       noOutputs = 2,
-      transform = linearTransf(range),
-      inverse = linearInverse(range),
+      denormalize = denormalize(range),
+      normalize = normalize(range),
       alpha = ones(1).muli(Alpha))),
     planner = Some(planner),
     agentObserver = events)

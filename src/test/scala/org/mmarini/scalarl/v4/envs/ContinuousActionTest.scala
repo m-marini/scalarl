@@ -71,16 +71,16 @@ class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
   private val Range: INDArray = create(Array(Array(-MuRange, -HRange), Array(MuRange, HRange)))
   private val RewardRange: INDArray = create(Array(-100.0, 0.0)).transpose()
   private val Eta = create(Array(EtaMu, EtaH))
-  private val denorm = linearTransf(Range)
-  private val norm = linearInverse(Range)
+  private val denorm = denormalize(Range)
+  private val norm = normalize(Range)
 
   def agent: ActorCriticAgent = ActorCriticAgent(
     network = network,
     avg = zeros(1),
     rewardDecay = ones(1).muli(RewardDecay),
     valueDecay = ones(1).muli(ValueDecay),
-    transform = linearTransf(RewardRange),
-    invTransform = linearInverse(RewardRange),
+    denormalize = denormalize(RewardRange),
+    normalizer = normalize(RewardRange),
     actors = Array(GaussianActor(dimension = 0,
       eta = Eta,
       denormalize = denorm,

@@ -39,14 +39,16 @@ import org.nd4j.linalg.ops.transforms.Transforms._
 /**
  * Actor critic agent
  *
- * @param dimension the dimension index
- * @param noOutputs the number of value for action
- * @param alpha     the alpha parameter
+ * @param dimension   the dimension index
+ * @param noOutputs   the number of value for action
+ * @param denormalize the output denormalizer function
+ * @param normalize   the output normalizer function
+ * @param alpha       the alpha parameter
  */
 case class PolicyActor(dimension: Int,
                        noOutputs: Int,
-                       transform: INDArray => INDArray,
-                       inverse: INDArray => INDArray,
+                       denormalize: INDArray => INDArray,
+                       normalize: INDArray => INDArray,
                        alpha: INDArray) extends Actor with LazyLogging {
 
   /**
@@ -92,7 +94,7 @@ case class PolicyActor(dimension: Int,
     val deltaH = z.mul(delta).muli(alpha)
     val hStar = h.add(deltaH)
     val hStarN = hStar.sub(mean(hStar))
-    val unclipped = inverse(hStarN)
+    val unclipped = normalize(hStarN)
     val actorLabels = clip(unclipped, -1, 1, copy = false)
     actorLabels
   }
@@ -111,20 +113,8 @@ case class PolicyActor(dimension: Int,
    * @param outputs the outputs
    */
   def preferences(outputs: INDArray): INDArray = {
-    val pr = transform(outputs)
+    val pr = denormalize(outputs)
     val pr1 = pr.sub(pr.mean())
     pr1
   }
-}
-
-object PolicyActor {
-
-
-  /**
-   * Returns the normalized preferences
-   *
-   * @param data the preferences
-   */
-  def normalize(data: INDArray): INDArray =
-    data.sub(mean(data))
 }

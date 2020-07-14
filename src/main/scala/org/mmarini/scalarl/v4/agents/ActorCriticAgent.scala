@@ -45,20 +45,23 @@ import org.nd4j.linalg.ops.transforms.Transforms.pow
  * The agent generates action based on the signals from the environment and learns the correct behaviour trying to
  * maximize the average rewords
  *
- * @param actors      the actors
- * @param network     the  network
- * @param avg         the average reward
- * @param valueDecay  the value decay parameter
- * @param rewardDecay the reward decay parameter
- * @param planner     the model to run planning
+ * @param actors        the actors
+ * @param network       the  network
+ * @param avg           the average reward
+ * @param valueDecay    the value decay parameter
+ * @param rewardDecay   the reward decay parameter
+ * @param denormalize   the output denormalizer function
+ * @param normalizer    the output normalizer function
+ * @param planner       the model to run planning
+ * @param agentObserver the agent event observer
  */
 case class ActorCriticAgent(actors: Seq[Actor],
                             network: ComputationGraph,
                             avg: INDArray,
                             valueDecay: INDArray,
                             rewardDecay: INDArray,
-                            transform: INDArray => INDArray,
-                            invTransform: INDArray  => INDArray,
+                            denormalize: INDArray => INDArray,
+                            normalizer: INDArray => INDArray,
                             planner: Option[Planner],
                             private val agentObserver: Observer[AgentEvent]) extends Agent {
 
@@ -111,7 +114,7 @@ case class ActorCriticAgent(actors: Seq[Actor],
     val (delta, newv0, newAvg) = computeDelta(v0, v1, reward)
 
     // Critic update
-    val criticLabel = clip(invTransform(newv0), -1, 1, copy = false)
+    val criticLabel = clip(normalizer(newv0), -1, 1, copy = false)
     val actorLabels = actors.map(_.computeLabels(outputs0, actions, delta, random))
 
     val newNet = network.clone()
@@ -164,7 +167,7 @@ case class ActorCriticAgent(actors: Seq[Actor],
    *
    * @param outputs the network outputs
    */
-  def v(outputs: Array[INDArray]): INDArray = transform(outputs(0))
+  def v(outputs: Array[INDArray]): INDArray = denormalize(outputs(0))
 }
 
 /**

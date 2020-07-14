@@ -99,7 +99,7 @@ class UtilsTest extends FunSpec with Matchers {
     }
 
     it("should create linear transformation ") {
-      val f = Utils.linearTransf(create(Array(
+      val f = Utils.denormalize(create(Array(
         Array(0.0, -2.0),
         Array(5.0, 4.0))))
 
@@ -109,7 +109,7 @@ class UtilsTest extends FunSpec with Matchers {
     }
 
     it("should create linear inverse ") {
-      val f = Utils.linearInverse(create(Array(
+      val f = Utils.normalize(create(Array(
         Array(0.0, -2.0),
         Array(5.0, 4.0))))
 
