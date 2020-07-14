@@ -31,7 +31,6 @@ package org.mmarini.scalarl.v4.agents
 
 import com.typesafe.scalalogging.LazyLogging
 import org.mmarini.scalarl.v4.Utils._
-import org.mmarini.scalarl.v4.agents.PolicyActor._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
@@ -40,12 +39,16 @@ import org.nd4j.linalg.ops.transforms.Transforms._
 /**
  * Actor critic agent
  *
- * @param dimension the dimension index
- * @param noOutputs the number of value for action
- * @param alpha     the alpha parameter
+ * @param dimension   the dimension index
+ * @param noOutputs   the number of value for action
+ * @param denormalize the output denormalizer function
+ * @param normalize   the output normalizer function
+ * @param alpha       the alpha parameter
  */
 case class PolicyActor(dimension: Int,
                        noOutputs: Int,
+                       denormalize: INDArray => INDArray,
+                       normalize: INDArray => INDArray,
                        alpha: INDArray) extends Actor with LazyLogging {
 
   /**
@@ -71,9 +74,28 @@ case class PolicyActor(dimension: Int,
   override def computeLabels(outputs: Array[INDArray],
                              actions: INDArray,
                              delta: INDArray,
-                             random: Random): INDArray = {
-    val prefs = preferences(outputs)
-    val actorLabels = computeActorLabel(prefs, actions.getInt(dimension), alpha, delta)
+                             random: Random): INDArray = computeLabels(outputs = outputs,
+    actions = actions,
+    delta = delta)
+
+  /**
+   * Returns the actor labels
+   *
+   * @param outputs the outputs
+   * @param actions the actions
+   * @param delta   the td error
+   */
+  def computeLabels(outputs: Array[INDArray],
+                    actions: INDArray,
+                    delta: INDArray): INDArray = {
+    val h = preferences(outputs)
+    val pi = softmax(h)
+    val z = features(Seq(actions.getInt(dimension)), h.length()).subi(pi)
+    val deltaH = z.mul(delta).muli(alpha)
+    val hStar = h.add(deltaH)
+    val hStarN = hStar.sub(mean(hStar))
+    val unclipped = normalize(hStarN)
+    val actorLabels = clip(unclipped, -1, 1, copy = false)
     actorLabels
   }
 
@@ -83,35 +105,16 @@ case class PolicyActor(dimension: Int,
    * @param outputs the outputs
    */
   def preferences(outputs: Array[INDArray]): INDArray =
-    normalize(outputs(dimension + 1))
-}
-
-object PolicyActor {
-  val PreferenceRange = 7
+    preferences(outputs(dimension + 1))
 
   /**
-   * Returns the actor target label
+   * Returns the preferences
    *
-   * @param prefs  the preferences
-   * @param action the action
-   * @param alpha  the alpha parameter
-   * @param delta  the TD Error
+   * @param outputs the outputs
    */
-  def computeActorLabel(prefs: INDArray, action: Int, alpha: INDArray, delta: INDArray): INDArray = {
-    val pi = softmax(prefs)
-    val expTot = exp(prefs).sum()
-    // deltaH = (A_i(a) / expTot - pi) alpha delta
-    val A = features(Seq(action), prefs.length()).divi(expTot)
-    val deltaPref = A.sub(pi).muli(alpha).muli(delta)
-    val actorLabel = normalize(prefs.add(deltaPref))
-    actorLabel
+  def preferences(outputs: INDArray): INDArray = {
+    val pr = denormalize(outputs)
+    val pr1 = pr.sub(pr.mean())
+    pr1
   }
-
-  /**
-   * Returns the normalized preferences
-   *
-   * @param data the preferences
-   */
-  def normalize(data: INDArray): INDArray =
-    scaleClip(data.sub(mean(data)), PreferenceRange)
 }

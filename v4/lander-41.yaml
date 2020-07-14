@@ -44,7 +44,7 @@ agent:
     shortcuts:
       - [ 1, 4 ]
     updater: Sgd
-    learningRate: 10e-3
+    learningRate: 300e-6
     maxAbsGradients: 100
     maxAbsParameters: 10e3
     dropOut: 0.8

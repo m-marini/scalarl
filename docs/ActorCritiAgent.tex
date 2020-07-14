@@ -22,7 +22,7 @@ Description of Actor Critic Agent and definitions of performance indicators
 The Policy Actor Critic Agent is composed by an artificial neural network (ANN) that generates the differential state value of critic component and the policy parameters for action selection of each actor (the action space dimensions) from the state input signals.
 At each iteration with the environment, the agent computes the average reward $r_\pi$ and the differential TD error $ \delta_t $
 \begin{equation}
-\delta_t = r_t - r_\pi + v_\pi(s_{t+1}) - v_\pi(s_t)	
+\delta_t = R_{t+1} - \bar R + \hat v(S_{t+1}) - \hat v(S_t)	
 \end{equation}
 
 The differential TD error indicate how different is the differential state value determined by the current reward from the estimated differential state value.
@@ -37,177 +37,234 @@ The TD error is used to determine the updated output values and train the AAN wi
 
 \subsection{Discrete Policy Actor}
 
-The policy actor computes the probabilities $ \pi_i(a, s) $ of choose action $ a $ at status $ s $ for the actor $ i $.
-The function is the softmax of the actions preferences $ h_{ia}(s) $ given by the ANN 
-\begin{equation}
-	\pi_i(a, s) = \frac{e^{h_{ia}(s)}}{\sum_k e^{h_{ik}(s)}}
-\end{equation}
-simplifying the notation with
-\begin{align*}
-	\pi_i(a, s) & = \pi_{ia}
-	\\
-	h_{ia}(s) & = h_{ia}
-\end{align*}
-
-To train the ANN the agent computes the updated actor preferences at each step $ t $
+The policy actor computes the probabilities $ \pi(a|s) $ of choose action $ a $ at status $ s $.
+The probabilities are the softmax function of the action preferences $ h(s,a,\vec \theta) $ given by the ANN 
 \begin{align}
-h^*_{ia}(s_t) = h_{ia}(s_t) + \alpha_i \delta_{h_{ia}}(t) 
+	\pi(a|s, \vec \theta)
+	&= \frac{e^{h_a(s,a,\vec{\theta})}}{\sum_{b \in A} e^{h(s,b,\vec{\theta})}}
 \end{align}
-where $ \delta_{h_{ia}}(t) $ is the TD error back-propagated to the preference $ h_{ia} $ 
-\begin{align*}
-\delta_{h_{ia}}(t)&	= \delta(t) \nabla \ln \pi_{ia}
-\end{align*}
+
+To train the ANN the agent updates the $ \vec \theta $ parameters at each step $ t $
+\begin{align}
+	\vec \theta_{t+1} =
+	\vec \theta_t + \alpha \delta_t \nabla \ln \pi(A_t|S_t, \vec \theta_t) 
+\end{align}
+
 The policy gradient function is
 \begin{align*}
 \begin{split}
-	\nabla \ln \pi_{ia}& = \frac{1}{\pi_{ia}}
-	\frac{\partial}{\partial h_{ia}} \pi_{ia}
+	\nabla \ln \pi(A_t|S_t, \vec \theta)
+	& = \frac{1}{\pi(A_t|S_t, \vec \theta)}
+	\nabla \pi(A_t|S_t, \vec \theta)
 	\\
-	& = \frac{1}{\pi_{ia} ( \sum_k e^{h_{ik}} )^2}
+	\pi(a|s, \vec \theta)
+	&= \frac{e^{h_a(s,a,\vec{\theta})}}{D(s,\vec \theta)}
+	\\
+	D(s,\vec \theta)
+	&= \sum_{b \in A} e^{h(s,b,\vec{\theta})}
+	\\
+	\nabla \pi(A_t|S_t, \vec \theta)
+	& =
+	\frac{1}{D^2(S_t,\vec \theta)}
 	\left[
-		e^{h_{ia}} \nabla h_{ia} - e^{h_{ia}} \nabla \sum_k e^{h_{ik}}
-	\right]
+		D(S_t, \vec \theta) \nabla e^{h(S_t,A_t,\vec \theta)} - e^{h(S_t,A_t,\vec \theta)} \nabla D(S_t, \vec \theta)
+	\right] 
 	\\
-	& = \frac{1} { \sum_k e^{h_{ik}}}
+	& =	\frac{1}{D^2(S_t,\vec \theta)}
 	\left[
-		\nabla h_{ia} - \sum_k \nabla e^{h_{ik}}
-	\right]
+		D(S_t, \vec \theta) e^{h(S_t,A_t,\vec \theta)} \nabla h(S_t,A_t,\vec \theta)
+		- e^{h(S_t,A_t,\vec \theta)} \nabla D(S_t, \vec \theta)
+	\right] 
 	\\
-	& = \frac{1} { \sum_k e^{h_{ik}}}
+	& =
+	\frac{\pi(A_t|S_t,\vec \theta)}{D(S_t,\vec \theta)}
 	\left[
-		\nabla h_{ia} - \sum_k e^{h_{ik}} \nabla h_{ik}
-	\right]
+		D(S_t, \vec \theta) \nabla h(S_t,A_t,\vec \theta)
+		- \nabla D(S_t, \vec \theta)
+	\right] 
 	\\
+	\nabla D(s,\vec \theta)
+	&= \sum_{b \in A} \nabla e^{h(s,b,\vec \theta)}
+	\\
+	&= \sum_{b \in A} e^{h(s,b,\vec \theta)}	\nabla h(s,b,\vec \theta)
+	\\
+	\nabla \pi(A_t|S_t, \vec \theta)
+	& =
+	\frac{\pi(A_t|S_t,\vec \theta)}{D(S_t,\vec \theta)}
+	\left[
+		D(S_t, \vec \theta) \nabla h(S_t,A_t,\vec \theta)
+		- \sum_{b \in A} e^{h(s,b,\vec \theta)}	\nabla h(s,b,\vec \theta)
+	\right] 
 \end{split}
 \end{align*}
 
 Let be
 \begin{align*}
-	A_j(a) = 1, \Rightarrow j = a 
+	I(a, b) = 1, \Rightarrow a = b
 	\\
-	A_j(a) = 0 \Rightarrow j \ne a 
+	I(a,b) = 0 \Rightarrow a \ne b
 \end{align*}
 then
 \begin{align*}
 \begin{split}
-	\nabla \ln \pi_{ia}& = \frac{1}{\sum_k e^{h_{ik}}} \sum_j
-	\left[
-		A_j(a) - e^{h_{ij}} 
-	\right] \nabla h_{ij}
+	\sum_{b \in A} I(At, b) \nabla h(St, b), \vec \theta)
+	&= \nabla h(St, At), \vec \theta)
 	\\
-	& = \sum_j
-	\left[ \frac{ A_j(a)}{\sum_k e^{h_{ik}}} - \pi_{ij}
-	\right] \nabla h_{ij}
+	\nabla \pi(A_t|S_t, \vec \theta)
+	&=
+	\frac{\pi(A_t|S_t,\vec \theta)}{D(S_t,\vec \theta)}
+	\sum_{b \in A}
+	\left[
+		D(S_t, \vec \theta) I(A_t,b)
+		-  e^{h(S_t,b,\vec \theta)}
+	\right] 	
+	\nabla h(S_t,b,\vec \theta)
+	\\
+	\nabla \ln \pi(A_t|S_t, \vec \theta)
+	&=
+	\sum_{b \in A}
+	\left[
+		I(A_t,b)
+		-  \pi(S_t,b,\vec \theta)
+	\right] 	
+	\nabla h(S_t,b,\vec \theta)
+	\\
+	\delta_h(S_t, A_t, b, \theta_t)
+	&= \delta_t
+	\left[
+		I(A_t,b) - \pi(S_t,b,\vec \theta)
+	\right] 
+	\\
+	\vec \theta_{t+1}
+	&=
+	\vec \theta_t +
+	\sum_{b \in A}
+	\alpha \delta_h(S_t, A_t, b, \theta_t)  \nabla h(S_t,b,\vec \theta_t)
 \end{split}
 \end{align*}
 
-Finally
+The same result is obtained by training the network with labels
 \begin{align}
-\delta_{h_{ia}}(t)&	= \delta(s_t) \sum_j \left[
-\frac{A_j(a_t)}{\sum_k e^{h_{ik}}} - \pi_{ij}
-\right]
+\begin{split}
+	h^*(S_t,A_t,b) = h(S_t,b,\vec \theta_t) + 
+	\alpha \delta_h(S_t, A_t, b, \vec \theta_t)
+\end{split}
 \end{align}
 
 \subsection{Gaussian policy actor}
 
-The Gaussian policy actor computes the probabilities $ \pi_i(a, s) $ of choose a continuous action $ a $ at status $ s $ as a normal distributed function of two parameters $ \mu_i(s) $ and $ \sigma_i(s) $.
+The Gaussian policy actor computes the probabilities $ \pi(a|s) $ of choose a continuous action $ a $ at status $ s $ as a normal distributed function of two parameters $ \mu(s, \vec \theta_\mu) $ and $ \sigma(s,\vec \theta_h) $.
 
-We change the notation to avoid ambiguity between the constant $ \pi = 3.14 \dots $ and the policy $ \pi_i(a,s) $:
 \begin{align}
-\begin{split}
-\pi_i(a, s)&	= p_i(a, s)
-\\
-&			= \frac{1}{\sigma_i(s) \sqrt{2 \pi}} e^{-\frac{(a - \mu_i(s))^2}{\sigma_i(s)^2}}
-\\
-\end{split}
-\end{align}
-\begin{align}
-\sigma_i(s)&	= e^{h_{i\sigma}(s)}	
-\end{align}
-
-Futhermore we change the notation to simplifying the equation:
-\begin{align*}
-p_i(a, s)& = p_i
-\\
-\mu_i(s)& = \mu_i
-\\
-\sigma_i(s)& = \sigma_i
-\\
-h_{i\sigma}(s)& = h_{i\sigma}
-\end{align*}
-to infere the gradient of logarithm of $ p_i $
-\begin{align*}
-\nabla \ln p_i = \left(
-\frac{\partial}{\partial \mu_i} + \frac{\partial}{\partial h_{i\sigma}}
-\right)
-\ln p_i
-\end{align*}
-the partial derivative by $ \mu_i $ is 
-\begin{align*}
-\\
-\frac{\partial}{\partial \mu_i} \ln p_i& = \frac{1}{p_i} \frac{\partial p_i}{\partial \mu_i}
-\\
-& = \frac{1}{p_i \sigma_i \sqrt{2 \pi} } e^{\frac{-(a-\mu_i)^2}{\sigma_i^2}} \frac{\partial}{\partial \mu_i} \left[ -\frac{(a-\mu_i)^2}{\sigma_i^2} \right]
-\\
-& = - \frac{1}{\sigma_i^2}[2 (a - \mu_i) (-1))]
-\\
-& = \frac{2}{\sigma_i^2}(a - \mu_i)
-\\
-\frac{\partial}{\partial h_{i\sigma}} \ln p_i& = \frac{1}{p_i} \frac{\partial p_i}{\partial \sigma_i} \frac{\partial \sigma_i}{\partial h_{i\sigma}}
-\\
-\frac{\partial p_i}{\partial \sigma_i}& = \frac{1}{\sigma_i^2 \sqrt{2 \pi}}
-\left\{
-\sigma_i \frac{\partial}{\partial \sigma_i}
-\left[
-e^{-\frac{(a-\mu_i)^2}{\sigma_i^2}}
-\right]
-- e^{-\frac{(a-\mu_i)^2}{\sigma_i^2}}
-\right\}
-\\
-& = \frac{p_i}{\sigma_i}
-\left\{
-\sigma_i \frac{\partial}{\partial \sigma_i}
-\left[
--(a - \mu_i)^2\sigma_i^{-2}
-\right] - 1
-\right\}
-\\
-& = \frac{p_i}{\sigma_i}
-\left[
--\sigma_i (a - \mu_i)^2 (-2 \sigma_i^{-3}) - 1)
-\right]
-\\
-& = \frac{p_i}{\sigma_i}
-\left[
-2(a-\mu_i)^2 \sigma_i^{-2} - 1
-\right]
-\\
-\frac{\partial \sigma_i}{\partial h_{i\sigma}}& = \sigma_i
-\frac{\partial}{\partial h_{i\sigma}} \ln p_i
-\\
-& = \frac{1}{p_i}
-\frac{p_i}{\sigma_i}
-\left[
-2(a-\mu_i)^2 \sigma_i^{-2} - 1
-\right] \sigma_i
-\\
-& = 2(a-\mu_i)^2 \sigma_i^{-2} - 1
-\end{align*}
-
-The backward propagated TD errors to the output network layer are
-\begin{align}
-\delta_{i\mu}(t)&		= \frac{2}{\sigma_i^2}(a - \mu_i) \delta (t)
-\\
-\delta_{ih_\sigma}(t)&	= \left[
-2\frac{(a - \mu_i)^2}{\sigma_i^2} - 1
-\right] \delta(t)
-\end{align}
-
-The updated actor parameters are:
-\begin{align}
-	\mu_i^*(s_t)&			= \mu_i(s_t) + \alpha_{i\mu} \delta_{i\mu}(t)
+	\pi(a|s,\vec \theta_\mu, \vec \theta_h)
+	&= \frac{1}{\sigma(s,\vec \theta_h) \sqrt{2 \pi}} e^{-\frac{(a - \mu(s, \vec \theta_\mu))^2}{\sigma(s, \vec \theta_h)^2}}
 	\\
-	h^*_{i\sigma}(s_t)&	= h_{i\sigma}(s_t) + \alpha_{ih_\sigma} \delta_{ih_\sigma}(t)
+	\sigma(s, \vec \theta_h)
+	&	= e^{h(s, \vec \theta_h)}	
+\end{align}
+
+To train the ANN the agent updates the $ \vec \theta_\mu, \vec \theta_h $ parameters at each step $ t $
+\begin{align}
+	\vec \theta_{\mu t+1}
+	&= \vec \theta_{\mu t}
+	+ \alpha_\mu \delta_t \nabla \ln \pi(A_t|S_t, \vec \theta_{\mu t}, \vec \theta_{h t})
+	\\
+	\vec \theta_{h+1}
+	&= \vec \theta_{h t}
+	+ \alpha_h \delta_t \nabla \ln \pi(A_t|S_t, \vec \theta_{\mu t}, \vec \theta_{h t})
+\end{align}
+
+The policy gradient functions for $\vec \theta_\mu $ is
+\begin{align*}
+	\nabla \ln \pi(a|s,\vec \theta_\mu, \vec \theta_h)
+	& = \pi^{-1}(a|s,\vec \theta_\mu, \vec \theta_h) \nabla \pi(a|s,\vec \theta_\mu, \vec \theta_h)
+	\\
+	& = \pi^{-1}(a|s,\vec \theta_\mu, \vec \theta_h) \frac{\partial \pi(a|s,\vec \theta_\mu, \vec \theta_h)}{\partial \mu(s, \vec \theta_\mu)} \nabla \mu(s, \vec \theta_\mu)
+	\\
+	\frac{\partial \pi(a|s,\vec \theta_\mu, \vec \theta_h)}{\partial \mu(s, \vec \theta_\mu)}
+	& = - \frac{1}{\sigma^3(s, \vec \theta_h) \sqrt{2 \pi} } e^{-\frac{(a-\mu(s, \vec \theta_\mu))^2}{\sigma^2(s, \vec \theta_h)}} \frac{\partial }{\partial \mu(s,\vec \theta_\mu)} (a-\mu(s, \vec \theta_\mu))^2
+	\\
+	& = -\pi(a|s,\vec \theta_\mu, \vec \theta_h)  (-2) (a - \mu(s, \vec \theta_\mu)) \sigma^{-2}(s, \vec \theta_h)
+	\\
+	\nabla \ln \pi(a|s,\vec \theta_\mu, \vec \theta_h)
+	& = \frac{2 [a - \mu(s, \vec \theta_\mu)]}{\sigma^2(s, \vec \theta_h)} \nabla \mu(s, \vec \theta_\mu)
+\end{align*}
+The policy gradient functions for $\vec \theta_h $ is
+\begin{align*}
+	\nabla \ln \pi(a|s,\vec \theta_\mu, \vec \theta_h )
+	& = \pi^{-1}(a|s,\vec \theta_\mu, \vec \theta_h ) \nabla \pi(a|s,\vec \theta_\mu, \vec \theta_h)
+	\\
+	& = \pi^{-1}(a|s,\vec \theta_\mu, \vec \theta_h )
+	\frac{\partial \pi(a|s,\vec \theta_\mu, \vec \theta_h )}{\partial h(s, \vec \theta_h)} \nabla h(s, \vec \theta_h)
+	\\	
+	\frac{\partial \pi(a|s,\vec \theta_\mu, \vec \theta_h )}{\partial h(s, \vec \theta_h)}
+	&= \frac{\partial \pi(a|s,\vec \theta_\mu, \vec \theta_h )}{\partial \sigma(s, \vec \theta_h)}
+ 	\frac{\partial \sigma(s, \vec \theta_h)}{\partial h(s, \vec \theta_h)}
+	\\
+	\frac{\partial \pi(a|s,\vec \theta_\mu, \vec \theta_h )}{\partial \sigma(s, \vec \theta_h)}
+	& = \frac{
+	\left\{
+		\sigma(s,\vec \theta_h) \frac{\partial}{\partial \sigma(s,\vec \theta_h)}
+		\left[
+			e^{-\frac{(a-\mu(s, \vec \theta_\mu))^2}{\sigma^2(s,\vec \theta_h)}}
+		\right]
+		- e^{-\frac{(a-\mu(s, \vec \theta_\mu))^2}{\sigma^2(s, \vec \theta_h)}}
+	\right\}}{\sigma^2(s,\vec \theta_h) \sqrt{2 \pi}}	
+	\\
+	& = \frac{
+	e^{-\frac{(a-\mu(s, \vec \theta_\mu))^2}{\sigma^2(s,\vec \theta_h)}}
+	\left\{
+		-\sigma(s,\vec \theta_h)
+		(a-\mu(s,\vec \theta_\mu))^2
+		\frac{\partial}{\partial \sigma(s,\vec \theta_h)}
+		\left[
+			\sigma^{-2}(s,\vec \theta_h)
+		\right]
+		- 1
+	\right\} }{\sigma^2(s,\vec \theta_h) \sqrt{2 \pi}}	
+	\\
+	& = \frac{\pi(a|s,\vec \theta_\mu, \vec \theta_h)}{\sigma(s,\vec \theta_h)}
+	\left\{
+		2 \frac{(a-\mu(s,\vec \theta_\mu))^2} {\sigma^2(s,\vec \theta_h)} - 1
+	\right\}
+	\\
+	\frac{\partial \sigma(s,\vec \theta_h)}{\partial h(s,\vec \theta_h)}
+	&= e^{h(s, \vec \theta_h)}
+	\\
+	&= \sigma(s, \vec \theta_h)
+	\\
+	\nabla \ln \pi(a|s,\vec \theta_\mu, \vec \theta_h )
+	& = 2 \frac{(a-\mu(s,\vec \theta_\mu))^2} {\sigma^2(s,\vec \theta_h)} - 1
+\end{align*}
+
+Let be
+\begin{align*}
+	\delta_\mu(s, a, \vec \theta_\mu, \vec \theta_h )
+	&= \delta_t 2 \frac{a - \mu(s, \vec \theta_\mu)}{\sigma^2(s, \vec \theta_h)}
+	\\
+	\delta_h(s, a, \vec \theta_\mu, \vec \theta_h )
+	&= \delta_t 
+	\left[
+		2 \frac{(a-\mu(s,\vec \theta_\mu))^2} {\sigma^2(s,\vec \theta_h)} - 1
+	\right]
+\end{align*}
+
+The $ \vec \theta_\mu, \vec \theta_h $ parameters are updated by
+\begin{align*}
+	\vec \theta_{\mu t+1}
+	&= \vec \theta_{\mu t} + \alpha_\mu \delta_\mu(S_t, A_t, \vec \theta_{\mu t}, \vec \theta_{h t} ) 
+	\\
+	\vec \theta_{h t+1}
+	&= \vec \theta_{h t} + \alpha_h \delta_h(S_t, A_t, \vec \theta_{\mu t}, \vec \theta_{ht} ) 
+\end{align*}
+
+The same result is obtained by training the network with labels
+\begin{align}
+	\mu^*(S_t) = \mu(S_t,\vec \theta_{\mu t}) + 
+	\alpha_\mu \delta_\mu(S_t, A_t, \vec \theta_{\mu t}, \vec \theta_{ht})
+	\\
+	h^*(S_t) = h(S_t,\vec \theta_{\mu t}) + 
+\alpha_h \delta_h(S_t, A_t, \vec \theta_{\mu t}, \vec \theta_{ht})
 \end{align}
 
 \subsection{Learning process}
@@ -222,7 +279,7 @@ The error increases as the agent experiences new environment states or try new p
 
 Instead the agent internal factor, such as the ANN approximation, generates errors that can be reduced only to a low-bound limit value.
 
-The ANN learning paramters can influence both in the quality of approximated functions and in the  speed of adaptation.
+The ANN learning parameters can influence both in the quality of approximated functions and in the  speed of adaptation.
 
 High value of step-size parameter $ \eta $ increases the correction of weights increasing consequently the speed of adaptation, but can easily generate corrective value too big bringing the network to not converging behaviors.
 On the other hand small value of step-size parameter weakens the correction of weights decreasing the speed of adaptation.

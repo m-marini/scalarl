@@ -39,20 +39,26 @@ agent:
     - 30
     shortcuts:
       - [ 1, 4 ]
-    updater: Adam
-    learningRate: 10e-3
-    beta1: 0.9
-    beta2: 0.999
-    epsilonAdam: 1e-8
-    maxAbsGradients: 10
+    updater: Sgd
+    learningRate: 300e-6
+    maxAbsGradients: 100
     maxAbsParameters: 10e3
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 30
+      alpha: 20
     - type: PolicyActor
-      alpha: 30
+      alpha: 20
     - type: PolicyActor
-      alpha: 30
+      alpha: 20
+  planner:
+    planningSteps: 5
+    threshold: 10e-6
+    minModelSize: 300
+    maxModelSize: 1000
+    stateKey:
+      type: Discrete
+    actionsKey:
+      type: Discrete
 session:
   numSteps: 10000

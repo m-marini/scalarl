@@ -1,5 +1,5 @@
 ---
-version: "4"
+version: "5"
 env:
   type: LanderContinuous
   actionConfig: DiscreteActions
@@ -36,6 +36,7 @@ agent:
   avgReward: 0
   rewardDecay: 0.99
   valueDecay: 0.99
+  rewardRange: [-1, 1]
   network:
     seed: 1234
     numHiddens:
@@ -45,17 +46,20 @@ agent:
     shortcuts:
       - [ 1, 4 ]
     updater: Sgd
-    learningRate: 30e-3
+    learningRate: 300e-3
     maxAbsGradients: 100
     maxAbsParameters: 10e3
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 500
+      alpha: 300
+      prefRange: [-2, 2]
     - type: PolicyActor
-      alpha: 500
+      alpha: 300
+      prefRange: [-2, 2]
     - type: PolicyActor
-      alpha: 500
+      alpha: 300
+      prefRange: [-2, 2]
 session:
   numSteps: 10000
   seed: 1234

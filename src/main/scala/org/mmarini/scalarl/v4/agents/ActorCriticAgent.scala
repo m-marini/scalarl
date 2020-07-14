@@ -34,7 +34,7 @@ import java.io.File
 import monix.reactive.Observer
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.util.ModelSerializer
-import org.mmarini.scalarl.v4.agents.ActorCriticAgent._
+import org.mmarini.scalarl.v4.Utils.clip
 import org.mmarini.scalarl.v4.{Agent, Feedback, Observation}
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
@@ -45,18 +45,23 @@ import org.nd4j.linalg.ops.transforms.Transforms.pow
  * The agent generates action based on the signals from the environment and learns the correct behaviour trying to
  * maximize the average rewords
  *
- * @param actors      the actors
- * @param network     the  network
- * @param avg         the average reward
- * @param valueDecay  the value decay parameter
- * @param rewardDecay the reward decay parameter
- * @param planner     the model to run planning
+ * @param actors        the actors
+ * @param network       the  network
+ * @param avg           the average reward
+ * @param valueDecay    the value decay parameter
+ * @param rewardDecay   the reward decay parameter
+ * @param denormalize   the output denormalizer function
+ * @param normalizer    the output normalizer function
+ * @param planner       the model to run planning
+ * @param agentObserver the agent event observer
  */
 case class ActorCriticAgent(actors: Seq[Actor],
                             network: ComputationGraph,
                             avg: INDArray,
                             valueDecay: INDArray,
                             rewardDecay: INDArray,
+                            denormalize: INDArray => INDArray,
+                            normalizer: INDArray => INDArray,
                             planner: Option[Planner],
                             private val agentObserver: Observer[AgentEvent]) extends Agent {
 
@@ -109,7 +114,7 @@ case class ActorCriticAgent(actors: Seq[Actor],
     val (delta, newv0, newAvg) = computeDelta(v0, v1, reward)
 
     // Critic update
-    val criticLabel = newv0
+    val criticLabel = clip(normalizer(newv0), -1, 1, copy = false)
     val actorLabels = actors.map(_.computeLabels(outputs0, actions, delta, random))
 
     val newNet = network.clone()
@@ -156,19 +161,19 @@ case class ActorCriticAgent(actors: Seq[Actor],
     ModelSerializer.writeModel(network, new File(path, s"network.zip"), false)
     this
   }
-}
-
-/**
- *
- */
-object ActorCriticAgent {
 
   /**
    * Returns the estimation of state value
    *
    * @param outputs the network outputs
    */
-  def v(outputs: Array[INDArray]): INDArray = outputs(0)
+  def v(outputs: Array[INDArray]): INDArray = denormalize(outputs(0))
+}
+
+/**
+ *
+ */
+object ActorCriticAgent {
 
   /**
    * Returns delta, v0', avg'

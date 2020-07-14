@@ -1,8 +1,8 @@
 ---
-version: "4"
+version: "5"
 env:
   type: LanderContinuous
-  actionConfig: ContinuousActions
+  actionConfig: DiscreteActions
   dt: 0.25
   h0Range: 10
   z0: 20
@@ -36,8 +36,10 @@ agent:
   avgReward: 0
   rewardDecay: 0.99
   valueDecay: 0.99
+  rewardRange: [-1, 1]
   network:
     seed: 1234
+    activation: RELU
     numHiddens:
     - 100
     - 30
@@ -45,26 +47,32 @@ agent:
     shortcuts:
       - [ 1, 4 ]
     updater: Sgd
-    learningRate: 100e-6
+    learningRate: 100e-3
     maxAbsGradients: 100
     maxAbsParameters: 10e3
     dropOut: 0.8
   actors:
-    - type: GaussianActor
-      alphaMu: 1000e-3
-      alphaSigma: 1000e-3
-      muRange: [-1, 6]
-      sigmaRange: 10
-    - type: GaussianActor
-      alphaMu: 1000e-3
-      alphaSigma: 1000e-3
-      muRange: [-1, 6]
-      sigmaRange: 10
-    - type: GaussianActor
-      alphaMu: 1000e-3
-      alphaSigma: 1000e-3
-      muRange: [-1, 6]
-      sigmaRange: 10
+    - type: PolicyActor
+      alpha: 1000
+      prefRange: [-2.4, 2.4]
+    - type: PolicyActor
+      alpha: 1000
+      prefRange: [-2.4, 2.4]
+    - type: PolicyActor
+      alpha: 1000
+      prefRange: [-2.4, 2.4]
+  planner:
+    planningSteps: 5
+    threshold: 10e-6
+    minModelSize: 300
+    maxModelSize: 1000
+    stateKey:
+      type: Tiles
+      offset: [-1, -1, -1, -1, -1, -1]
+      max: [1, 1, 1, 1, 1, 1]
+      tiles: [100, 100, 100, 100, 100, 100]
+    actionsKey:
+      type: Discrete
 session:
-  numSteps: 1000
+  numSteps: 10000
   seed: 1234

@@ -31,7 +31,6 @@ package org.mmarini.scalarl.v4.agents
 
 import com.typesafe.scalalogging.LazyLogging
 import org.mmarini.scalarl.v4.Utils._
-import org.mmarini.scalarl.v4._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j.hstack
@@ -40,13 +39,15 @@ import org.nd4j.linalg.ops.transforms.Transforms._
 /**
  * Gaussian Actor
  *
- * @param dimension the dimension index
- * @param eta       the eta (mu, sigma) parameters
- * @param range     the range of mu and hs (muMin, muMax), (hsMin, hsMax)
+ * @param dimension   the dimension index
+ * @param eta         the eta (mu, sigma) parameters
+ * @param denormalize the output denormalizer function
+ * @param normalize   the output normalizer function
  */
 case class GaussianActor(dimension: Int,
                          eta: INDArray,
-                         range: INDArray) extends Actor with LazyLogging {
+                         denormalize: INDArray => INDArray,
+                         normalize: INDArray => INDArray) extends Actor with LazyLogging {
   /**
    * Returns the actor labels
    *
@@ -55,11 +56,43 @@ case class GaussianActor(dimension: Int,
    * @param delta   the td error
    * @param random  the random generator
    */
-  override def computeLabels(outputs: Array[INDArray], actions: INDArray, delta: INDArray, random: Random): INDArray = {
+  override def computeLabels(outputs: Array[INDArray],
+                             actions: INDArray,
+                             delta: INDArray,
+                             random: Random): INDArray = {
+    val (_, _, muStar, hStar) = muHStar(outputs, actions, delta)
+    val labels = normalize(hstack(muStar, hStar))
+    val clipLables = clip(labels, -1, 1)
+    clipLables
+  }
+
+  /**
+   * Returns (mu, h, mu*, h*)
+   *
+   * @param outputs the outputs
+   * @param actions the actions
+   * @param delta   the td error
+   */
+  def muHStar(outputs: Array[INDArray],
+              actions: INDArray,
+              delta: INDArray): (INDArray, INDArray, INDArray, INDArray) = {
     val (mu, h, sigma) = muHSigma(outputs)
-    val (mu1, h1) = GaussianActor.computeActorTarget(actions.getColumn(dimension), eta, delta, mu, h, sigma, range)
-    val actorLabels = hstack(mu1, h1)
-    actorLabels
+    val action = actions.getColumn(dimension)
+    val sigma2 = sigma.mul(sigma)
+    val deltaAction = action.sub(mu)
+    val ratio = deltaAction.div(sigma)
+    // deltaMu = 2 (action - mu) / sigma^2 delta
+    val deltaMu = deltaAction.
+      div(sigma2).
+      muli(delta).
+      muli(2).
+      muli(eta.getColumn(0))
+    // deltaH = (2 (action - mu)^2 / sigma^2) - 1) delta
+    val deltaH = ratio.mul(ratio).muli(2).subi(1).muli(delta).muli(eta.getColumn(1))
+
+    val muStar = mu.add(deltaMu)
+    val hStar = h.add(deltaH)
+    (mu, h, muStar, hStar)
   }
 
   /**
@@ -79,73 +112,14 @@ case class GaussianActor(dimension: Int,
    *
    * @param outputs the output of actor network
    */
-  def muHSigma(outputs: Array[INDArray]): (INDArray, INDArray, INDArray) =
-    GaussianActor.muHSigma(outputs(dimension + 1), range = range)
-
-  /** Returns the number of outputs */
-  override def noOutputs: Int = 2
-}
-
-/**
- *
- */
-object GaussianActor {
-  /**
-   * Returns mu, h, sigma
-   *
-   * @param out   the output of actor network
-   * @param range the range of mu and hs (muMin, muMax), (hsMin, hsMax)
-   */
-  def muHSigma(out: INDArray, range: INDArray): (INDArray, INDArray, INDArray) = {
-    val mu = clip(out.getColumn(0),
-      range.getDouble(0L, 0L),
-      range.getDouble(0L, 1L),
-      copy = true)
-    val h = clip(out.getColumn(1),
-      range.getDouble(1L, 0L),
-      range.getDouble(1L, 1L),
-      copy = true)
+  def muHSigma(outputs: Array[INDArray]): (INDArray, INDArray, INDArray) = {
+    val denorm = denormalize(outputs(dimension + 1))
+    val mu = denorm.getColumn(0)
+    val h = denorm.getColumn(1)
     val sigma = exp(h)
     (mu, h, sigma)
   }
 
-  /**
-   * Returns the target mu, h
-   *
-   * @param action the action
-   * @param eta    the alpha parameter
-   * @param delta  the TD Error
-   * @param mu     the mu
-   * @param h      the h sigma
-   * @param sigma  the sigma
-   * @param range  the range of mu and hs (muMin, muMax), (hsMin, hsMax)
-   */
-  def computeActorTarget(action: INDArray,
-                         eta: INDArray,
-                         delta: INDArray,
-                         mu: INDArray,
-                         h: INDArray,
-                         sigma: INDArray,
-                         range: INDArray): (INDArray, INDArray) = {
-    val sigma2 = sigma.mul(sigma)
-    val deltaAction = action.sub(mu)
-    val ratio = deltaAction.div(sigma)
-    // deltaMu = 2 (action - mu) / sigma^2 delta
-    val deltaMu = deltaAction.
-      div(sigma2).
-      muli(delta).
-      muli(2).
-      muli(eta.getColumn(0))
-    // deltaH = (2 (action - mu)^2 / sigma^2) - 1) delta
-    val deltaH = ratio.mul(ratio).muli(2).subi(1).muli(delta).muli(eta.getColumn(1))
-    val mu1 = clip(mu.add(deltaMu),
-      range.getDouble(0L, 0L),
-      range.getDouble(0L, 1L),
-      copy = true)
-    val h1 = clip(h.add(deltaH),
-      range.getDouble(0L, 0L),
-      range.getDouble(0L, 1L),
-      copy = true)
-    (mu1, h1)
-  }
+  /** Returns the number of outputs */
+  override def noOutputs: Int = 2
 }

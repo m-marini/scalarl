@@ -37,6 +37,7 @@ import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.weights.WeightInit
 import org.mmarini.scalarl.v4.Session
+import org.mmarini.scalarl.v4.Utils._
 import org.mmarini.scalarl.v4.agents.{ActorCriticAgent, AgentEvent, GaussianActor}
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.ndarray.INDArray
@@ -47,26 +48,39 @@ import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 import org.scalatest.{FunSpec, Matchers}
 
 class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
-  val Seed = 12345L
-  val NoSteps = 1000
-  val Hiddens = 10
-  val NoInputs: Long = Tiles(2).noFeatures
+  private val Seed = 12345L
+  private val NoSteps = 1000
+  private val NoInputs: Long = Tiles(2).noFeatures
+  private val EtaMu = 0.03
+  private val EtaH = 0.03
+  private val RewardDecay = 0.97
+  private val ValueDecay = 0.99
+  private val MuRange = 10
+  private val HRange = Math.log(10 / 3)
+  private val LearningRate = 300e-3
 
   create()
-  val random: Random =
-    getRandomFactory.getNewRandomInstance(Seed)
 
-  val events: PublishSubject[AgentEvent] = PublishSubject[AgentEvent]()
-  val Range: INDArray = create(Array(Array(-10.0, 10.0), Array(-7.0, 7 - 0)))
+  private val random: Random =
+    getRandomFactory.getNewRandomInstance(Seed)
+  private val events: PublishSubject[AgentEvent] = PublishSubject[AgentEvent]()
+  private val Range: INDArray = create(Array(Array(-MuRange, -HRange), Array(MuRange, HRange)))
+  private val RewardRange: INDArray = create(Array(-100.0, 0.0)).transpose()
+  private val Eta = create(Array(EtaMu, EtaH))
+  private val denorm = denormalize(Range)
+  private val norm = normalize(Range)
 
   def agent: ActorCriticAgent = ActorCriticAgent(
     network = network,
     avg = zeros(1),
-    rewardDecay = ones(1).muli(0.97),
-    valueDecay = ones(1).muli(0.99),
+    rewardDecay = ones(1).muli(RewardDecay),
+    valueDecay = ones(1).muli(ValueDecay),
+    denormalize = denormalize(RewardRange),
+    normalizer = normalize(RewardRange),
     actors = Array(GaussianActor(dimension = 0,
-      eta = ones(2).muli(0.03),
-      range = Range
+      eta = Eta,
+      denormalize = denorm,
+      normalize = norm
     )),
     planner = None,
     agentObserver = events)
@@ -76,19 +90,19 @@ class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
       nIn(NoInputs).
       nOut(1).
       lossFunction(LossFunction.MSE).
-      activation(Activation.IDENTITY).
+      activation(Activation.TANH).
       build()
     val actorOutLayer = new OutputLayer.Builder().
       nIn(NoInputs).
       nOut(2).
       lossFunction(LossFunction.MSE).
-      activation(Activation.IDENTITY).
+      activation(Activation.TANH).
       build()
 
     val conf = new NeuralNetConfiguration.Builder().
       seed(Seed).
       weightInit(WeightInit.XAVIER).
-      updater(new Sgd(3e-3)).
+      updater(new Sgd(LearningRate)).
       //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
       //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
@@ -115,6 +129,8 @@ class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {
       epoch = 0,
       env = s0,
       agent = agent)
+
+    //events.logKpi().subscribe()(global)
 
     val (_, agent1: ActorCriticAgent) = session.run(random)
     val actor = agent1.actors.head.asInstanceOf[GaussianActor]

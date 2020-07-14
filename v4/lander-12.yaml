@@ -1,5 +1,5 @@
 ---
-version: "4"
+version: "5"
 env:
   type: LanderContinuous
   actionConfig: DiscreteActions
@@ -36,6 +36,7 @@ agent:
   avgReward: 0
   rewardDecay: 0.99
   valueDecay: 0.99
+  rewardRange: [-1, 1]
   network:
     numHiddens:
     - 100
@@ -51,10 +52,13 @@ agent:
   actors:
     - type: PolicyActor
       alpha: 7
+      prefRange: [-7, 7]
     - type: PolicyActor
       alpha: 7
+      prefRange: [-7, 7]
     - type: PolicyActor
       alpha: 7
+      prefRange: [-7, 7]
   planner:
     planningSteps: 5
     threshold: 10e-6
@@ -68,4 +72,4 @@ agent:
     actionsKey:
       type: Discrete
 session:
-  numSteps: 10000
+  numSteps: 3000

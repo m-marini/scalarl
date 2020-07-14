@@ -44,7 +44,7 @@ agent:
     shortcuts:
       - [ 1, 4 ]
     updater: Adam
-    learningRate: 100e-6
+    learningRate: 10e-6
     beta1: 0.9
     beta2: 0.999
     epsilonAdam: 1e-8
@@ -53,11 +53,11 @@ agent:
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 4
+      alpha: 10
     - type: PolicyActor
-      alpha: 4
+      alpha: 10
     - type: PolicyActor
-      alpha: 4
+      alpha: 10
   planner:
     planningSteps: 5
     threshold: 10e-6
