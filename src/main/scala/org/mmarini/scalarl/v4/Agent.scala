@@ -31,7 +31,6 @@ package org.mmarini.scalarl.v4
 
 import java.io.File
 
-import org.deeplearning4j.nn.api.NeuralNetwork
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 

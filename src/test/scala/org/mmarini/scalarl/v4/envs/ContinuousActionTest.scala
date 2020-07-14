@@ -30,8 +30,6 @@
 package org.mmarini.scalarl.v4.envs
 
 import com.typesafe.scalalogging.LazyLogging
-import monix.eval.Task
-import monix.execution.Scheduler.global
 import monix.reactive.subjects.PublishSubject
 import org.deeplearning4j.nn.api.OptimizationAlgorithm
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration
@@ -41,14 +39,12 @@ import org.deeplearning4j.nn.weights.WeightInit
 import org.mmarini.scalarl.v4.Session
 import org.mmarini.scalarl.v4.Utils._
 import org.mmarini.scalarl.v4.agents.{ActorCriticAgent, AgentEvent, GaussianActor}
-import org.mmarini.scalarl.v4.reactive.Implicits._
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.learning.config.Sgd
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
-import org.nd4j.linalg.ops.transforms.Transforms._
 import org.scalatest.{FunSpec, Matchers}
 
 class ContinuousActionTest extends FunSpec with Matchers with LazyLogging {

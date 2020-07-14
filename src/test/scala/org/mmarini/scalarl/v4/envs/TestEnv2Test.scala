@@ -36,9 +36,9 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.weights.WeightInit
+import org.mmarini.scalarl.v4.Utils._
 import org.mmarini.scalarl.v4.agents.{ActorCriticAgent, AgentEvent, PolicyActor}
 import org.mmarini.scalarl.v4.{Agent, Session}
-import org.mmarini.scalarl.v4.Utils._
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random

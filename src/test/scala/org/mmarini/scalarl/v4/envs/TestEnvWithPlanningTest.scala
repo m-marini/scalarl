@@ -36,7 +36,7 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.weights.WeightInit
-import org.mmarini.scalarl.v4.Utils.{normalize, denormalize}
+import org.mmarini.scalarl.v4.Utils.{denormalize, normalize}
 import org.mmarini.scalarl.v4.agents._
 import org.mmarini.scalarl.v4.{Agent, Session}
 import org.nd4j.linalg.activations.Activation
