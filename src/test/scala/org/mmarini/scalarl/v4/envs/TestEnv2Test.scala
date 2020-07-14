@@ -38,7 +38,9 @@ import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.weights.WeightInit
 import org.mmarini.scalarl.v4.agents.{ActorCriticAgent, AgentEvent, PolicyActor}
 import org.mmarini.scalarl.v4.{Agent, Session}
+import org.mmarini.scalarl.v4.Utils._
 import org.nd4j.linalg.activations.Activation
+import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.learning.config.Sgd
@@ -47,24 +49,37 @@ import org.nd4j.linalg.ops.transforms.Transforms._
 import org.scalatest.{FunSpec, Matchers}
 
 class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
-  val Seed = 12345L
-  val NoSteps = 500
-  val Hiddens = 10
+  private val Seed = 12345L
+  private val NoSteps = 1000
+  private val ValudeDecay = 0.99
+  private val RewardDecay = 0.98
+  private val Alpha = 1.0
+  private val LearningRate = 0.5
+  private val Range = 2.0
 
   create()
-  val random: Random = getRandomFactory.getNewRandomInstance(Seed)
 
-  val events = PublishSubject[AgentEvent]()
+  private val RewardRange: INDArray = create(Array(0.0, 1.0)).transpose()
+  private val range: INDArray = create(Array(-Range, Range)).transpose()
+
+  private val random: Random = getRandomFactory.getNewRandomInstance(Seed)
+
+  private val events: PublishSubject[AgentEvent] = PublishSubject[AgentEvent]()
+
 
   def agent: Agent = ActorCriticAgent(
     network = network,
-    rewardDecay = ones(1).mul(0.97),
-    valueDecay = ones(1).mul(0.99),
+    rewardDecay = ones(1).mul(RewardDecay),
+    valueDecay = ones(1).mul(ValudeDecay),
+    transform = linearTransf(RewardRange),
+    invTransform = linearInverse(RewardRange),
     avg = zeros(1),
     actors = Array(PolicyActor(
       dimension = 0,
       noOutputs = 2,
-      alpha = ones(1).mul(3))),
+      transform = linearTransf(range),
+      inverse = linearInverse(range),
+      alpha = ones(1).mul(Alpha))),
     planner = None,
     agentObserver = events)
 
@@ -73,22 +88,22 @@ class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
       nIn(3).
       nOut(1).
       lossFunction(LossFunction.MSE).
-      activation(Activation.IDENTITY).
+      activation(Activation.TANH).
       build()
 
     val actorOutLayer = new OutputLayer.Builder().
       nIn(3).
       nOut(2).
       lossFunction(LossFunction.MSE).
-      activation(Activation.IDENTITY).
+      activation(Activation.TANH).
       build()
 
     val conf = new NeuralNetConfiguration.Builder().
       seed(Seed).
       weightInit(WeightInit.XAVIER).
-      updater(new Sgd(1.0 / 4)).
+      updater(new Sgd(LearningRate)).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
-      miniBatch(false).graphBuilder().
+      graphBuilder().
       addInputs("inputs").
       addLayer("critic", criticOutLayer, "inputs").
       addLayer("actor", actorOutLayer, "inputs").
@@ -128,14 +143,14 @@ class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
       val (_, agent1: ActorCriticAgent) = session.run(random)
       val o0 = agent1.network.output(s0.observation.signals)
       val ac0 = agent1.actors.head.asInstanceOf[PolicyActor]
-      val pr0 = ac0.preferences(o0)
-      logger.debug("q(s0) = {}, pi(s0) = {}", pr0, softmax(pr0))
-      pr0.getDouble(1L) shouldBe >(pr0.getDouble(0L))
+      val h0 = ac0.preferences(o0)
+      logger.debug("h(s0) = {}, pi(s0) = {}", h0, softmax(h0))
+      h0.getDouble(1L) shouldBe >(h0.getDouble(0L))
 
       val o1 = agent1.network.output(s1.observation.signals)
-      val pr1 = ac0.preferences(o1)
-      logger.debug("q(s1) = {}, pi(s1) = {}", pr1, softmax(pr1))
-      pr1.getDouble(1L) shouldBe >(pr1.getDouble(0L))
+      val h1 = ac0.preferences(o1)
+      logger.debug("h(s1) = {}, pi(s1) = {}", h1, softmax(h1))
+      h1.getDouble(1L) shouldBe >(h1.getDouble(0L))
     }
   }
 }

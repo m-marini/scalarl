@@ -76,7 +76,7 @@ object Main extends LazyLogging {
       logger.info("File {} epoch {}", file, epoch)
 
       val jsonConf = Configuration.jsonFromFile(file)
-      require(jsonConf.hcursor.get[String]("version").toTry.get == "4")
+      require(jsonConf.hcursor.get[String]("version").toTry.get == "5")
 
       val random = jsonConf.hcursor.get[Long]("seed").map(
         getRandomFactory.getNewRandomInstance

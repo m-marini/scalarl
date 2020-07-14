@@ -34,7 +34,7 @@ import java.io.File
 import monix.reactive.Observer
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.util.ModelSerializer
-import org.mmarini.scalarl.v4.agents.ActorCriticAgent._
+import org.mmarini.scalarl.v4.Utils.clip
 import org.mmarini.scalarl.v4.{Agent, Feedback, Observation}
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
@@ -57,6 +57,8 @@ case class ActorCriticAgent(actors: Seq[Actor],
                             avg: INDArray,
                             valueDecay: INDArray,
                             rewardDecay: INDArray,
+                            transform: INDArray => INDArray,
+                            invTransform: INDArray  => INDArray,
                             planner: Option[Planner],
                             private val agentObserver: Observer[AgentEvent]) extends Agent {
 
@@ -109,7 +111,7 @@ case class ActorCriticAgent(actors: Seq[Actor],
     val (delta, newv0, newAvg) = computeDelta(v0, v1, reward)
 
     // Critic update
-    val criticLabel = newv0
+    val criticLabel = clip(invTransform(newv0), -1, 1, copy = false)
     val actorLabels = actors.map(_.computeLabels(outputs0, actions, delta, random))
 
     val newNet = network.clone()
@@ -156,19 +158,19 @@ case class ActorCriticAgent(actors: Seq[Actor],
     ModelSerializer.writeModel(network, new File(path, s"network.zip"), false)
     this
   }
-}
-
-/**
- *
- */
-object ActorCriticAgent {
 
   /**
    * Returns the estimation of state value
    *
    * @param outputs the network outputs
    */
-  def v(outputs: Array[INDArray]): INDArray = outputs(0)
+  def v(outputs: Array[INDArray]): INDArray = transform(outputs(0))
+}
+
+/**
+ *
+ */
+object ActorCriticAgent {
 
   /**
    * Returns delta, v0', avg'

@@ -97,5 +97,25 @@ class UtilsTest extends FunSpec with Matchers {
     it("should create features vector") {
       Utils.features(Seq(0L, 3L), 5) shouldBe create(Array(1.0, 0.0, 0.0, 1.0, 0.0))
     }
+
+    it("should create linear transformation ") {
+      val f = Utils.linearTransf(create(Array(
+        Array(0.0, -2.0),
+        Array(5.0, 4.0))))
+
+      f(zeros(2)) shouldBe create(Array(2.5, 1.0))
+      f(ones(2)) shouldBe create(Array(5.0, 4.0))
+      f(ones(2).negi()) shouldBe create(Array(0.0, -2.0))
+    }
+
+    it("should create linear inverse ") {
+      val f = Utils.linearInverse(create(Array(
+        Array(0.0, -2.0),
+        Array(5.0, 4.0))))
+
+      f(create(Array(2.5, 1.0))) shouldBe zeros(2)
+      f(create(Array(5.0, 4.0))) shouldBe ones(2)
+      f(create(Array(0.0, -2.0))) shouldBe ones(2).negi()
+    }
   }
 }

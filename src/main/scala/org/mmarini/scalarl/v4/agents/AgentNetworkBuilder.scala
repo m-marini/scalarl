@@ -63,13 +63,22 @@ object AgentNetworkBuilder extends LazyLogging {
     val maxAbsGradient = conf.get[Double]("maxAbsGradients").toTry.get
     val maxAbsParams = conf.get[Double]("maxAbsParameters").toTry.get
     val dropOut = conf.get[Double]("dropOut").toTry.get
-    val bias = conf.get[Double]("bias").toOption
     val shortcutsMap = validateShortCut(shortcuts, numHiddens.length)
+    val activation = conf.get[String]("activation").toTry.get match {
+      case "SOFTPLUS" => Activation.SOFTPLUS
+      case "RELU" => Activation.RELU
+      case "TANH" => Activation.TANH
+      case "HARDTANH" => Activation.HARDTANH
+      case "SIGMOID" => Activation.SIGMOID
+      case "HARDSIGMOID" => Activation.HARDSIGMOID
+      case act =>
+        throw new IllegalArgumentException(s"Wrong activation function $act")
+    }
 
     // Computes the number of inputs for hidden layers
     val (noInputsByLayers, inputLayerNames) = inputLayersByLayer(noInputs, numHiddens, shortcutsMap)
-    val hiddenLayers = createHiddenLayers(noInputsByLayers.zip(numHiddens), dropOut)
-    val outputLayers = createOutputLayers(outputs, noInputsByLayers.last, bias)
+    val hiddenLayers = createHiddenLayers(noInputsByLayers.zip(numHiddens), dropOut,activation)
+    val outputLayers = createOutputLayers(outputs, noInputsByLayers.last)
     val noParms = numParms(hiddenLayers, outputLayers)
     val updater = UpdaterBuilder.fromJson(conf)(noParms.toInt)
     val annConf = seed.map(seed =>
@@ -144,32 +153,33 @@ object AgentNetworkBuilder extends LazyLogging {
    * @param ioConf  list of number of inputs and outputs
    * @param dropOut the drop out parameter
    */
-  def createHiddenLayers(ioConf: Seq[(Int, Int)], dropOut: Double): Seq[DenseLayer] = for {
-    (ins, outs)
-      <- ioConf
-  } yield new DenseLayer.Builder().
-    nIn(ins).
-    nOut(outs).
-    activation(Activation.TANH).
-    dropOut(dropOut).
-    build()
+  def createHiddenLayers(ioConf: Seq[(Int, Int)], dropOut: Double, activation: Activation): Seq[DenseLayer] = {
+    for {
+      (ins, outs)
+        <- ioConf
+    } yield new DenseLayer.Builder().
+      nIn(ins).
+      nOut(outs).
+      activation(activation).
+      dropOut(dropOut).
+      build()
+  }
 
   /**
    * Returns the output layers
    *
    * @param outputs  the number of outputs nodes
    * @param noInputs the number of inputs
-   * @param bias     the bias
    */
-  def createOutputLayers(outputs: Seq[Int], noInputs: Int, bias: Option[Double]): Seq[OutputLayer] = for {
+  def createOutputLayers(outputs: Seq[Int], noInputs: Int): Seq[OutputLayer] = for {
     outs <- outputs
   } yield {
     val layer0 = new OutputLayer.Builder().
       nIn(noInputs).
       nOut(outs).
       lossFunction(LossFunction.MSE).
-      activation(Activation.IDENTITY)
-    val layer1 = bias.map(layer0.biasInit).getOrElse(layer0).build()
+      activation(Activation.TANH)
+    val layer1 = layer0.build()
     layer1
   }
 

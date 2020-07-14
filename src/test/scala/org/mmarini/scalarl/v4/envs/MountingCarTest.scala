@@ -42,7 +42,6 @@ import org.deeplearning4j.nn.conf.{GradientNormalization, NeuralNetConfiguration
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.weights.WeightInit
 import org.mmarini.scalarl.v4.Utils._
-import org.mmarini.scalarl.v4.agents.ActorCriticAgent.v
 import org.mmarini.scalarl.v4.agents._
 import org.mmarini.scalarl.v4.reactive.Implicits._
 import org.mmarini.scalarl.v4.{Feedback, Session}
@@ -56,36 +55,43 @@ import org.nd4j.linalg.ops.transforms.Transforms._
 import org.scalatest.{FunSpec, Matchers}
 
 class MountingCarTest extends FunSpec with Matchers with LazyLogging {
-  val Seed = 12345L
-  val NoSteps = 1000
-  val Alpha = 30000e-6
-  val EtaMu = 3000e-3
-  val EtaHs = 300e-3
-  val PlanningStep = 5
-  val MinModelSize = 100
-  val MaxModelSize = 300
-  val ModelThreshold = 1e-9
-  val Trace = false
-  val KpiFile = new File("mc-kpi.csv")
+  private val Seed = 12345L
+  private val NoSteps = 1000
+  private val Alpha = 30000e-6
+  private val EtaMu = 3000e-3
+  private val EtaHs = 300e-3
+  private val PlanningStep = 5
+  private val MinModelSize = 100
+  private val MaxModelSize = 300
+  private val ModelThreshold = 1e-9
+  private val Trace = false
+  private val KpiFile = new File("mc-kpi.csv")
 
-  val NoInputs: Long = Tiles(1, 1).noFeatures
+  private val NoInputs: Long = Tiles(1, 1).noFeatures
   private implicit val s: Scheduler = Scheduler.global
 
   create()
-  val MidX: INDArray = ones(1).muli((MountingCarEnv.XLeft + MountingCarEnv.XRight) / 2)
-  val Range: INDArray = create(Array(Array(-10.0, 10.0), Array(-3.0, 3.0)))
 
-  val random: Random = getRandomFactory.getNewRandomInstance(Seed)
-  val events: PublishSubject[AgentEvent] = PublishSubject[AgentEvent]()
+  private val MidX: INDArray = ones(1).muli((MountingCarEnv.XLeft + MountingCarEnv.XRight) / 2)
+  private val RewardRange: INDArray = create(Array(-2.0, 2.0)).transpose()
+  private val Range: INDArray = create(Array(Array(-10.0, 10.0), Array(-3.0, 3.0)))
+  private val denorm = linearTransf(Range)
+  private val norm = linearInverse(Range)
+
+  private val random: Random = getRandomFactory.getNewRandomInstance(Seed)
+  private val events: PublishSubject[AgentEvent] = PublishSubject[AgentEvent]()
 
   def agent: ActorCriticAgent = ActorCriticAgent(
     network = network,
     avg = zeros(1),
     rewardDecay = ones(1).muli(0.97),
     valueDecay = ones(1).muli(0.99),
+    transform = linearTransf(RewardRange),
+    invTransform = linearTransf(RewardRange),
     actors = Array(GaussianActor(dimension = 0,
       eta = create(Array(EtaMu, EtaHs)),
-      Range)),
+      denormalize = denorm,
+      normalize = norm)),
     planner = planner,
     agentObserver = events)
 
@@ -154,9 +160,9 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
     val (mu1, h1, sigma1) = ac1.muHSigma(o1)
     val s = ag0.score(event.feedback)
 
-    val v0 = v(o0)
+    val v0 = ag0.v(o0)
     val o01 = ag0.network.output(s1.signals)
-    val v1 = v(o01)
+    val v1 = ag0.v(o01)
 
     val (delta, _, _) = ag0.computeDelta(v0, v1, r)
 

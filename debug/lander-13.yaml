@@ -36,6 +36,7 @@ agent:
   avgReward: 0
   rewardDecay: 0.99
   valueDecay: 0.99
+  rewardsRange: [-1, 1]
   planner:
     planningSteps: 5
     threshold: 1e-3
@@ -67,10 +68,13 @@ agent:
   actors:
     - type: PolicyActor
       alpha: 1e-3
+      prefRange: [-7, 7]
     - type: PolicyActor
       alpha: 1e-3
+      prefRange: [-7, 7]
     - type: PolicyActor
       alpha: 1e-3
+      prefRange: [-7, 7]
 session:
   numSteps: 3000
   seed: 1234

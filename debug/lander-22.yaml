@@ -1,19 +1,20 @@
 ---
 version: "5"
 env:
-  type: LanderContinuous
+  type: LanderTiles
+  hash: 300
   actionConfig: DiscreteActions
   dt: 0.25
   h0Range: 10
-  z0: 20
-  fuel: 100
+  z0: 3
+  fuel: 30
   zMax: 150
   hRange: 500
   zRange: 150
   vhRange: 24
   vzRange: 12
   landingRadius: 10
-  landingVH: 2
+  landingVH: 0.5
   landingVZ: 4
   g: 1.6
   maxAH: 1
@@ -26,11 +27,6 @@ env:
   outOfFuelReward: -1
   rewardDistanceScale: 0
   flyingReward: -10e-3
-  normalize:
-    clipMin: [-10, -10, -10, -24, -24, -12]
-    clipMax: [10, 10, 10, 24, 24, 12]
-    offset: [0, 0, 0, 0, 0, 0]
-    max: [20, 20, 20, 8, 8, 4]
 agent:
   type: ActorCritic
   avgReward: 0
@@ -45,21 +41,31 @@ agent:
     - 30
     shortcuts:
       - [ 1, 4 ]
+    activation: RELU
     updater: Sgd
-    learningRate: 300e-3
+    learningRate: 300e-6
     maxAbsGradients: 100
     maxAbsParameters: 10e3
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 300
-      prefRange: [-2, 2]
+      alpha: 1000
+      prefRange: [-2.4, 2.4]
     - type: PolicyActor
-      alpha: 300
-      prefRange: [-2, 2]
+      alpha: 1000
+      prefRange: [-2.4, 2.4]
     - type: PolicyActor
-      alpha: 300
-      prefRange: [-2, 2]
+      alpha: 1000
+      prefRange: [-2.4, 2.4]
+  planner:
+    planningSteps: 5
+    threshold: 10e-6
+    minModelSize: 300
+    maxModelSize: 1000
+    stateKey:
+      type: Discrete
+    actionsKey:
+      type: Discrete
 session:
   numSteps: 10000
   seed: 1234

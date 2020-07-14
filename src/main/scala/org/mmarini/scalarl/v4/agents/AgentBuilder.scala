@@ -37,10 +37,12 @@ import monix.reactive.Observable
 import monix.reactive.subjects.PublishSubject
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.util.ModelSerializer
+import org.mmarini.scalarl.v4.Utils._
 import org.mmarini.scalarl.v4.{ActionConfig, Agent, DiscreteAction}
 import org.nd4j.linalg.factory.Nd4j._
+import org.nd4j.linalg.ops.transforms.Transforms._
+//import scala.math._
 
-import scala.math._
 
 /**
  *
@@ -76,6 +78,7 @@ object AgentBuilder extends LazyLogging {
     val avg = conf.get[Double]("avgReward").toTry.map(ones(1).muli(_)).get
     val rewardDecay = conf.get[Double]("rewardDecay").toTry.map(ones(1).muli(_)).get
     val valueDecay = conf.get[Double]("valueDecay").toTry.map(ones(1).muli(_)).get
+    val rewardRange = conf.get[Array[Double]]("rewardRange").toTry.map(create).get.transpose()
 
     val actions = conf.downField("actors")
     val actors = actionConfig.zipWithIndex.map {
@@ -98,6 +101,8 @@ object AgentBuilder extends LazyLogging {
       avg = avg,
       valueDecay = valueDecay,
       rewardDecay = rewardDecay,
+      transform = linearTransf(rewardRange),
+      invTransform = linearInverse(rewardRange),
       planner = planner,
       agentObserver = subj
     )
@@ -140,11 +145,17 @@ object AgentBuilder extends LazyLogging {
   def policyActorFromJson(conf: ACursor)(dimension: Int,
                                          noInputs: Int,
                                          actionConfig: DiscreteAction,
-                                         modelPath: Option[String]): PolicyActor =
+                                         modelPath: Option[String]): PolicyActor = {
+    val range = conf.get[List[Double]]("prefRange").toTry.map(x => create(x.toArray)).get.transpose()
+    val transfom = linearTransf(range)
+    val grad = linearInverse(range)
     PolicyActor(
       dimension = dimension,
       noOutputs = actionConfig.numValues,
+      transform = transfom,
+      inverse = grad,
       alpha = conf.get[Double]("alpha").toTry.map(ones(1).muli(_)).get)
+  }
 
   /**
    * Returns the discrete action agent
@@ -162,13 +173,17 @@ object AgentBuilder extends LazyLogging {
     val muRange = conf.get[Array[Double]]("muRange").toTry.get
     require(muRange.length == 2, s"muRange must have 2 values")
     require(muRange(0) < muRange(1), s"muRange must have min < max")
-    val sigmaRange = conf.get[Double]("sigmaRange").toTry.get
-    require(sigmaRange > 0, s"sigmaRange must be positive")
-    val range = vstack(create(muRange), create(Array(-log(sigmaRange), log(sigmaRange))))
+    val sigmaRange = conf.get[Array[Double]]("sigmaRange").toTry.get
+    require(sigmaRange.length == 2, s"sigmaRange must have 2 values")
+    require(sigmaRange.min > 0, s"sigmaRange must be positive")
+    val range = vstack(create(muRange), log(create(sigmaRange))).transpose
+    val denorm = linearTransf(range)
+    val normalize = linearInverse(range)
     GaussianActor(
       dimension = dimension,
       eta = create(Array(alphaMu, alphaSigma)),
-      range)
+      denormalize = denorm,
+      normalize = normalize)
   }
 
   /**

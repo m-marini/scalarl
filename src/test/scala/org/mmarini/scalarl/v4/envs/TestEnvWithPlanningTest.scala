@@ -36,9 +36,11 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.weights.WeightInit
+import org.mmarini.scalarl.v4.Utils.{linearInverse, linearTransf}
 import org.mmarini.scalarl.v4.agents._
 import org.mmarini.scalarl.v4.{Agent, Session}
 import org.nd4j.linalg.activations.Activation
+import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.learning.config.Sgd
@@ -52,21 +54,33 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
   private val PlanningSteps = 5
   private val MinModelSize = 6
   private val MaxModelSize = 10
+  private val ValudeDecay = 0.99
+  private val RewardDecay = 0.98
+  private val Alpha = 1.0
+  private val LearningRate = 0.25
+  private val Range = 2.0
 
   create()
+
+  private val RewardRange: INDArray = create(Array(0.0, 1.0)).transpose()
+  private val range: INDArray = create(Array(-Range, Range)).transpose()
 
   private val random: Random = getRandomFactory.getNewRandomInstance(Seed)
   private val events: PublishSubject[AgentEvent] = PublishSubject[AgentEvent]()
 
   def agent: Agent = ActorCriticAgent(
     network = network,
-    rewardDecay = ones(1).mul(0.97),
-    valueDecay = ones(1).mul(0.99),
+    rewardDecay = ones(1).mul(RewardDecay),
+    valueDecay = ones(1).mul(ValudeDecay),
     avg = zeros(1),
+    transform = linearTransf(RewardRange),
+    invTransform = linearInverse(RewardRange),
     actors = Array(PolicyActor(
       dimension = 0,
       noOutputs = 2,
-      alpha = ones(1).mul(3))),
+      transform = linearTransf(range),
+      inverse = linearInverse(range),
+      alpha = ones(1).muli(Alpha))),
     planner = Some(planner),
     agentObserver = events)
 
@@ -98,7 +112,7 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
     val conf = new NeuralNetConfiguration.Builder().
       seed(Seed).
       weightInit(WeightInit.XAVIER).
-      updater(new Sgd(1.0 / 4)).
+      updater(new Sgd(LearningRate)).
       //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
       //updater(new Adam(1000e-3 / (4), 0.9, 0.999, 0.1)).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
@@ -162,7 +176,7 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
 
     val planner = agent1.planner.get.asInstanceOf[PriorityPlanner[Seq[Int], Seq[Int]]]
     it("should have model with 6 entries") {
-      planner.model should have size 6
+      planner.model should have size 5
     }
   }
 }

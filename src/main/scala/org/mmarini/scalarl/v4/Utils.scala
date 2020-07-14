@@ -79,6 +79,25 @@ object Utils {
   }
 
   /**
+   * Returns the row vector linear transfomation from -1, 1 range to defined range
+   *
+   * @param ranges the range of transformation the first row contains minimum values
+   *               and the second row contains the maximum values
+   */
+  def linearTransf(ranges: INDArray): INDArray => INDArray = {
+    val m = ranges.getRow(1).sub(ranges.getRow(0)).div(2)
+    val q = ranges.getRow(0).add(ranges.getRow(1)).div(2)
+    x => x.mul(m).addi(q)
+  }
+
+  /** Returns the inverse of row vector linear transfomation from -1, 1 range to defined range */
+  def linearInverse(ranges: INDArray): INDArray => INDArray = {
+    val m = Nd4j.ones(ranges.size(1)).muli(2).divi(ranges.getRow(1).sub(ranges.getRow(0)))
+    val q = ranges.getRow(1).add(ranges.getRow(0)).divi(ranges.getRow(0).sub(ranges.getRow(1)))
+    x => x.mul(m).addi(q)
+  }
+
+  /**
    * Returns random integer for a cdf
    *
    * @param x      the cumulative distribution function
