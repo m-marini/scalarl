@@ -34,6 +34,7 @@ import org.mmarini.scalarl.v4.Utils
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
+import org.nd4j.linalg.ops.transforms.Transforms
 import org.nd4j.linalg.ops.transforms.Transforms._
 
 /**
@@ -56,8 +57,11 @@ import org.nd4j.linalg.ops.transforms.Transforms._
  * @param outOfRangeReward    the reward when out of range
  * @param outOfFuelReward     the rewaord when out of fuel
  * @param rewardDistanceScale the reward by distance
+ * @param directionReward     the reward by direction
  * @param outOfPlatformReward the reward when out of platform
  * @param flyingReward        the reward when flying
+ * @param hSpeedReward        the reward for horizontal speed
+ * @param vSpeedReward        the reward for vertical speed
  * @param fuel                the initial available fuel
  */
 class LanderConf(val dt: INDArray,
@@ -79,11 +83,15 @@ class LanderConf(val dt: INDArray,
                  val outOfFuelReward: INDArray,
                  val outOfPlatformReward: INDArray,
                  val flyingReward: INDArray,
-                 val rewardDistanceScale: INDArray) {
+                 val rewardDistanceScale: INDArray,
+                 val directionReward: INDArray,
+                 val hSpeedReward: INDArray,
+                 val vSpeedReward: INDArray) {
 
   import LanderConf._
   import StatusCode._
 
+  private val EPS = 1e-6
   private val minRange = hstack(hRange.neg(), hRange.neg(), zeros(1))
   private val maxRange = hstack(hRange, hRange, zMax)
 
@@ -99,6 +107,41 @@ class LanderConf(val dt: INDArray,
     val plan = random.nextDouble(Array(1, 2)).muli(h0Range).muli(2).subi(h0Range)
     val pos = hstack(plan, z0)
     pos
+  }
+
+  /**
+   * Returns the reward from direction
+   *
+   * @param pos   the shuttle position (x,y,z)
+   * @param speed the shuttle speed (x,y,z)
+   */
+  def rewardFromDirection(pos: INDArray, speed: INDArray): INDArray = {
+    val dirNorm = pos.norm2().mul(speed.norm2())
+    if (dirNorm.getDouble(0L) > EPS) {
+      val prod = pos.mmul(speed.transpose())
+      val cos = prod.neg().divi(dirNorm)
+      val reward = cos.mul(directionReward)
+      reward
+    } else {
+      directionReward.neg()
+    }
+  }
+
+  /**
+   * Returns the reward from direction
+   *
+   * @param speed the speed
+   * @return
+   */
+  def rewardFromSpeed(speed: INDArray): INDArray = {
+    val hSpeed = speed.getColumns(0, 1).norm2()
+    val dh = hSpeed.sub(landingVH)
+    val vSpeed = speed.getColumn(2)
+    val dv = vSpeed.add(landingVZ).norm2()
+    val rh = Transforms.max(dh, 0.0).muli(hSpeedReward)
+    val rv = dv.mul(vSpeedReward)
+    val reward = rh.add(rv)
+    reward
   }
 
   /**
@@ -180,7 +223,9 @@ class LanderConf(val dt: INDArray,
    *
    * @param actions the actions
    */
-  private def acceleration(actions: INDArray): INDArray = {
+  private def acceleration(actions: INDArray): INDArray
+
+  = {
     val acc = Utils.clip(actions, 0, NumDiscreteJet - 1).add(JetOffset).muli(jetScale)
     acc
   }
@@ -216,6 +261,9 @@ object LanderConf {
     outOfPlatformReward = conf.get[Double]("outOfPlatformReward").toTry.map(ones(1).mul(_)).get,
     flyingReward = conf.get[Double]("flyingReward").toTry.map(ones(1).mul(_)).get,
     rewardDistanceScale = conf.get[Double]("rewardDistanceScale").toTry.map(ones(1).mul(_)).get,
+    directionReward = conf.get[Double]("directionReward").toTry.map(ones(1).mul(_)).get,
+    hSpeedReward = conf.get[Double]("hSpeedReward").toTry.map(ones(1).mul(_)).get,
+    vSpeedReward = conf.get[Double]("vSpeedReward").toTry.map(ones(1).mul(_)).get,
     fuel = conf.get[Int]("fuel").toTry.map(ones(1).mul(_)).get)
 }
 

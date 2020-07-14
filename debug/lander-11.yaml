@@ -26,6 +26,11 @@ env:
   outOfFuelReward: -1
   rewardDistanceScale: 0
   flyingReward: -10e-3
+  directionReward: 10e-3
+  # 10e-3/0.5
+  hSpeedReward: -20e-3
+  # 80e-3/4
+  vSpeedReward: -20e-3 
   normalize:
     clipMin: [-10, -10, -10, -24, -24, -12]
     clipMax: [10, 10, 10, 24, 24, 12]
@@ -43,6 +48,7 @@ agent:
     - 100
     - 30
     - 30
+    activation: SOFTPLUS
     shortcuts:
       - [ 1, 4 ]
     updater: Sgd

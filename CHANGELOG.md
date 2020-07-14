@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #91: Dump output on kpi
 - Issue #93: Report session duration
 - Issue #95: ANN Output Normalization and Relu
+- Issue #97: Redesign rewards
 
 ### Fixed
 

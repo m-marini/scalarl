@@ -107,7 +107,10 @@ case class LanderStatus(encoder: LanderEncoder,
         case OutOfFuel =>
           conf.outOfFuelReward
         case Flying =>
-          conf.rewardFromMovement(pos, newEnv.pos).add(conf.flyingReward)
+          conf.rewardFromMovement(pos, newEnv.pos).
+            add(conf.flyingReward).
+            add(conf.rewardFromDirection(pos, speed)).
+            add(conf.rewardFromSpeed(speed))
       }
       (newEnv, reward)
     case _ =>

@@ -57,13 +57,16 @@ class LanderConfTest1 extends FunSpec with Matchers {
     outOfRangeReward = ones(1).mul(-100.0),
     outOfFuelReward = ones(1).mul(-100.0),
     flyingReward = ones(1).mul(-1.0),
-    rewardDistanceScale = ones(1).mul(0.01))
+    rewardDistanceScale = ones(1).mul(0.01),
+    directionReward = ones(1).mul(0.1),
+    hSpeedReward = ones(1).mul(0.1),
+    vSpeedReward = ones(1).mul(0.1))
+
   private val MaxPower = 4
-  val Act000: INDArray = zeros(3)
-  val Act111: INDArray = ones(3)
-  val Act222: INDArray = ones(3).muli(2)
-  val Act333: INDArray = ones(3).muli(3)
-  val Act444: INDArray = ones(3).muli(MaxPower)
+  private val Act000: INDArray = zeros(3)
+  private val Act222: INDArray = ones(3).muli(2)
+  private val Act333: INDArray = ones(3).muli(3)
+  private val Act444: INDArray = ones(3).muli(MaxPower)
 
   private def vector(x: Double, y: Double, z: Double) = create(Array(x, y, z))
 
