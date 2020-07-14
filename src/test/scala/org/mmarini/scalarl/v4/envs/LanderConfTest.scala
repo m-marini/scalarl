@@ -35,31 +35,58 @@ import org.nd4j.linalg.factory.Nd4j._
 import org.scalatest.{FunSpec, Matchers}
 
 class LanderConfTest extends FunSpec with Matchers {
+  private val Dt = 0.25
+  private val DefaultFuel = 10.0
+  private val H0Range = 5.0
+  private val Z0 = 1.0
+  private val ZMax = 100.0
+  private val HRange = 500.0
+  private val LandingRadius = 10.0
+  private val LandingVH = 0.5
+  private val LandingVZ = 4.0
+  private val G = 1.6
+  private val MaxAZ = 3.2
+  private val LandedReward = 100.0
+  private val VCrashReward = -100.0
+  private val HCrashReward = -100.0
+  private val OutOfPlatformReward = -100.0
+  private val OutOfRangeReward = -100.0
+  private val OutOfFuelReward = -100.0
+  private val FlyingReward = -1.0
+  private val RewardDistanceScale = 0.01
+  private val DirectionReward = 0.1
+  private val HSpeedReward = 0.1
+  private val VSpeedReward = 0.1
 
   create()
 
-  val DefaultFuel: INDArray = ones(1).mul(10.0)
+  val defaultFuel: INDArray = ones(1).mul(DefaultFuel)
+
   val conf: LanderConf = new LanderConf(
-    dt = ones(1).mul(0.25),
-    h0Range = ones(1).mul(5.0),
-    z0 = ones(1).mul(1),
-    fuel = DefaultFuel,
-    zMax = ones(1).mul(100.0),
-    hRange = ones(1).mul(500.0),
-    landingRadius = ones(1).mul(10.0),
-    landingVH = ones(1).mul(0.5),
-    landingVZ = ones(1).mul(4.0),
-    g = ones(1).mul(1.6),
+    dt = ones(1).mul(Dt),
+    h0Range = ones(1).mul(H0Range),
+    z0 = ones(1).mul(Z0),
+    fuel = defaultFuel,
+    zMax = ones(1).mul(ZMax),
+    hRange = ones(1).mul(HRange),
+    landingRadius = ones(1).mul(LandingRadius),
+    landingVH = ones(1).mul(LandingVH),
+    landingVZ = ones(1).mul(LandingVZ),
+    g = ones(1).mul(G),
     maxAH = ones(1),
-    maxAZ = ones(1).mul(3.2),
-    landedReward = ones(1).mul(100.0),
-    vCrashReward = ones(1).mul(-100.0),
-    hCrashReward = ones(1).mul(-100.0),
-    outOfPlatformReward = ones(1).mul(-100.0),
-    outOfRangeReward = ones(1).mul(-100.0),
-    outOfFuelReward = ones(1).mul(-100.0),
-    flyingReward = ones(1).mul(-1.0),
-    rewardDistanceScale = ones(1).mul(0.01))
+    maxAZ = ones(1).mul(MaxAZ),
+    landedReward = ones(1).mul(LandedReward),
+    vCrashReward = ones(1).mul(VCrashReward),
+    hCrashReward = ones(1).mul(HCrashReward),
+    outOfPlatformReward = ones(1).mul(OutOfPlatformReward),
+    outOfRangeReward = ones(1).mul(OutOfRangeReward),
+    outOfFuelReward = ones(1).mul(OutOfFuelReward),
+    flyingReward = ones(1).mul(FlyingReward),
+    rewardDistanceScale = ones(1).mul(RewardDistanceScale),
+    directionReward = ones(1).mul(DirectionReward),
+    hSpeedReward = ones(1).mul(HSpeedReward),
+    vSpeedReward = ones(1).mul(VSpeedReward)
+  )
 
   describe("LanderConf at land point") {
     describe("at (0,0,-0.1), (0,0,1)") {
@@ -67,7 +94,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val speed = create(Array[Double](0, 0, 1))
 
       it("should be landed") {
-        conf.status(pos, speed, DefaultFuel) shouldBe Landed
+        conf.status(pos, speed, defaultFuel) shouldBe Landed
       }
     }
 
@@ -75,7 +102,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](0, 0, -0.1))
       val speed = create(Array[Double](0, 0, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, DefaultFuel) shouldBe Landed
+        conf.status(pos, speed, defaultFuel) shouldBe Landed
       }
     }
 
@@ -84,7 +111,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val speed = create(Array[Double](0.5, 0, -4.0))
 
       it("should be landed") {
-        val x = conf.status(pos, speed, DefaultFuel)
+        val x = conf.status(pos, speed, defaultFuel)
         x shouldBe Landed
       }
     }
@@ -93,7 +120,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](0, 0, -0.1))
       val speed = create(Array[Double](-0.5, 0, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, DefaultFuel) shouldBe Landed
+        conf.status(pos, speed, defaultFuel) shouldBe Landed
       }
     }
 
@@ -101,7 +128,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](0, 0, -0.1))
       val speed = create(Array[Double](0, 0.5, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, DefaultFuel) shouldBe Landed
+        conf.status(pos, speed, defaultFuel) shouldBe Landed
       }
     }
 
@@ -109,7 +136,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](0, 0, -0.1))
       val speed = create(Array[Double](0, -0.5, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, DefaultFuel) shouldBe Landed
+        conf.status(pos, speed, defaultFuel) shouldBe Landed
       }
     }
 
@@ -117,7 +144,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](10.0, 0, -0.1))
       val speed = create(Array[Double](0, 0, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, DefaultFuel) shouldBe Landed
+        conf.status(pos, speed, defaultFuel) shouldBe Landed
       }
     }
 
@@ -125,7 +152,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](-10.0, 0, -0.1))
       val speed = create(Array[Double](0, 0, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, DefaultFuel) shouldBe Landed
+        conf.status(pos, speed, defaultFuel) shouldBe Landed
       }
     }
 
@@ -133,7 +160,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](0, 10.0, -0.1))
       val speed = create(Array[Double](0, 0, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, DefaultFuel) shouldBe Landed
+        conf.status(pos, speed, defaultFuel) shouldBe Landed
       }
     }
 
@@ -141,7 +168,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](0, 10.0, -0.1))
       val speed = create(Array[Double](0, 0, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, DefaultFuel) shouldBe Landed
+        conf.status(pos, speed, defaultFuel) shouldBe Landed
       }
     }
 
@@ -149,7 +176,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](7.07, 7.07, -0.1))
       val speed = create(Array[Double](0, 0, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, DefaultFuel) shouldBe Landed
+        conf.status(pos, speed, defaultFuel) shouldBe Landed
       }
     }
 
@@ -157,7 +184,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](0, 0, -0.1))
       val speed = create(Array[Double](0.353, 0.353, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, DefaultFuel) shouldBe Landed
+        conf.status(pos, speed, defaultFuel) shouldBe Landed
       }
     }
   }
@@ -183,7 +210,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](7.08, 7.08, -0.1))
       val speed = create(Array[Double](0, 0, 0))
       it("should be crashed") {
-        conf.status(pos, speed, DefaultFuel) shouldBe OutOfPlatform
+        conf.status(pos, speed, defaultFuel) shouldBe OutOfPlatform
       }
     }
   }
@@ -193,7 +220,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](0, 0, 100.1))
       val speed = zeros(3)
       it("should be out of range") {
-        conf.status(pos, speed, DefaultFuel) shouldBe OutOfRange
+        conf.status(pos, speed, defaultFuel) shouldBe OutOfRange
       }
     }
 
@@ -201,7 +228,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](600.1, 0, 10.0))
       val speed = zeros(3)
       it("should be out of range") {
-        conf.status(pos, speed, DefaultFuel) shouldBe OutOfRange
+        conf.status(pos, speed, defaultFuel) shouldBe OutOfRange
       }
     }
 
@@ -209,7 +236,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](-600.1, 0, 10.0))
       val speed = zeros(3)
       it("should be out of range") {
-        conf.status(pos, speed, DefaultFuel) shouldBe OutOfRange
+        conf.status(pos, speed, defaultFuel) shouldBe OutOfRange
       }
     }
 
@@ -217,7 +244,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](0, 600.1, 10.0))
       val speed = zeros(3)
       it("should be out of range") {
-        conf.status(pos, speed, DefaultFuel) shouldBe OutOfRange
+        conf.status(pos, speed, defaultFuel) shouldBe OutOfRange
       }
     }
 
@@ -225,7 +252,33 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](0, -600.1, 10.0))
       val speed = zeros(3)
       it("should be out of range") {
-        conf.status(pos, speed, DefaultFuel) shouldBe OutOfRange
+        conf.status(pos, speed, defaultFuel) shouldBe OutOfRange
+      }
+    }
+  }
+  describe("LanderConf flying") {
+    describe("at (0,0,10.0) speed (0,0,0)") {
+      val pos = create(Array[Double](0, 0, 10.0))
+      val speed = zeros(3)
+      it("should be Flying") {
+        conf.status(pos, speed, defaultFuel) shouldBe Flying
+        conf.rewardFromDirection(pos, speed) shouldBe ones(1).muli(-DirectionReward)
+      }
+    }
+    describe("at (1,2,10.0) speed (-0.1,-0.2,-1)") {
+      val pos = create(Array[Double](1, 2, 10.0))
+      val speed = create(Array[Double](-0.1, -0.2, -1.0))
+      it("should be Flying") {
+        conf.status(pos, speed, defaultFuel) shouldBe Flying
+        conf.rewardFromDirection(pos, speed) shouldBe ones(1).muli(DirectionReward)
+      }
+    }
+    describe("at (1,2,10.0) speed (0.1,0.2,1)") {
+      val pos = create(Array[Double](1, 2, 10.0))
+      val speed = create(Array[Double](0.1, 0.2, 1.0))
+      it("should be Flying") {
+        conf.status(pos, speed, defaultFuel) shouldBe Flying
+        conf.rewardFromDirection(pos, speed) shouldBe ones(1).muli(-DirectionReward)
       }
     }
   }

@@ -30,7 +30,6 @@
 package org.mmarini.scalarl.v4.envs
 
 import io.circe.ACursor
-import javax.xml.crypto.dsig.TransformService
 import org.mmarini.scalarl.v4.Utils
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
@@ -92,6 +91,7 @@ class LanderConf(val dt: INDArray,
   import LanderConf._
   import StatusCode._
 
+  private val EPS = 1e-6
   private val minRange = hstack(hRange.neg(), hRange.neg(), zeros(1))
   private val maxRange = hstack(hRange, hRange, zMax)
 
@@ -116,9 +116,15 @@ class LanderConf(val dt: INDArray,
    * @param speed the shuttle speed (x,y,z)
    */
   def rewardFromDirection(pos: INDArray, speed: INDArray): INDArray = {
-    val cos = pos.mmul(speed.transpose()).neg().divi(speed.norm1()).divi(pos.norm1())
-    val reward = cos.mul(directionReward)
-    reward
+    val dirNorm = pos.norm2().mul(speed.norm2())
+    if (dirNorm.getDouble(0L) > EPS) {
+      val prod = pos.mmul(speed.transpose())
+      val cos = prod.neg().divi(dirNorm)
+      val reward = cos.mul(directionReward)
+      reward
+    } else {
+      directionReward.neg()
+    }
   }
 
   /**
@@ -128,12 +134,12 @@ class LanderConf(val dt: INDArray,
    * @return
    */
   def rewardFromSpeed(speed: INDArray): INDArray = {
-    val hSpeed = speed.getColumns(0, 1).norm1()
+    val hSpeed = speed.getColumns(0, 1).norm2()
     val dh = hSpeed.sub(landingVH)
-    val vSpeed = speed.getColumns(2)
-    val dv = vSpeed.neg().sub(landingVZ)
+    val vSpeed = speed.getColumn(2)
+    val dv = vSpeed.add(landingVZ).norm2()
     val rh = Transforms.max(dh, 0.0).muli(hSpeedReward)
-    val rv = Transforms.max(dv, 0.0).muli(vSpeedReward)
+    val rv = dv.mul(vSpeedReward)
     val reward = rh.add(rv)
     reward
   }
@@ -217,7 +223,9 @@ class LanderConf(val dt: INDArray,
    *
    * @param actions the actions
    */
-  private def acceleration(actions: INDArray): INDArray = {
+  private def acceleration(actions: INDArray): INDArray
+
+  = {
     val acc = Utils.clip(actions, 0, NumDiscreteJet - 1).add(JetOffset).muli(jetScale)
     acc
   }

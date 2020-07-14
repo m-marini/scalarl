@@ -27,6 +27,12 @@ env:
   outOfFuelReward: -1
   rewardDistanceScale: 0
   flyingReward: -10e-3
+  directionReward: 10e-3
+  # 10e-3/0.5
+  hSpeedReward: -20e-3
+  # 80e-3/4
+  vSpeedReward: -20e-3 
+  flyingReward: -10e-3
 agent:
   type: ActorCritic
   avgReward: 0
