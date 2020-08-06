@@ -52,12 +52,16 @@ class MonitorWrapper(val observable: Observable[(Step, INDArray)]) extends Obser
       }
       case _ => 0
     }
+    val rew = step.agent0 match {
+      case actor: ActorCriticAgent => actor.avg
+      case _ => avg.getColumn(0)
+    }
     logger.info(f"Epoch ${
       step.epoch
     }%,3d, Steps ${
       step.step
     }%5d ,avg rewards=${
-      avg.getDouble(0L)
+      rew.getDouble(0L)
     }%12g, avgScore=${
       avg.getDouble(1L)
     }%12g, model=${modelSize}%4d")

@@ -29,40 +29,21 @@
 
 package org.mmarini.scalarl.v4.envs
 
-import io.circe.ACursor
-import org.mmarini.scalarl.v4.envs.LanderContinuousEncoder._
+import org.mmarini.scalarl.v4.Utils
 import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.factory.Nd4j._
 
 /**
  * The LanderConf with lander parameters
- *
- * @param normalize the normalize function
  */
 class LanderContinuousEncoder(normalize: INDArray => INDArray) extends LanderEncoder {
 
   /** Returns the number of signals */
-  override val noSignals: Int = NumDims
+  override val noSignals: Int = 6
 
   /**
    * Returns the input signals
    *
-   * @param status the status
+   * @param s the signals
    */
-  override def signals(status: LanderStatus): INDArray =
-    normalize(hstack(status.pos, status.speed))
-}
-
-/** Factory for [[LanderContinuousEncoder]] instances */
-object LanderContinuousEncoder {
-  val NumDims: Int = 6
-
-  /**
-   *
-   * @param conf the json configuration
-   */
-  def fromJson(conf: ACursor): LanderContinuousEncoder = {
-    val normalize = Normalizer.fromJson(conf.downField("normalize"))(NumDims)
-    new LanderContinuousEncoder(normalize)
-  }
+  override def signals(s: INDArray): INDArray = normalize(s)
 }

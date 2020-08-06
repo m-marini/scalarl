@@ -35,6 +35,7 @@ import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 
 import scala.annotation.tailrec
+import scala.util.Try
 
 /**
  * The priority planner learns the behavior of environment and simulate it for planning the agent policy
@@ -110,7 +111,7 @@ case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
         case None => ctx
         case Some((_, (_, score))) if score < threshold => ctx
         case Some((targetKey, (feedback, _))) =>
-          val (agent1, _,  score) = agent.directLearn(feedback, random)
+          val (agent1, _, score) = agent.directLearn(feedback, random)
           val newModel = planner.model + (targetKey -> (feedback, score.getDouble(0L)))
           val planner1 = planner.copy(model = newModel).
             sweepBackward(feedback.s0.signals, agent1)
@@ -173,14 +174,15 @@ object PriorityPlanner {
    * @param noInputs  the number of inputs
    * @param noOutputs the number of outputs
    */
-  def fromJson(conf: ACursor)(noInputs: Int, noOutputs: Int): PriorityPlanner[ModelKey, ModelKey] = {
-    val planningSteps = conf.get[Int]("planningSteps").toTry.get
-    val minModelSize = conf.get[Int]("minModelSize").toTry.get
-    val maxModelSize = conf.get[Int]("maxModelSize").toTry.get
-    val threshold = conf.get[Double]("threshold").toTry.get
-    val stateKeyGen = INDArrayKeyGenerator.fromJson(conf.downField("stateKey"))(noInputs)
-    val actionsKeyGen = INDArrayKeyGenerator.fromJson(conf.downField("actionsKey"))(noOutputs)
-    PriorityPlanner(
+  def fromJson(conf: ACursor)(noInputs: Int, noOutputs: Int): Try[PriorityPlanner[ModelKey, ModelKey]] = {
+    for {
+      planningSteps <- conf.get[Int]("planningSteps").toTry
+      minModelSize <- conf.get[Int]("minModelSize").toTry
+      maxModelSize <- conf.get[Int]("maxModelSize").toTry
+      threshold <- conf.get[Double]("threshold").toTry
+      stateKeyGen <- INDArrayKeyGenerator.fromJson(conf.downField("stateKey"))(noInputs)
+      actionsKeyGen <- INDArrayKeyGenerator.fromJson(conf.downField("actionsKey"))(noOutputs)
+    } yield PriorityPlanner(
       stateKeyGen = stateKeyGen,
       actionsKeyGen = actionsKeyGen,
       planningSteps = planningSteps,

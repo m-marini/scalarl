@@ -31,12 +31,59 @@ package org.mmarini.scalarl.v4.envs
 
 import java.io.{FileReader, Reader}
 
-import io.circe.Json
 import io.circe.yaml.parser
+import io.circe.{ACursor, Json}
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.Nd4j.{create, ones}
+
+import scala.util.Try
 
 object Configuration {
 
   def jsonFromFile(file: String): Json = jsonFromReader(new FileReader(file))
 
   def jsonFromReader(reader: Reader): Json = parser.parse(reader).toTry.get
+
+  def scalarFromJson(conf: ACursor): Try[INDArray] =
+    conf.as[Double].toTry.map(ones(1).mul(_))
+
+  def vectorFromJson(conf: ACursor)(n: Int): Try[INDArray] =
+    conf.as[Array[Double]].toTry.flatMap(data => Try {
+      require(data.length == n, s"vector has ${
+        data.length
+      } elements: must have $n elements")
+      create(data)
+    })
+
+  def matrixFromJson(conf: ACursor)(n: Int, m: Int): Try[INDArray] =
+    conf.as[Array[Array[Double]]].toTry.flatMap(data => Try {
+      require(data.length == n, s"vector has ${data.length} elements: must have $n elements")
+      for {
+        (range, i) <- data.zipWithIndex
+      } {
+        require(range.length == 2, s"ranges($i) has ${range.length} elements: must have 2 elements")
+      }
+      create(data)
+    })
+
+
+  /**
+   * Returns ranges from Json configuration
+   *
+   * @param conf       the json configuration
+   * @param dimensions the number of dimensions
+   */
+  def rangesFromJson(conf: ACursor)(dimensions: Int): Try[INDArray] =
+    for {
+      data <- matrixFromJson(conf)(dimensions, 2)
+      _ <- Try {
+        for {
+          i <- 0 until dimensions
+        } {
+          require(data.getDouble(i, 0L) <= data.getDouble(i, 1L), s"range($i) is ${
+            data.getRow(i)
+          }: must be min, max")
+        }
+      }
+    } yield data.transpose()
 }

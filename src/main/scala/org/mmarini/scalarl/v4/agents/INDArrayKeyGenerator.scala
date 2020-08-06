@@ -31,12 +31,14 @@ package org.mmarini.scalarl.v4.agents
 
 import io.circe.ACursor
 import org.mmarini.scalarl.v4.Utils._
+import org.mmarini.scalarl.v4.envs.Configuration._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.ops.transforms.Transforms
-import org.nd4j.linalg.ops.transforms.Transforms._
 
-/** The factory object for [[INDArrayKeyGenerator]] */
+import scala.util.{Failure, Success, Try}
+
+/** The factory object for [[INDArrayKeyGenerator]]*/
 object INDArrayKeyGenerator {
 
   val binary: INDArray => ModelKey = x => ModelKey(find(x).map(_.toInt))
@@ -53,12 +55,16 @@ object INDArrayKeyGenerator {
    * @param cursor the configuration
    * @param noDims the number of dimension
    */
-  def fromJson(cursor: ACursor)(noDims: Int): INDArray => ModelKey = cursor.get[String]("type").toTry.get match {
-    case "Binary" => binary
-    case "Discrete" => discrete
-    case "Tiles" => tilesFromJson(cursor)(noDims)
-    case x => throw new IllegalArgumentException(s"Unrecognized key generator type '$x'")
-  }
+  def fromJson(cursor: ACursor)(noDims: Int): Try[INDArray => ModelKey] = for {
+    typ <- cursor.get[String]("type").toTry
+    key <- typ match {
+      case "Binary" => Success(binary)
+      case "Discrete" => Success(discrete)
+      case "Tiles" => tilesFromJson(cursor)(noDims)
+      case "NormalTiles" => normalTilesFromJson(cursor)(noDims)
+      case x => Failure(new IllegalArgumentException(s"Unrecognized key generator type '$x'"))
+    }
+  } yield key
 
   /**
    * Returns the tiles key generator from json
@@ -66,37 +72,48 @@ object INDArrayKeyGenerator {
    * @param cursor the json tiles configuration
    * @param noDims the number of dimensions
    */
-  def tilesFromJson(cursor: ACursor)(noDims: Int): INDArray => ModelKey = {
-    val offset = create(cursor.get[Array[Double]]("offset").toTry.get)
-    require(offset.shape() sameElements Array(1L, noDims))
-    val max = create(cursor.get[Array[Double]]("max").toTry.get)
-    require(max.shape() sameElements Array(1L, noDims))
-    val noTiles = create(cursor.get[Array[Int]]("tiles").toTry.get.map(_.toDouble))
-    require(noTiles.shape() sameElements Array(1L, noDims))
-    tiles(
-      min = offset,
-      max = max,
-      noTiles = noTiles)
-  }
+  def tilesFromJson(cursor: ACursor)(noDims: Int): Try[INDArray => ModelKey] = for {
+    n <- cursor.get[Array[Int]]("noTiles").toTry
+    ranges <- rangesFromJson(cursor.downField("ranges"))(noDims: Int)
+    keyEncoder <- Try {
+      require(n.length == noDims, s"tiles dimension ${n.length}: must be $noDims")
+      val noTiles = create(n.map(_.toDouble))
+      tiles(noTiles = noTiles, ranges)
+
+    }
+  } yield keyEncoder
+
+  /**
+   * Returns the tiles key generator from json
+   *
+   * @param cursor the json tiles configuration
+   * @param noDims the number of dimensions
+   */
+  def normalTilesFromJson(cursor: ACursor)(noDims: Int): Try[INDArray => ModelKey] = for {
+    n <- cursor.get[Array[Int]]("noTiles").toTry
+    keyEncoder <- Try {
+      require(n.length == noDims, s"tiles dimension ${n.length}: must be $noDims")
+      val noTiles = create(n.map(_.toDouble))
+      val ranges = create(Array(-1.0, 1.0)).transpose().broadcast(2, noDims)
+      tiles(noTiles = noTiles, ranges)
+    }
+  } yield keyEncoder
+
 
   /**
    * Returns the generator
    *
-   * @param min     the state minimum values
-   * @param max     the state maximum values
-   * @param noTiles the state tiles number
+   * @param noTiles the tiles number
+   * @param ranges  the continuous ranges
    */
-  def tiles(min: INDArray,
-            max: INDArray,
-            noTiles: INDArray): INDArray => ModelKey = {
-    require(min.equalShapes(max))
-    require(min.equalShapes(noTiles))
+  def tiles(noTiles: INDArray, ranges: INDArray): INDArray => ModelKey = {
     require(noTiles.minNumber().intValue() > 0)
-
-    val scale1 = noTiles.div(max.sub(min))
+    val min = zeros(noTiles.shape(): _*)
+    val toRange = vstack(min, noTiles)
+    val tr = transform(ranges, toRange)
+    val max = noTiles.sub(1)
     values => {
-      val key1 = values.sub(min).muli(scale1)
-      val key2 = round(Transforms.min(Transforms.max(zeros(noTiles.shape(): _*), key1), noTiles))
+      val key2 = Transforms.min(tr(values), max)
       val result = for {
         i <- 0 until key2.columns()
       } yield {

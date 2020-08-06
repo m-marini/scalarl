@@ -55,15 +55,16 @@ class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
   private val RewardDecay = 0.98
   private val Alpha = 1.0
   private val LearningRate = 0.5
-  private val Range = 2.0
+  private val Range = 1.0
 
   create()
 
   private val RewardRange: INDArray = create(Array(0.0, 1.0)).transpose()
-  private val range: INDArray = create(Array(-Range, Range)).transpose()
-
+  private val range: INDArray = create(Array(
+    Array(0.0, 0.0),
+    Array(Range, Range)
+  ))
   private val random: Random = getRandomFactory.getNewRandomInstance(Seed)
-
   private val events: PublishSubject[AgentEvent] = PublishSubject[AgentEvent]()
 
 
@@ -79,7 +80,10 @@ class TestEnv2Test extends FunSpec with Matchers with LazyLogging {
       noOutputs = 2,
       denormalize = denormalize(range),
       normalize = normalize(range),
-      alpha = ones(1).mul(Alpha))),
+      alpha = ones(1).mul(Alpha),
+      transform = transform(create(Array(0.0, 1.0)).transpose(), create(Array(0.0, 1.0)).transpose()),
+      inverse = transform(create(Array(0.0, 1.0)).transpose(), create(Array(0.0, 1.0)).transpose())
+    )),
     planner = None,
     agentObserver = events)
 

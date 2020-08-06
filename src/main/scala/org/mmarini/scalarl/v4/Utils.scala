@@ -3,19 +3,12 @@ package org.mmarini.scalarl.v4
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.indexing.NDArrayIndex
+import org.nd4j.linalg.ops.transforms.Transforms
 import org.nd4j.linalg.ops.transforms.Transforms._
 
 object Utils {
-  /**
-   * Returns the clip values
-   *
-   * @param x    the values
-   * @param xMin minimum value
-   * @param xMax maximum values
-   * @param copy true if return value is a new copy
-   */
-  def clip(x: INDArray, xMin: Double, xMax: Double, copy: Boolean = true): INDArray = min(max(x, xMin, copy), xMax, copy)
 
   /**
    * Returns the clip values
@@ -25,7 +18,16 @@ object Utils {
    * @param xMax maximum values
    * @param copy true if return value is a new copy
    */
-  def clip(x: INDArray, xMin: INDArray, xMax: INDArray, copy: Boolean): INDArray = min(max(x, xMin, copy), xMax, copy)
+  def clip(x: INDArray, xMin: Double, xMax: Double, copy: Boolean = true): INDArray = Transforms.min(Transforms.max(x, xMin, copy), xMax, copy)
+
+  /**
+   * Returns the clip values
+   *
+   * @param x     the values
+   * @param range range values row(0) = min, row(1) = max
+   * @param copy  true if return value is a new copy
+   */
+  def clip(x: INDArray, range: INDArray, copy: Boolean): INDArray = Transforms.min(Transforms.max(x, range.getRow(0), copy), range.getRow(1), copy)
 
   /**
    * Returns the features vector with ones at indices
@@ -35,8 +37,8 @@ object Utils {
    */
   def features(indices: Seq[Long], size: Long): INDArray = {
     require(size > 0)
-    indices.foreach(i => require(i >= 0 && i < size))
-    val result = Nd4j.zeros(1, size)
+    indices.foreach(i => require(i >= 0 && i < size, s"indices=$indices size=$size"))
+    val result = zeros(1, size)
     indices.foreach(result.putScalar(_, 1))
     result
   }
@@ -80,15 +82,28 @@ object Utils {
 
   /**
    * Returns the denormalizer function of row vector
+   * The function returns defined ranges form ranges 0, 1
+   *
+   * @param ranges the range of transformation the first row contains minimum values
+   *               and the second row contains the maximum values
+   */
+  def denormalize01(ranges: INDArray): INDArray => INDArray = {
+    val fromRanges = vstack(zeros(1, ranges.size(1)), ones(1, ranges.size(1)))
+    transform(fromRanges, ranges)
+  }
+
+  /**
+   * Returns the denormalizer function of row vector
    * The function returns defined ranges form ranges -1, 1
    *
    * @param ranges the range of transformation the first row contains minimum values
    *               and the second row contains the maximum values
    */
   def denormalize(ranges: INDArray): INDArray => INDArray = {
-    val m = ranges.getRow(1).sub(ranges.getRow(0)).div(2)
-    val q = ranges.getRow(0).add(ranges.getRow(1)).div(2)
-    x => x.mul(m).addi(q)
+    val min = ones(1, ranges.size(1)).negi()
+    val max = ones(1, ranges.size(1))
+    val fromRanges = vstack(min, max)
+    transform(fromRanges, ranges)
   }
 
   /**
@@ -99,9 +114,36 @@ object Utils {
    *               and the second row contains the maximum values
    */
   def normalize(ranges: INDArray): INDArray => INDArray = {
-    val m = Nd4j.ones(ranges.size(1)).muli(2).divi(ranges.getRow(1).sub(ranges.getRow(0)))
-    val q = ranges.getRow(1).add(ranges.getRow(0)).divi(ranges.getRow(0).sub(ranges.getRow(1)))
-    x => x.mul(m).addi(q)
+    val toRanges = vstack(ones(1, ranges.size(1)).negi(), ones(1, ranges.size(1)))
+    transform(ranges, toRanges)
+  }
+
+  /**
+   * Returns the normalizer function of row vector
+   * The function returns ranges 0, 1 for defined ranges
+   *
+   * @param ranges the range of transformation the first row contains minimum values
+   *               and the second row contains the maximum values
+   */
+  def normalize01(ranges: INDArray): INDArray => INDArray = {
+    val toRanges = vstack(zeros(1, ranges.size(1)), ones(1, ranges.size(1)))
+    transform(ranges, toRanges)
+  }
+
+  /**
+   * Returns the normalizer function of row vector
+   * The function returns ranges 0, 1 for defined ranges
+   *
+   * @param fromRanges the range of transformation the first row contains minimum values
+   *                   and the second row contains the maximum values
+   * @param toRanges   the range of transformation the first row contains minimum values
+   *                   and the second row contains the maximum values
+   */
+  def transform(fromRanges: INDArray, toRanges: INDArray): INDArray => INDArray = {
+    val m = toRanges.getRow(1).sub(toRanges.getRow(0)).divi(fromRanges.getRow(1).sub(fromRanges.getRow(0)))
+    val q = m.mul(fromRanges.getRow(0)).subi(toRanges.getRow(0)).negi()
+    x =>
+      clip(x, fromRanges, copy = true).mul(m).addi(q)
   }
 
   /**
@@ -117,6 +159,7 @@ object Utils {
     } yield x.getDouble(i)
     val y = random.nextDouble()
     val result = seq.indexWhere(y < _)
+    require(result >= 0, s"$x")
     result
   }
 

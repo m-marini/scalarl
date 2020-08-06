@@ -35,43 +35,28 @@ import org.mmarini.scalarl.v4.envs.StatusCode._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
+import org.nd4j.linalg.ops.transforms.Transforms._
 
 /**
  * The LanderStatus with position and speed
  *
  * @constructor create a LanderStatus with position and speed
- * @param encoder      the status coder
- * @param pos          the position
- * @param time         the time instant
- * @param speed        the speed
- * @param fuel         the fuel stock
- * @param conf         the configuration
- * @param actionConfig the actions configuration
+ * @param pos   the position of lander
+ * @param time  the time instant
+ * @param speed the speed of lander
+ * @param fuel  the fuel stock
+ * @param conf  the configuration
  */
-case class LanderStatus(encoder: LanderEncoder,
-                        pos: INDArray,
+case class LanderStatus(pos: INDArray,
                         speed: INDArray,
                         time: INDArray,
                         fuel: INDArray,
-                        conf: LanderConf,
-                        actionConfig: Seq[ActionConfig]) extends Env with LazyLogging {
+                        conf: LanderConf) extends Env with LazyLogging {
   /**
    * Return the observation of the current land status
-   *
-   * The signals are composed with
-   *  - (0) 2 signals for the horizontal position in the range -1 : 1 (-600 : 600)
-   *  - (2) 1 signal for the vertical position in the range 0 : 1 (0 : 100)
-   *  - (3) 2 signal for horizontal speed in the range -1 : 1 (-24 : 24) sqrt(600 * 1)
-   *  - (5) 1 signal for vertical speed in the range -1 : 1 (-12 : 12) sqrt(100 * 1.6)
-   *  - (6) 3 signals for squared position 0 : 1
-   *  - (9) 3 signals for squared speed 0 : 1
-   *  - (12) 2 signals for horizontal position direction 0, 1
-   *  - (14) 3 signals for speed direction 0, 1
-   *  - (17) 1 signal for horizontal no landing position 0, 1
-   *  - (18) 3 signals for no land speed 0, 1 (vh high, vz low, vz high)
    */
   override lazy val observation: Observation = INDArrayObservation(
-    signals = encoder.signals(this),
+    signals = conf.signals(this),
     time = time)
 
   /** Returns true if the status is final */
@@ -96,26 +81,62 @@ case class LanderStatus(encoder: LanderEncoder,
       val reward = newEnv.status match {
         case OutOfRange =>
           conf.outOfRangeReward
-        case VCrash =>
-          conf.vCrashReward
-        case HCrash =>
-          conf.hCrashReward
+        case VCrashedOnPlatform =>
+          conf.vCrashedOnPlatformReward
+        case HCrashedOnPlatform =>
+          conf.hCrashedOnPlatformReward
         case Landed =>
           conf.landedReward
-        case OutOfPlatform =>
-          conf.outOfPlatformReward
+        case LandedOutOfPlatform =>
+          conf.landedOutOfPlatformReward
+        case HCrashedOutOfPlatform =>
+          conf.hCrashedOutOfPlatformReward
+        case VCrashedOutOfPlatform =>
+          conf.vCrashedOutOfPlatformReward
         case OutOfFuel =>
           conf.outOfFuelReward
         case Flying =>
-          conf.rewardFromMovement(pos, newEnv.pos).
-            add(conf.flyingReward).
+          conf.flyingReward.
             add(conf.rewardFromDirection(pos, speed)).
-            add(conf.rewardFromSpeed(speed))
+            addi(conf.rewardFromVSpeed(speed)).
+            addi(conf.rewardFromHSpeed(speed))
       }
       (newEnv, reward)
     case _ =>
       (initial(random), zeros(1))
   }
+
+  /**
+   * Returns the direction of target
+   * The direction is in the range of -Pi, Pi
+   * 0 toward x axis
+   * Pi/2 toward y axis
+   * Pi backward x axis
+   * -Pi/2 backward y axis
+   */
+  def direction: INDArray = atan2(pos.getColumn(1).neg(), pos.getColumn(0).neg())
+
+  /** Returns the distance from platform */
+  def distance: INDArray = pos.getColumns(0, 1).norm2()
+
+  /**
+   * Returns the speed direction
+   * The direction is in the range of -Pi, Pi
+   * 0 toward x axis
+   * Pi/2 toward y axis
+   * Pi backward x axis
+   * -Pi/2 backward y axis
+   */
+  def speedDirection: INDArray = atan2(speed.getColumn(1), speed.getColumn(0))
+
+  /** Returns the horizontal speed */
+  def hSpeed: INDArray = speed.getColumns(0, 1).norm2()
+
+  /** Returns the height from ground */
+  def height: INDArray = pos.getColumn(2)
+
+  /** Returns the vertical speed */
+  def vSpeed: INDArray = speed.getColumn(2)
 
   /**
    *
@@ -141,7 +162,10 @@ case class LanderStatus(encoder: LanderEncoder,
   }
 
   /** Returns the number of signals */
-  override def signalsSize: Int = encoder.noSignals
+  override def signalsSize: Int = conf.noSignals
+
+  /** Returns the action configuration */
+  override val actionDimensions: Int = LanderConf.NumActors
 }
 
 /** Factory for [[LanderStatus]] instances */
@@ -150,20 +174,14 @@ object LanderStatus {
   /**
    * Returns the initial environment
    *
-   * @param conf         the configuration
-   * @param encoder      the encoder
-   * @param actionConfig the action configuration
-   * @param random       the random generator
+   * @param conf   the configuration
+   * @param random the random generator
    */
   def apply(conf: LanderConf,
-            encoder: LanderEncoder,
-            actionConfig: Seq[ActionConfig],
             random: Random): LanderStatus = LanderStatus(
     conf = conf,
-    encoder = encoder,
     pos = conf.initialPos(random),
     speed = zeros(3),
     time = zeros(1),
-    fuel = conf.fuel,
-    actionConfig = actionConfig)
+    fuel = conf.fuel)
 }

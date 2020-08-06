@@ -7,7 +7,6 @@ import org.nd4j.linalg.ops.transforms.Transforms
 
 case class ContinuousActionEnv(x: INDArray, t: INDArray) extends Env {
   /** Returns the action configuration */
-  override val actionConfig: Seq[ActionConfig] = Seq(ContinuousAction)
   val TilesEncoder: Tiles = Tiles(2L)
 
   /**
@@ -36,4 +35,7 @@ case class ContinuousActionEnv(x: INDArray, t: INDArray) extends Env {
       signals = signals,
       time = t)
   }
+
+  /** Returns the action space dimension */
+  override def actionDimensions: Int = 1
 }

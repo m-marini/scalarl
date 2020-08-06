@@ -37,12 +37,11 @@ import monix.reactive.Observable
 import monix.reactive.subjects.PublishSubject
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.util.ModelSerializer
+import org.mmarini.scalarl.v4.Agent
 import org.mmarini.scalarl.v4.Utils._
-import org.mmarini.scalarl.v4.{ActionConfig, Agent, DiscreteAction}
 import org.nd4j.linalg.factory.Nd4j._
-import org.nd4j.linalg.ops.transforms.Transforms._
-//import scala.math._
 
+import scala.util.{Failure, Success, Try}
 
 /**
  *
@@ -51,139 +50,87 @@ object AgentBuilder extends LazyLogging {
 
 
   /**
+   * Returns the agent
+   *
+   * @param dimension the dimension index
+   * @param conf      the json configuration
+   * @param noInputs  the number ofr inputs
+   * @param modelPath the path of model to load
+   */
+  def actorFromJson(conf: ACursor)(dimension: Int,
+                                   noInputs: Int,
+                                   modelPath: Option[String]): Try[Actor] = for {
+    typ <- conf.get[String]("type").toTry
+    actor <- typ match {
+      case "PolicyActor" => PolicyActor.fromJson(conf)(dimension, noInputs, modelPath)
+      case "GaussianActor" => GaussianActor.fromJson(conf)(dimension, noInputs, modelPath)
+      case _ => Failure(new IllegalArgumentException(s"Actor $dimension '$typ' unrecognized"))
+    }
+  } yield actor
+
+
+  /**
    * Returns [[Agent]] from json configuration
    *
-   * @param conf         the configuration
-   * @param noInputs     the number of inputs
-   * @param actionConfig actions configuration
+   * @param conf             the configuration
+   * @param noInputs         the number of inputs
+   * @param actionDimensions actions space configuration
    */
-  def fromJson(conf: ACursor)(noInputs: Int, actionConfig: Seq[ActionConfig]): (Agent, Observable[AgentEvent]) = {
-    val result = conf.get[String]("type").toTry.get match {
-      case "ActorCritic" => actorCriticFromJson(conf)(noInputs, actionConfig)
-      case typ =>
-        throw new IllegalArgumentException(s"Agent type '$typ' unrecognized")
+  def fromJson(conf: ACursor)(noInputs: Int, actionDimensions: Int): Try[(Agent, Observable[AgentEvent])] = {
+    val result = conf.get[String]("type").toTry.flatMap {
+      case "ActorCritic" => actorCriticFromJson(conf)(noInputs, actionDimensions)
+      case typ => Failure(new IllegalArgumentException(s"Agent type '$typ' unrecognized"))
     }
     result
   }
 
+  def actorsFromJson(conf: ACursor)(noInputs: Int, actionDimensions: Int, modelPath: Option[String]): Try[Seq[Actor]] =
+    Try {
+      for {
+        i <- 0 until actionDimensions
+      } yield
+        actorFromJson(conf.downN(i))(i, noInputs, modelPath).get
+    }
+
   /**
    * Returns the [[ActorCriticAgent]] from json
    *
-   * @param conf         the configuration
-   * @param noInputs     the number of inputs
-   * @param actionConfig the action configuration
+   * @param conf             the configuration
+   * @param noInputs         the number of inputs
+   * @param actionDimensions the action space dimensions
    */
-  def actorCriticFromJson(conf: ACursor)(noInputs: Int, actionConfig: Seq[ActionConfig]): (ActorCriticAgent, Observable[AgentEvent]) = {
-    val modelPath = conf.get[String]("modelPath").toOption
-    val avg = conf.get[Double]("avgReward").toTry.map(ones(1).muli(_)).get
-    val rewardDecay = conf.get[Double]("rewardDecay").toTry.map(ones(1).muli(_)).get
-    val valueDecay = conf.get[Double]("valueDecay").toTry.map(ones(1).muli(_)).get
-    val rewardRange = conf.get[Array[Double]]("rewardRange").toTry.map(create).get.transpose()
-
-    val actions = conf.downField("actors")
-    val actors = actionConfig.zipWithIndex.map {
-      case (action, dim) =>
-        actorFromJson(actions.downN(dim))(dim, noInputs, action, modelPath)
+  def actorCriticFromJson(conf: ACursor)(noInputs: Int, actionDimensions: Int): Try[(ActorCriticAgent, Observable[AgentEvent])] = {
+    for {
+      avg <- conf.get[Double]("avgReward").toTry.map(ones(1).muli(_))
+      rewardDecay <- conf.get[Double]("rewardDecay").toTry.map(ones(1).muli(_))
+      valueDecay <- conf.get[Double]("valueDecay").toTry.map(ones(1).muli(_))
+      rewardRange <- conf.get[Array[Double]]("rewardRange").toTry.map(create).map(_.transpose())
+      modelPath = conf.get[String]("modelPath").toOption
+      actors <- actorsFromJson(conf.downField("actors"))(noInputs, actionDimensions, modelPath)
+      noOutputs = 1 +: actors.map(_.noOutputs)
+      network <- modelPath.map(path => {
+        loadNetwork(new File(path, s"network.zip"), noInputs, noOutputs)
+      }).getOrElse(AgentNetworkBuilder.fromJson(conf.downField("network"))(noInputs, noOutputs))
+      plannerCfg = conf.downField("planner")
+      planner <- if (plannerCfg.succeeded) {
+        PriorityPlanner.fromJson(plannerCfg)(noInputs, noOutputs.sum).map(Some(_))
+      } else {
+        Success(None)
+      }
+    } yield {
+      val subj = PublishSubject[AgentEvent]()
+      val agent = ActorCriticAgent(actors = actors,
+        network = network,
+        avg = avg,
+        valueDecay = valueDecay,
+        rewardDecay = rewardDecay,
+        denormalize = denormalize(rewardRange),
+        normalizer = normalize(rewardRange),
+        planner = planner,
+        agentObserver = subj
+      )
+      (agent, subj)
     }
-
-    val noOutputs = 1 +: actors.map(_.noOutputs)
-
-    val network = modelPath.map(path => {
-      loadNetwork(new File(path, s"network.zip"), noInputs, noOutputs)
-    }).getOrElse(AgentNetworkBuilder.fromJson(conf.downField("network"))(noInputs, noOutputs))
-
-    val plannerCfg = conf.downField("planner")
-    val planner = if (plannerCfg.succeeded) Some(PriorityPlanner.fromJson(plannerCfg)(noInputs, actionConfig.length)) else None
-
-    val subj = PublishSubject[AgentEvent]()
-    val agent = ActorCriticAgent(actors = actors,
-      network = network,
-      avg = avg,
-      valueDecay = valueDecay,
-      rewardDecay = rewardDecay,
-      denormalize = denormalize(rewardRange),
-      normalizer = normalize(rewardRange),
-      planner = planner,
-      agentObserver = subj
-    )
-    (agent, subj)
-  }
-
-  /**
-   * Returns the agent
-   *
-   * @param dimension    the dimension index
-   * @param conf         the json configuration
-   * @param noInputs     the number ofr inputs
-   * @param actionConfig the action configuration
-   * @param modelPath    the path of model to load
-   */
-  def actorFromJson(conf: ACursor)(dimension: Int,
-                                   noInputs: Int,
-                                   actionConfig: ActionConfig,
-                                   modelPath: Option[String]): Actor = {
-    val typ = conf.get[String]("type").toTry.get
-    (typ, actionConfig) match {
-      case ("PolicyActor", cfg: DiscreteAction) =>
-        policyActorFromJson(conf)(dimension, noInputs, cfg, modelPath)
-      case ("GaussianActor", _) =>
-        gaussianFromJson(conf)(dimension, noInputs, modelPath)
-      case _ =>
-        throw new IllegalArgumentException(s"Actor $dimension '$typ' incompatible with action configuration $actionConfig")
-    }
-  }
-
-  /**
-   * Returns the discrete action agent
-   *
-   * @param conf         the configuration element
-   * @param dimension    the dimension index
-   * @param noInputs     the number of inputs
-   * @param actionConfig the actions configuration
-   * @param modelPath    the path of model to load
-   */
-  def policyActorFromJson(conf: ACursor)(dimension: Int,
-                                         noInputs: Int,
-                                         actionConfig: DiscreteAction,
-                                         modelPath: Option[String]): PolicyActor = {
-    val range = conf.get[List[Double]]("prefRange").toTry.map(x => create(x.toArray)).get.transpose()
-    val transfom = denormalize(range)
-    val grad = normalize(range)
-    PolicyActor(
-      dimension = dimension,
-      noOutputs = actionConfig.numValues,
-      denormalize = transfom,
-      normalize = grad,
-      alpha = conf.get[Double]("alpha").toTry.map(ones(1).muli(_)).get)
-  }
-
-  /**
-   * Returns the discrete action agent
-   *
-   * @param conf      the configuration element
-   * @param dimension the dimension index
-   * @param noInputs  the number of inputs
-   * @param modelPath the path of model to load
-   */
-  def gaussianFromJson(conf: ACursor)(dimension: Int,
-                                      noInputs: Int,
-                                      modelPath: Option[String]): GaussianActor = {
-    val alphaMu = conf.get[Double]("alphaMu").toTry.get
-    val alphaSigma = conf.get[Double]("alphaSigma").toTry.get
-    val muRange = conf.get[Array[Double]]("muRange").toTry.get
-    require(muRange.length == 2, s"muRange must have 2 values")
-    require(muRange(0) < muRange(1), s"muRange must have min < max")
-    val sigmaRange = conf.get[Array[Double]]("sigmaRange").toTry.get
-    require(sigmaRange.length == 2, s"sigmaRange must have 2 values")
-    require(sigmaRange.min > 0, s"sigmaRange must be positive")
-    val range = vstack(create(muRange), log(create(sigmaRange))).transpose
-    val denorm = denormalize(range)
-    val norm = normalize(range)
-    GaussianActor(
-      dimension = dimension,
-      eta = create(Array(alphaMu, alphaSigma)),
-      denormalize = denorm,
-      normalize = norm)
   }
 
   /**
@@ -193,18 +140,22 @@ object AgentBuilder extends LazyLogging {
    * @param noInputs  the number of inputs
    * @param noOutputs the number of outputs
    */
-  def loadNetwork(file: File, noInputs: Int, noOutputs: Seq[Int]): ComputationGraph = {
+  def loadNetwork(file: File, noInputs: Int, noOutputs: Seq[Int]): Try[ComputationGraph] = {
     logger.info("Loading {} ...", file)
     val net = ModelSerializer.restoreComputationGraph(file, true)
     // Validate
-    net.layerInputSize(0) match {
-      case x if x != noInputs =>
-        throw new IllegalArgumentException(s"Network $file with wrong ($x) input number: expected $noInputs")
+    Try {
+      net.layerInputSize(0) match {
+        case x if x != noInputs =>
+          throw new IllegalArgumentException(s"Network $file with wrong ($x) input number: expected $noInputs")
+      }
+      net.getNumOutputArrays match {
+        case n if n != noOutputs.length =>
+          throw new IllegalArgumentException(s"Network $file with wrong ($n) output layers: expected ${
+            noOutputs.length
+          }")
+      }
+      net
     }
-    net.getNumOutputArrays match {
-      case n if n != noOutputs.length =>
-        throw new IllegalArgumentException(s"Network $file with wrong ($n) output layers: expected ${noOutputs.length}")
-    }
-    net
   }
 }

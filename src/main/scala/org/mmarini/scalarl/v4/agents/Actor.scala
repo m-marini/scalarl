@@ -14,9 +14,8 @@ trait Actor {
    * @param outputs the outputs
    * @param actions the actions
    * @param delta   the td error
-   * @param random  the random generator
    */
-  def computeLabels(outputs: Array[INDArray], actions: INDArray, delta: INDArray, random: Random): INDArray
+  def computeLabels(outputs: Array[INDArray], actions: INDArray, delta: INDArray): Map[String, Any]
 
   /**
    * Returns the action choosen by the actor

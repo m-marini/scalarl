@@ -40,6 +40,8 @@ import org.mmarini.scalarl.v4._
 import org.mmarini.scalarl.v4.agents.AgentEvent
 import org.mmarini.scalarl.v4.reactive.Implicits._
 
+import scala.util.Try
+
 /**
  *
  */
@@ -62,51 +64,53 @@ object SessionBuilder extends LazyLogging {
     dumpFileParm: Option[String],
     env: => Env,
     agent: => Agent,
-    agentEvents: Observable[AgentEvent]): Session = {
+    agentEvents: Observable[AgentEvent]): Try[Session] = {
 
-    val numSteps = conf.get[Int]("numSteps").toTry.get
-    val dump = dumpFileParm.orElse(conf.get[String]("dump").toOption)
-    val trace = conf.get[String]("trace").toOption
-    val saveModel = conf.get[String]("modelFile").toOption
-    val kpiFile = kpiFileParm.orElse(conf.get[String]("kpiFile").toOption)
+    for {
+      numSteps <- conf.get[Int]("numSteps").toTry
+    } yield {
+      val dump = dumpFileParm.orElse(conf.get[String]("dump").toOption)
+      val trace = conf.get[String]("trace").toOption
+      val saveModel = conf.get[String]("modelFile").toOption
+      val kpiFile = kpiFileParm.orElse(conf.get[String]("kpiFile").toOption)
+      // Clean up all files
+      if (epoch == 0) {
+        (dump.toSeq ++ trace ++ saveModel ++ kpiFile).foreach(new File(_).delete())
+      }
+      saveModel.foreach(f => {
+        new File(f).mkdirs()
+      })
 
-    // Clean up all files
-    if (epoch == 0) {
-      (dump.toSeq ++ trace ++ saveModel ++ kpiFile).foreach(new File(_).delete())
+      // Create session
+      val session = new Session(
+        numSteps = numSteps,
+        env = env,
+        agent = agent,
+        epoch = epoch)
+
+      dump.foreach(filename => {
+        logger.info("Dump file {}", filename)
+        session.landerDump().writeCsv(new File(filename)).subscribe()
+      })
+
+      trace.foreach(filename => {
+        logger.info("Trace file {}", filename)
+        session.landerTrace().writeCsv(new File(filename)).subscribe()
+      })
+
+      kpiFile.foreach(filename => {
+        logger.info("Kpi file {}", filename)
+        agentEvents.kpis().writeCsv(new File(filename)).subscribe()
+      })
+
+      // Save model every 10 steps
+      saveModel.foreach(file => {
+        logger.info("Model file {}", file)
+        val path = new File(file)
+        session.steps.takeEveryNth(SaveStepInterval).saveAgent(path).subscribe()
+        session.steps.last.saveAgent(path).subscribe()
+      })
+      session
     }
-    saveModel.foreach(f => {
-      new File(f).mkdirs()
-    })
-
-    // Create session
-    val session = new Session(
-      numSteps = numSteps,
-      env = env,
-      agent = agent,
-      epoch = epoch)
-
-    dump.foreach(filename => {
-      logger.info("Dump file {}", filename);
-      session.landerDump().writeCsv(new File(filename)).subscribe()
-    })
-
-    trace.foreach(filename => {
-      logger.info("Trace file {}", filename);
-      session.landerTrace().writeCsv(new File(filename)).subscribe()
-    })
-
-    kpiFile.foreach(filename => {
-      logger.info("Kpi file {}", filename);
-      agentEvents.kpis().writeCsv(new File(filename)).subscribe()
-    })
-
-    // Save model every 10 steps
-    saveModel.foreach(file => {
-      logger.info("Model file {}", file);
-      val path = new File(file)
-      session.steps.takeEveryNth(SaveStepInterval).saveAgent(path).subscribe()
-      session.steps.last.saveAgent(path).subscribe()
-    })
-    session
   }
 }

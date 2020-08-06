@@ -74,7 +74,7 @@ case class TestEnv(time: INDArray, status: Int, conf: TestEnvConf) extends Env {
   override def signalsSize: Int = conf.numState
 
   /** Returns the action configuration */
-  override def actionConfig: Seq[ActionConfig] = Seq(DiscreteAction(2))
+  override def actionDimensions: Int = 1
 }
 
 /**

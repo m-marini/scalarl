@@ -72,12 +72,9 @@ class Session(env: => Env,
    * @return the environment and agent after the interaction session
    */
   def run(random: Random): (Env, Agent) = {
-    logger.info("Running session with agent with {} inputs and {} outputs ...",
+    logger.info("Running session with agent with {} inputs and {} actors ...",
       env.signalsSize,
-      env.actionConfig.map {
-        case DiscreteAction(n) => n
-        case ContinuousAction => 2
-      }.sum
+      env.actionDimensions
     )
 
     val env0 = env

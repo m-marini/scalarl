@@ -24,41 +24,41 @@ env:
   #vSpeedReward: -2 
   #hSpeedReward: -2
   landedReward: 100
-  vCrashedOnPlatformReward: 100
-  hCrashedOnPlatformReward: 100
-  landedOutOfPlatformReward: -100
-  vCrashedOutOfPlatformReward: -100
-  hCrashedOutOfPlatformReward: -100
+  vCrashReward: -100
+  hCrashReward: -10
+  outOfPlatformReward: -3
   outOfRangeReward: -100
   outOfFuelReward: -100
-  flyingReward: -2
+  flyingReward: 0
   directionReward: 1
-  hSpeedReward: -5
-  vSpeedReward: -1.25
-  encoder: LanderContinuous
+  hSpeedReward: 0
+  vSpeedReward: -2
+  # input encoder
+  encoder: LanderTiles
   signalRanges:
     - [-1, 1]
     - [-1, 1]
     - [0, 64]
     - [0, 16]
-    - [0, 8]
+    - [0, 16]
     - [-16, 16]
+  # output encoder
   actionConfig: DiscreteActions
 agent:
   type: ActorCritic
-  avgReward: 0
+  avgReward: -6
   rewardDecay: 0.999
   valueDecay: 0.99
   rewardRange: [-100, 100]
   network:
     seed: 1234
-    activation: SOFTPLUS
     numHiddens:
     - 100
     - 30
     - 30
     shortcuts:
       - [ 1, 4 ]
+    activation: SOFTPLUS
     updater: Sgd
     learningRate: 10e-3
     maxAbsGradients: 100
@@ -66,14 +66,23 @@ agent:
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 7e-3
-      prefRange: [-2.4, 2.4]
+      alpha: 30e-3
+      prefRange: [-2.3, 2.3]
     - type: PolicyActor
-      alpha: 4e-3
-      prefRange: [-2.4, 2.4]
+      alpha: 10e-3
+      prefRange: [-2.3, 2.3]
     - type: PolicyActor
-      alpha: 5e-3
-      prefRange: [-2.4, 2.4]
+      alpha: 20e-3
+      prefRange: [-2.3, 2.3]
+  planner:
+    planningSteps: 5
+    threshold: 10e-6
+    minModelSize: 300
+    maxModelSize: 1000
+    stateKey:
+      type: Discrete
+    actionsKey:
+      type: Discrete
 session:
-  numSteps: 1000000
+  numSteps: 3000
   seed: 1234
