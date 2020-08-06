@@ -31,14 +31,15 @@ package org.mmarini.scalarl.v4.envs
 
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.ACursor
-import org.mmarini.scalarl.v4.{ContinuousAction, DiscreteAction, Env}
+import org.mmarini.scalarl.v4.Env
 import org.nd4j.linalg.api.rng.Random
+
+import scala.util.Try
 
 /**
  *
  */
 object EnvBuilder extends LazyLogging {
-  val EnvDiscreteAction = DiscreteAction(5)
 
   /**
    * Returns the environment from json caonfiguration
@@ -46,19 +47,7 @@ object EnvBuilder extends LazyLogging {
    * @param conf   the json configuration
    * @param random the random configuration
    */
-  def fromJson(conf: ACursor)(random: Random): Env = {
-    val landerConf = LanderConf.fromJson(conf)
-    val coder = conf.get[String]("type").toTry.get match {
-      case "LanderTiles" => LanderTilesEncoder.fromJson(conf)
-      case "LanderContinuous" => LanderContinuousEncoder.fromJson(conf)
-      case typ => throw new IllegalArgumentException(s"Unreconginzed coder type '$typ'")
-    }
-    val actionConfig = conf.get[String]("actionConfig").toTry.get match {
-      case "DiscreteActions" => EnvDiscreteAction
-      case "ContinuousActions" => ContinuousAction
-      case typ => throw new IllegalArgumentException(s"Unreconginzed action configuration name '$typ'")
-    }
-
-    LanderStatus(landerConf, coder, (1 to 3).map(_ => actionConfig), random)
-  }
+  def fromJson(conf: ACursor)(random: Random): Try[Env] =
+    for {landerConf <- LanderConf.fromJson(conf)}
+      yield LanderStatus(landerConf, random)
 }

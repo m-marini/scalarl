@@ -36,7 +36,7 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.weights.WeightInit
-import org.mmarini.scalarl.v4.Utils.{denormalize, normalize}
+import org.mmarini.scalarl.v4.Utils.{denormalize, normalize, _}
 import org.mmarini.scalarl.v4.agents._
 import org.mmarini.scalarl.v4.{Agent, Session}
 import org.nd4j.linalg.activations.Activation
@@ -45,7 +45,7 @@ import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.learning.config.Sgd
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
-import org.nd4j.linalg.ops.transforms.Transforms.softmax
+import org.nd4j.linalg.ops.transforms.Transforms._
 import org.scalatest.{FunSpec, Matchers}
 
 class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
@@ -58,13 +58,15 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
   private val RewardDecay = 0.98
   private val Alpha = 1.0
   private val LearningRate = 0.25
-  private val Range = 2.0
+  private val Range = 1.0
 
   create()
 
   private val RewardRange: INDArray = create(Array(0.0, 1.0)).transpose()
-  private val range: INDArray = create(Array(-Range, Range)).transpose()
-
+  private val range: INDArray = create(Array(
+    Array(0.0, 0.0),
+    Array(Range, Range)
+  ))
   private val random: Random = getRandomFactory.getNewRandomInstance(Seed)
   private val events: PublishSubject[AgentEvent] = PublishSubject[AgentEvent]()
 
@@ -80,7 +82,10 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
       noOutputs = 2,
       denormalize = denormalize(range),
       normalize = normalize(range),
-      alpha = ones(1).muli(Alpha))),
+      alpha = ones(1).muli(Alpha),
+      transform = transform(create(Array(0.0, 1.0)).transpose(), create(Array(0.0, 1.0)).transpose()),
+      inverse = transform(create(Array(0.0, 1.0)).transpose(), create(Array(0.0, 1.0)).transpose())
+    )),
     planner = Some(planner),
     agentObserver = events)
 
@@ -176,7 +181,7 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
 
     val planner = agent1.planner.get.asInstanceOf[PriorityPlanner[Seq[Int], Seq[Int]]]
     it("should have model with 6 entries") {
-      planner.model should have size 5
+      planner.model should have size 6
     }
   }
 }

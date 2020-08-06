@@ -118,4 +118,14 @@ class UtilsTest extends FunSpec with Matchers {
       f(create(Array(0.0, -2.0))) shouldBe ones(2).negi()
     }
   }
+
+  it("should create normalize01") {
+    val f = Utils.normalize01(create(Array(
+      Array(0.0, -2.0),
+      Array(5.0, 4.0))))
+
+    f(create(Array(2.5, 1.0))) shouldBe ones(2).muli(0.5)
+    f(create(Array(5.0, 4.0))) shouldBe ones(2)
+    f(create(Array(0.0, -2.0))) shouldBe zeros(2)
+  }
 }

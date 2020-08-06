@@ -41,17 +41,16 @@ import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.conf.{GradientNormalization, NeuralNetConfiguration}
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.weights.WeightInit
+import org.mmarini.scalarl.v4.Session
 import org.mmarini.scalarl.v4.Utils._
 import org.mmarini.scalarl.v4.agents._
 import org.mmarini.scalarl.v4.reactive.Implicits._
-import org.mmarini.scalarl.v4.{Feedback, Session}
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.learning.config.Sgd
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
-import org.nd4j.linalg.ops.transforms.Transforms._
 import org.scalatest.{FunSpec, Matchers}
 
 class MountingCarTest extends FunSpec with Matchers with LazyLogging {
@@ -99,9 +98,9 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
     Some(PriorityPlanner(
       stateKeyGen = INDArrayKeyGenerator.binary,
       actionsKeyGen = INDArrayKeyGenerator.tiles(
-        min = ones(1).negi(),
-        max = ones(1),
-        noTiles = ones(1).muli(100)),
+        noTiles = ones(1).muli(100),
+        ranges = create(Array(-1.0, 1.0)).transposei()
+      ),
       planningSteps = PlanningStep,
       minModelSize = MinModelSize,
       maxModelSize = MaxModelSize,
@@ -149,33 +148,6 @@ class MountingCarTest extends FunSpec with Matchers with LazyLogging {
   }
 
   def trace(event: AgentEvent) {
-    val Feedback(s0, a, r, s1) = event.feedback
-    val ag0 = event.agent0.asInstanceOf[ActorCriticAgent]
-    val ac0 = ag0.actors.head.asInstanceOf[GaussianActor]
-    val o0 = ag0.network.output(s0.signals)
-    val (mu0, h0, sigma0) = ac0.muHSigma(o0)
-    val ag1 = event.agent1.asInstanceOf[ActorCriticAgent]
-    val ac1 = ag1.actors.head.asInstanceOf[GaussianActor]
-    val o1 = ag1.network.output(s0.signals)
-    val (mu1, h1, sigma1) = ac1.muHSigma(o1)
-    val s = ag0.score(event.feedback)
-
-    val v0 = ag0.v(o0)
-    val o01 = ag0.network.output(s1.signals)
-    val v1 = ag0.v(o01)
-
-    val (delta, _, _) = ag0.computeDelta(v0, v1, r)
-
-    val actorLabels = ac0.computeLabels(o0, a, delta, random)
-    val muStar = actorLabels.getColumn(0)
-    val hStar = actorLabels.getColumn(1)
-    val sigmaStart = exp(hStar)
-
-    logger.debug("s0={}, a={}, r={}, score={}, delta={}", find(s0.signals), a, r, s, delta)
-    logger.debug("   mu ={}, h= {}, sigma= {}", mu0, h0, sigma0)
-    logger.debug("   mu*={}, h*={}, sigma*={}", muStar, hStar, sigmaStart)
-    logger.debug("   mu'={}, h'={}, sigma'={}", mu1, h1, sigma1)
-
   }
 
   describe("TestEnv") {

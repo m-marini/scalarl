@@ -11,6 +11,8 @@ env:
   landingRadius: 10
   landingVH: 2
   landingVZ: 4
+  optimalVH: 1
+  optimalVZ: -2
   g: 1.6
   maxAH: 1
   maxAZ: 3.2
@@ -35,7 +37,8 @@ env:
   directionReward: 1
   hSpeedReward: -5
   vSpeedReward: -1.25
-  encoder: LanderContinuous
+  # input encoder
+  encoder: LanderTiles
   signalRanges:
     - [-1, 1]
     - [-1, 1]
@@ -43,6 +46,7 @@ env:
     - [0, 16]
     - [0, 8]
     - [-16, 16]
+  # output encoder
   actionConfig: DiscreteActions
 agent:
   type: ActorCritic
@@ -52,13 +56,13 @@ agent:
   rewardRange: [-100, 100]
   network:
     seed: 1234
-    activation: SOFTPLUS
     numHiddens:
     - 100
     - 30
     - 30
     shortcuts:
       - [ 1, 4 ]
+    activation: SOFTPLUS
     updater: Sgd
     learningRate: 10e-3
     maxAbsGradients: 100
@@ -75,5 +79,5 @@ agent:
       alpha: 5e-3
       prefRange: [-2.4, 2.4]
 session:
-  numSteps: 1000000
+  numSteps: 100000
   seed: 1234

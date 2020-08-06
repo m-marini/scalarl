@@ -1,18 +1,20 @@
 function analyzeDiscreteAgent(
   X,                  # the indicators dump
-  EPSH = 1,           # the optimal range of h to be considered
+  EPSH = 0.24,           # the optimal range of h to be considered
   K0 = 0.7,           # the K threshold for C1 class
   EPS = 100e-6,       # the minimu J value to be considered
   PRC = [50 : 10 : 90]', # the percentiles in the chart
   BINS = 20)          # the number of bins in histogram
-  # Number of actions
-  NAC = 5;
-  # Number of colums per actors
-  NCOLA = 16;
+  # Number of direction
+  NDIR = 8;
+  # Number of h Jet
+  NHJET = 3;
+  # Number of z Jet
+  NZJET = 5;
   # Number of steps, number of values
   [n m] = size(X);
   # Number of actors
-  NA = floor((m - 4 ) / NCOLA);
+  NA = 3;
   #DR = 100:102;
 
   # Compute J value of network (sum over the J values of critics and actors)
@@ -21,21 +23,8 @@ function analyzeDiscreteAgent(
   V1 = X(:, 3);
   RPI = X(:, 4);
   TD = (VSTAR - V0) .^ 2;
-  J = TD;
-  J1 = (VSTAR - V1) .^ 2;
-  for actor = 0 : NA - 1
-    j = actor * NCOLA + 5;
-    IH = j + 1;
-    IHSTAR = j + NAC + 1;
-    IH1 = j + 2 * NAC + 1;
-    H = X(:, IH : IH + NAC - 1);
-    HSTAR = X(:, IHSTAR : IHSTAR + NAC - 1);
-    H1 = X(:, IH1 : IH1 + NAC - 1);
-    JH = (HSTAR - H) .^ 2;
-    JH1 = (HSTAR - H1) .^ 2;
-    J = J + sum(JH, 2);
-    J1 = J1 + sum(JH1, 2);
-  endfor
+  J = X(:, 5);
+  J1 = X(:, 6);
   
   # Filter the J values greater than threshold EPS
   VI = find(abs(J) >= EPS);
@@ -53,29 +42,51 @@ function analyzeDiscreteAgent(
   # Number of optimizied steps
   C2 = n - C0 - C1;
   
+  # Direction actor
   hChart = {};
-  for actor = 0 : NA - 1
-    j = actor * 16 + 5;
-    alpha = X(1, j);
-    # Computes the J values
-    IH = j + 1;
-    IHSTAR = IH + NAC;
-    H = X(:, IH : IH + NAC - 1);
-    HSTAR = X(:, IHSTAR : IHSTAR + NAC - 1);
-    
-    DH = HSTAR - H;
-    DH2 = DH .^ 2;
-    DH2M = mean(DH2, 2);
+  alpha = X(1, 7);
+  # Computes the J values
+  H = X(:, 8 : 15);
+  HSTAR = X(:, 16 : 23);
+  DH = HSTAR - H;
+  DH2 = DH .^ 2;
+  DH2M = mean(DH2, 2);
+  hChart{1 , 1} = DH2M;
+  # Compute alpha for percetile
+  PCH = prctile(sqrt(DH2M), PRC);
+  hChart{1, 2} = EPSH ./ PCH * alpha;
+  # Compute mean
+  hChart{1, 3} = ones(size(PRC, 1), 1) * EPSH ./ sqrt(mean(DH2M)) * alpha;
 
-    hChart{actor + 1 , 1} = DH2M;
+  # H power actor
+  alpha = X(1, 32);
+  # Computes the J values
+  H = X(:, 33 : 35);
+  HSTAR = X(:, 36 : 38);
+  DH = HSTAR - H;
+  DH2 = DH .^ 2;
+  DH2M = mean(DH2, 2);
+  hChart{2 , 1} = DH2M;
+  # Compute alpha for percetile
+  PCH = prctile(sqrt(DH2M), PRC);
+  hChart{2, 2} = EPSH ./ PCH * alpha;
+  # Compute mean
+  hChart{2, 3} = ones(size(PRC, 1), 1) * EPSH ./ sqrt(mean(DH2M)) * alpha;
 
-    # Compute alpha for percetile
-    PCH = prctile(sqrt(DH2M), PRC);
-    hChart{actor + 1, 2} = EPSH ./ PCH * alpha;
-
-    # Compute mean
-    hChart{actor + 1, 3} = ones(size(PRC, 1), 1) * EPSH ./ sqrt(mean(DH2M)) * alpha;
-  endfor
+  # Z power actor
+  alpha = X(1, 42);
+  # Computes the J values
+  H = X(:, 43 : 47);
+  HSTAR = X(:, 48 : 52);
+  DH = HSTAR - H;
+  DH2 = DH .^ 2;
+  DH2M = mean(DH2, 2);
+  hChart{3 , 1} = DH2M;
+  # Compute alpha for percetile
+  PCH = prctile(sqrt(DH2M), PRC);
+  hChart{3, 2} = EPSH ./ PCH * alpha;
+  # Compute mean
+  hChart{3, 3} = ones(size(PRC, 1), 1) * EPSH ./ sqrt(mean(DH2M)) * alpha;
  
   NR = 2;             # number of rows
   NC = 2 + NA;
@@ -94,14 +105,14 @@ function analyzeDiscreteAgent(
   ylabel("# samples");
   
   subplot(NR, NC, 1 + NC);
-  autoplot([RTREND]);
+  autoplot([RPI RTREND]);
   grid on;
   title(sprintf("Average Reward\n%s Trend", RMODE));
   ylabel("Reward");
   xlabel("Step");
   
   subplot(NR, NC, 2 + NC);
-  autoplot([TDTREND]);
+  autoplot([TD TDTREND]);
   grid on;
   title(sprintf("Squared TD Error\n%s Trend", TDMODE));
   ylabel("delta^2");

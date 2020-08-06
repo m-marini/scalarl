@@ -146,28 +146,22 @@ R = -j_x - j_y - j_z
 
 ## Input signals
 
-The input signals are
+The base input signals are in the range -1, 1
+- the direction of platform (0 toward x-axis, 0.5 toward y-axis) tiles length of 11.25 DEG for 32 tiles
+- the direction of horizontal speed (0 toward x-axis, 0.5 toward y-axis) tiles length of 11.25 DEG for 32 tiles
+- the platform distance (-1 = 0 m, 1 = 64 m), tiles length of 2m for 32 tiles
+- the height from the ground (-1 = 0 m, 1 = 16 m) tiles length of 0.5 m for 32 tiles
+- the horizontal speed (-1 = 0 m/s, 1 = 8 m/s) tiles length of 0.25 m/s for 32 tiles
+- the vertical speed (-1 = -16 m/s, 1 = 16 m/s) tiles length of 1 m/s for 32 tiles
 
-- the position x, y of landing site respect the shuttle normalized -500, 500 to -1, 1
-- the position z of landing site respect the shuttle normalized 0, 100 to -1, 1
-- the speeds vx, vy, vz of shuttle normalized ? to -1, 1
-- the signals for correct horizontal position respect the landing site -1 when x, y before $r =10 \; m$, 1 when x, y after $r=10 \; m$, 0 otherwise.
-- the signals for inrange speeds for landing, -1 when $ v_x, v_y, < 0.5 \; \frac{m}{s} $,  -1 when $ v_x, v_y, > 0.5 \; \frac{m}{s} $, 0 otherwise.
-- the signals for inrange vertical speeds for landing, -1 when $ v_z < -4 \; \frac{m}{s} $,  1 when $ v_z > 0 \; \frac{m}{s} $, 0 otherwise.
-
-| Offset |  Signal |
-|-------:|--------:|
-|      0 |       x |
-|      1 |       y |
-|      2 |       z |
-|      3 |   $v_x$ |
-|      4 |   $v_y$ |
-|      5 |   $v_z$ |
-|      6 |  land x |
-|      7 |  land y |
-|      8 | vland x |
-|      9 | vland y |
-|     10 | vland z |
+| Offset | Signal             |
+|-------:|--------------------|
+|      0 | Platform direction |
+|      1 | Speed direction    |
+|      2 | Platform distance  |
+|      3 | Height             |
+|      4 | H Speed            |
+|      5 | V Speed            |
 
 ## Available action signals
 

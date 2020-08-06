@@ -31,51 +31,40 @@ package org.mmarini.scalarl.v4.envs
 
 import io.circe.ACursor
 import org.mmarini.scalarl.v4.Utils
-import org.mmarini.scalarl.v4.envs.LanderTilesEncoder.{HPrecision, VHPrecision, VZPrecision, ZPrecision}
 import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.factory.Nd4j
 
 /**
  * The LanderConf with lander parameters
  *
  */
-class LanderTilesEncoder(hash: Option[Int]) extends LanderEncoder {
+class LanderTilesEncoder(hash: Option[Int], normalize: INDArray => INDArray) extends LanderEncoder {
   /** Returns the number of signals */
   private val tilesCoder: Tiles = hash.map(h => Tiles.withHash(h, 1, 1, 1, 1, 1, 1)).getOrElse(Tiles(1, 1, 1, 1, 1, 1))
   override val noSignals: Int = tilesCoder.noFeatures.toInt
   private val Size = 6
-  //  private val vhOffset = VHPrecision * tilesCoder.tilings / 2
-  private val statusOffset: INDArray = Nd4j.create(Array(-HPrecision, -HPrecision, 0, -VHPrecision, -VHPrecision, -VZPrecision)).
-    mul(tilesCoder.tilings / 2)
-  private val statusScale: INDArray = Nd4j.ones(Size).div(tilesCoder.tilings).
-    div(Nd4j.create(Array(HPrecision, HPrecision, ZPrecision, VHPrecision, VHPrecision, VZPrecision)))
 
   /**
    * Returns the input signals
    *
-   * @param status the status
+   * @param in the input signals
    */
-  override def signals(status: LanderStatus): INDArray = {
-    val statusVect = Nd4j.hstack(status.pos, status.speed)
-    val s0 = statusVect.sub(statusOffset)
-    val s = s0.mul(statusScale)
+  override def signals(in: INDArray): INDArray = {
+    val s = normalize(in)
     val features = tilesCoder.features(s)
     val signals = Utils.features(features, tilesCoder.noFeatures)
     signals
-
   }
 }
 
 /** Factory for [[LanderTilesEncoder]] instances */
 object LanderTilesEncoder {
-  val HPrecision = 4.0
-  val ZPrecision = 1.0
-  val VHPrecision = 0.4
-  val VZPrecision = 0.5
-
   /**
+   * Returns the tile encoder
    *
-   * @param conf the json configuration
+   * @param conf   the json configuration
+   * @param ranges the input ranges
+   * @return
    */
-  def fromJson(conf: ACursor): LanderTilesEncoder = new LanderTilesEncoder(hash = conf.get[Int]("hash").toOption)
+  def fromJson(conf: ACursor, ranges: INDArray) =
+    new LanderTilesEncoder(hash = conf.get[Int]("hash").toOption, Utils.normalize01(ranges))
 }

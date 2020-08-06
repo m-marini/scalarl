@@ -40,7 +40,7 @@ class AgentNetworkBuilderTest extends FunSpec with Matchers {
     it("should validate shortcuts") {
       val shortcuts = Seq(Seq(0, 2), Seq(1, 2))
       val noHidden = 2
-      val map = AgentNetworkBuilder.validateShortCut(shortcuts, noHidden)
+      val map = AgentNetworkBuilder.validateShortCut(shortcuts, noHidden).get
       map should contain(2 -> Seq(0, 1))
     }
 

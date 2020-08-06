@@ -30,25 +30,33 @@
 package org.mmarini.scalarl.v4.agents
 
 import com.typesafe.scalalogging.LazyLogging
+import io.circe.ACursor
 import org.mmarini.scalarl.v4.Utils._
+import org.mmarini.scalarl.v4.envs.Configuration._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.ops.transforms.Transforms._
+
+import scala.util.Try
 
 /**
  * Actor critic agent
  *
  * @param dimension   the dimension index
  * @param noOutputs   the number of value for action
- * @param denormalize the output denormalizer function
- * @param normalize   the output normalizer function
+ * @param denormalize the output denormalizer function to preference
+ * @param normalize   the output normalizer function from preference
+ * @param transform   the action transformation function
+ * @param inverse     the action inverse transformation function
  * @param alpha       the alpha parameter
  */
 case class PolicyActor(dimension: Int,
                        noOutputs: Int,
                        denormalize: INDArray => INDArray,
                        normalize: INDArray => INDArray,
+                       transform: INDArray => INDArray,
+                       inverse: INDArray => INDArray,
                        alpha: INDArray) extends Actor with LazyLogging {
 
   /**
@@ -59,7 +67,7 @@ case class PolicyActor(dimension: Int,
    */
   override def chooseAction(outputs: Array[INDArray], random: Random): INDArray = {
     val pi = softmax(preferences(outputs))
-    val action = ones(1).muli(randomInt(pi)(random))
+    val action = transform(ones(1).muli(randomInt(pi)(random)))
     action
   }
 
@@ -69,34 +77,23 @@ case class PolicyActor(dimension: Int,
    * @param outputs the outputs
    * @param actions the actions
    * @param delta   the td error
-   * @param random  the random generator
    */
   override def computeLabels(outputs: Array[INDArray],
                              actions: INDArray,
-                             delta: INDArray,
-                             random: Random): INDArray = computeLabels(outputs = outputs,
-    actions = actions,
-    delta = delta)
-
-  /**
-   * Returns the actor labels
-   *
-   * @param outputs the outputs
-   * @param actions the actions
-   * @param delta   the td error
-   */
-  def computeLabels(outputs: Array[INDArray],
-                    actions: INDArray,
-                    delta: INDArray): INDArray = {
+                             delta: INDArray): Map[String, Any] = {
     val h = preferences(outputs)
     val pi = softmax(h)
-    val z = features(Seq(actions.getInt(dimension)), h.length()).subi(pi)
+    val action = inverse(actions.getScalar(dimension.toLong)).getInt(0)
+    val z = features(Seq(action), h.length()).subi(pi)
     val deltaH = z.mul(delta).muli(alpha)
     val hStar = h.add(deltaH)
-    val hStarN = hStar.sub(mean(hStar))
-    val unclipped = normalize(hStarN)
-    val actorLabels = clip(unclipped, -1, 1, copy = false)
-    actorLabels
+    val actorLabels = normalize(hStar)
+    val result = Map(s"h($dimension)" -> h,
+      s"pi($dimension)" -> pi,
+      s"deltaH($dimension)" -> deltaH,
+      s"h*($dimension)" -> hStar,
+      s"labels($dimension)" -> actorLabels)
+    result
   }
 
   /**
@@ -116,5 +113,40 @@ case class PolicyActor(dimension: Int,
     val pr = denormalize(outputs)
     val pr1 = pr.sub(pr.mean())
     pr1
+  }
+}
+
+object PolicyActor {
+
+  /**
+   * Returns the discrete action agent
+   *
+   * @param conf      the configuration element
+   * @param dimension the dimension index
+   * @param noInputs  the number of inputs
+   * @param modelPath the path of model to load
+   */
+  def fromJson(conf: ACursor)(dimension: Int,
+                              noInputs: Int,
+                              modelPath: Option[String]): Try[PolicyActor] = {
+    for {
+      noValues <- conf.get[Int]("noValues").toTry
+      range <- rangesFromJson(conf.downField("range"))(1)
+      prefRange <- rangesFromJson(conf.downField("prefRange"))(1)
+      alpha <- scalarFromJson(conf.downField("alpha"))
+    } yield {
+      val broadPrefRange = prefRange.broadcast(2, noValues)
+      val transfom = denormalize(broadPrefRange)
+      val grad = normalize(broadPrefRange)
+      val fromRange = create(Array[Double](0, noValues - 1)).transposei()
+      PolicyActor(dimension = dimension,
+        noOutputs = noValues,
+        denormalize = transfom,
+        normalize = grad,
+        alpha = alpha,
+        transform = transform(fromRange, range),
+        inverse = transform(range, fromRange)
+      )
+    }
   }
 }

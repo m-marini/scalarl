@@ -7,9 +7,9 @@ trait LanderEncoder {
   /**
    * Returns the input signals
    *
-   * @param status the status
+   * @param s the signals
    */
-  def signals(status: LanderStatus): INDArray
+  def signals(s: INDArray): INDArray
 
   /** Returns the number of signals */
   def noSignals: Int

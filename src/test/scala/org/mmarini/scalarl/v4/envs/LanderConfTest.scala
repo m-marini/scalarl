@@ -29,6 +29,7 @@
 
 package org.mmarini.scalarl.v4.envs
 
+import org.mmarini.scalarl.v4.Utils
 import org.mmarini.scalarl.v4.envs.StatusCode._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j._
@@ -53,40 +54,62 @@ class LanderConfTest extends FunSpec with Matchers {
   private val OutOfRangeReward = -100.0
   private val OutOfFuelReward = -100.0
   private val FlyingReward = -1.0
-  private val RewardDistanceScale = 0.01
   private val DirectionReward = 0.1
   private val HSpeedReward = 0.1
   private val VSpeedReward = 0.1
 
   create()
 
-  val defaultFuel: INDArray = ones(1).mul(DefaultFuel)
+  private val defaultFuel: INDArray = ones(1).mul(DefaultFuel)
 
-  val conf: LanderConf = new LanderConf(
+  private def encoder = new LanderContinuousEncoder(
+    Utils.normalize(
+      create(Array(
+        Array(-1.0, -1.0, 0.0, 0.0, 0.0, -12.0),
+        Array(1.0, 1.0, 10.0, 10.0, 24.0, 12.0)
+      ))))
+
+  private val conf: LanderConf = new LanderConf(
     dt = ones(1).mul(Dt),
-    h0Range = ones(1).mul(H0Range),
-    z0 = ones(1).mul(Z0),
     fuel = defaultFuel,
-    zMax = ones(1).mul(ZMax),
-    hRange = ones(1).mul(HRange),
     landingRadius = ones(1).mul(LandingRadius),
-    landingVH = ones(1).mul(LandingVH),
-    landingVZ = ones(1).mul(LandingVZ),
     g = ones(1).mul(G),
-    maxAH = ones(1),
-    maxAZ = ones(1).mul(MaxAZ),
+    initialLocationTrans = Utils.normalize01(create(Array(
+      Array(-H0Range, -H0Range, Z0),
+      Array(H0Range, H0Range, Z0),
+    ))),
+    spaceRange = create(Array(
+      Array(-HRange, -HRange, 0),
+      Array(HRange, HRange, ZMax)
+    )),
+    landingSpeed = create(
+      Array(LandingVH, -LandingVZ),
+    ),
+    jetAccRange = create(Array(
+      Array(-1.0, -1.0, -MaxAZ),
+      Array(1.0, 1.0, MaxAZ)
+    )),
+    optimalSpeed = create(Array(LandingVH, LandingVZ)),
     landedReward = ones(1).mul(LandedReward),
-    vCrashReward = ones(1).mul(VCrashReward),
-    hCrashReward = ones(1).mul(HCrashReward),
-    outOfPlatformReward = ones(1).mul(OutOfPlatformReward),
+    landedOutOfPlatformReward = ones(1).mul(VCrashReward),
+    vCrashedOnPlatformReward = ones(1).mul(VCrashReward),
+    hCrashedOnPlatformReward = ones(1).mul(HCrashReward),
+    hCrashedOutOfPlatformReward = ones(1).mul(OutOfPlatformReward),
+    vCrashedOutOfPlatformReward = ones(1).mul(OutOfPlatformReward),
     outOfRangeReward = ones(1).mul(OutOfRangeReward),
     outOfFuelReward = ones(1).mul(OutOfFuelReward),
     flyingReward = ones(1).mul(FlyingReward),
-    rewardDistanceScale = ones(1).mul(RewardDistanceScale),
     directionReward = ones(1).mul(DirectionReward),
     hSpeedReward = ones(1).mul(HSpeedReward),
-    vSpeedReward = ones(1).mul(VSpeedReward)
+    vSpeedReward = ones(1).mul(VSpeedReward),
+    encoder = encoder
   )
+  /*
+  maxVH = ones(1).mul(LandingVH),
+  maxVZ = ones(1).mul(LandingVZ),
+  maxAH = ones(1),
+  maxAZ = ones(1).mul(MaxAZ)
+*/
 
   describe("LanderConf at land point") {
     describe("at (0,0,-0.1), (0,0,1)") {
@@ -120,7 +143,8 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](0, 0, -0.1))
       val speed = create(Array[Double](-0.5, 0, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, defaultFuel) shouldBe Landed
+        val s = conf.status(pos, speed, defaultFuel)
+        s shouldBe Landed
       }
     }
 
@@ -210,7 +234,7 @@ class LanderConfTest extends FunSpec with Matchers {
       val pos = create(Array[Double](7.08, 7.08, -0.1))
       val speed = create(Array[Double](0, 0, 0))
       it("should be crashed") {
-        conf.status(pos, speed, defaultFuel) shouldBe OutOfPlatform
+        conf.status(pos, speed, defaultFuel) shouldBe LandedOutOfPlatform
       }
     }
   }

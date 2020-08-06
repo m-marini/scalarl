@@ -30,11 +30,15 @@
 package org.mmarini.scalarl.v4.agents
 
 import com.typesafe.scalalogging.LazyLogging
+import io.circe.ACursor
 import org.mmarini.scalarl.v4.Utils._
+import org.mmarini.scalarl.v4.envs.Configuration._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
-import org.nd4j.linalg.factory.Nd4j.hstack
+import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.ops.transforms.Transforms._
+
+import scala.util.Try
 
 /**
  * Gaussian Actor
@@ -54,28 +58,10 @@ case class GaussianActor(dimension: Int,
    * @param outputs the outputs
    * @param actions the actions
    * @param delta   the td error
-   * @param random  the random generator
    */
   override def computeLabels(outputs: Array[INDArray],
                              actions: INDArray,
-                             delta: INDArray,
-                             random: Random): INDArray = {
-    val (_, _, muStar, hStar) = muHStar(outputs, actions, delta)
-    val labels = normalize(hstack(muStar, hStar))
-    val clipLables = clip(labels, -1, 1)
-    clipLables
-  }
-
-  /**
-   * Returns (mu, h, mu*, h*)
-   *
-   * @param outputs the outputs
-   * @param actions the actions
-   * @param delta   the td error
-   */
-  def muHStar(outputs: Array[INDArray],
-              actions: INDArray,
-              delta: INDArray): (INDArray, INDArray, INDArray, INDArray) = {
+                             delta: INDArray): Map[String, Any] = {
     val (mu, h, sigma) = muHSigma(outputs)
     val action = actions.getColumn(dimension)
     val sigma2 = sigma.mul(sigma)
@@ -92,7 +78,17 @@ case class GaussianActor(dimension: Int,
 
     val muStar = mu.add(deltaMu)
     val hStar = h.add(deltaH)
-    (mu, h, muStar, hStar)
+    val labels = normalize(hstack(muStar, hStar))
+    val clipLabeles = clip(labels, -1, 1)
+    Map(s"mu($dimension)" -> mu,
+      s"h($dimension)" -> h,
+      s"sigma($dimension)" -> sigma,
+      s"deltaMu($dimension)" -> deltaMu,
+      s"deltaH($dimension)" -> deltaH,
+      s"mu*($dimension)" -> muStar,
+      s"h*($dimension)" -> hStar,
+      s"labels($dimension)" -> clipLabeles
+    )
   }
 
   /**
@@ -122,4 +118,38 @@ case class GaussianActor(dimension: Int,
 
   /** Returns the number of outputs */
   override def noOutputs: Int = 2
+}
+
+object GaussianActor {
+
+  /**
+   * Returns the discrete action agent
+   *
+   * @param conf      the configuration element
+   * @param dimension the dimension index
+   * @param noInputs  the number of inputs
+   * @param modelPath the path of model to load
+   */
+  def fromJson(conf: ACursor)(dimension: Int,
+                              noInputs: Int,
+                              modelPath: Option[String]): Try[GaussianActor] = for {
+    alphaMu <- conf.get[Double]("alphaMu").toTry
+    alphaSigma <- conf.get[Double]("alphaSigma").toTry
+    muRange <- rangesFromJson(conf.downField("muRange"))(1)
+    sigmaRange <- rangesFromJson(conf.downField("sigmaRange"))(1).flatMap { range =>
+      Try {
+        require(range.getDouble(0L, 0L) > 0, s"sigmaRange must be positive")
+        range
+      }
+    }}
+    yield {
+      val range = hstack(muRange, log(sigmaRange))
+      val denorm = denormalize(range)
+      val norm = normalize(range)
+      GaussianActor(
+        dimension = dimension,
+        eta = create(Array(alphaMu, alphaSigma)),
+        denormalize = denorm,
+        normalize = norm)
+    }
 }

@@ -1,56 +1,54 @@
 ---
-version: "4"
+version: "5"
 env:
-  type: LanderContinuous
-  actionConfig: DiscreteActions
   dt: 0.25
-  h0Range: 14
-  z0: 20
-  fuel: 100
-  zMax: 150
-  hRange: 500
-  zRange: 150
-  vhRange: 24
-  vzRange: 12
-  landingRadius: 10
-  landingVH: 1
-  landingVZ: 4
   g: 1.6
-  maxAH: 1
-  maxAZ: 3.2
-  landedReward: 1
-  vCrashReward: -1
-  hCrashReward: -100e-3
-  outOfPlatformReward: -30e-3
-  outOfRangeReward: -1
-  outOfFuelReward: -1
-  rewardDistanceScale: 0
-  flyingReward: -10e-3
-  normalize:
-    clipMin: [-10, -10, -10, -24, -24, -12]
-    clipMax: [10, 10, 10, 24, 24, 12]
-    offset: [0, 0, 0, 0, 0, 0]
-    max: [10, 10, 10, 0.4, 0.4, 0.5]
+  fuel: 300
+  initialLocationRange:
+    - [-100, 100]
+    - [-100, 100]
+    - [100, 100]
+  spaceRanges:
+    - [-500, 500]
+    - [-500, 500]
+    - [0, 150]
+  landingRadius: 10
+  landingSpeedLimits: [2, -4]
+  optimalSpeed: [1, -2]
+  jetAccRange:
+    - [-1, 1]
+    - [-1, 1]
+    - [0, 3.2]
+  landedReward: 100
+  vCrashedOnPlatformReward: 100
+  hCrashedOnPlatformReward: 100
+  landedOutOfPlatformReward: -30
+  vCrashedOutOfPlatformReward: -30
+  hCrashedOutOfPlatformReward: -30
+  outOfRangeReward: -100
+  outOfFuelReward: -100
+  flyingReward: -6
+  directionReward: 5
+  hSpeedReward: -5
+  vSpeedReward: -1.25
+  actionDimensions: 3
+  encoder: LanderContinuous
+  signalRanges:
+    - [-3.14, 3.14]
+    - [-3.14, 3.14]
+    - [0, 64]
+    - [0, 16]
+    - [0, 8]
+    - [-16, 16]
 agent:
   type: ActorCritic
   avgReward: 0
-  rewardDecay: 0.99
+  rewardDecay: 0.999
   valueDecay: 0.99
-  rewardsRange: [-1, 1]
-  planner:
-    planningSteps: 5
-    threshold: 1e-3
-    minModelSize: 300
-    maxModelSize: 1000
-    stateKey:
-      type: Tiles
-      offset: [-1, -1, -1, -1, -1, -1]
-      max: [1, 1, 1, 1, 1, 1]
-      tiles: [100, 100, 100, 100, 100, 100]
-    actionsKey:
-      type: Discrete
+  rewardRange: [-100, 100]
   network:
     seed: 1234
+    activation: SOFTPLUS
     numHiddens:
     - 100
     - 30
@@ -58,23 +56,42 @@ agent:
     shortcuts:
       - [ 1, 4 ]
     updater: Sgd
-    learningRate: 1e-6
-    beta1: 0.9
-    beta2: 0.999
-    epsilonAdam: 1e-8
+    learningRate: 1000e-3
     maxAbsGradients: 100
     maxAbsParameters: 10e3
     dropOut: 0.8
+  planner:
+    planningSteps: 5
+    threshold: 1e-3
+    minModelSize: 300
+    maxModelSize: 1000
+    stateKey:
+      type: NormalTiles
+      noTiles: [32, 32, 32, 32, 32, 32]
+    actionsKey:
+      type: Discrete
   actors:
     - type: PolicyActor
-      alpha: 1e-3
-      prefRange: [-7, 7]
+      noValues: 8
+      range: 
+        - [0, 6.09]
+      alpha: 100e-3
+      prefRange:
+        - [-2.4, 2.4]
     - type: PolicyActor
-      alpha: 1e-3
-      prefRange: [-7, 7]
+      noValues: 3
+      range:
+        - [0, 2]
+      alpha: 100e-3
+      prefRange:
+        - [-2.4, 2.4]
     - type: PolicyActor
-      alpha: 1e-3
-      prefRange: [-7, 7]
+      noValues: 5
+      range:
+        - [-4, 4]
+      alpha: 100e-3
+      prefRange:
+        - [-2.4, 2.4]
 session:
-  numSteps: 3000
+  numSteps: 1000000
   seed: 1234

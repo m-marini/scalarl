@@ -373,48 +373,29 @@ An increasing trend indicates the estimation of value states is getting worse it
 Both the critic and actors approximate the value function and policy function with neural network.
 To monitor the learning activity of ANN we compute the MSE of estimated functions.
 
-The critic computes the updated value of current state by applying the the bootstrap equation:
-\begin{align*}
-	v^*(s_t)&	= v(s_{t+1}) + r_t - r_\pi 
-\end{align*}
 
-The square error of critic output is
-\begin{align*}
-	\delta^2(t)&	= [v^*(s_t) - v(s_{t+1})]^2
-\end{align*}
-
-The square error of discrete policy actor outputs are
-\begin{align*}
-	J_h(t)&	= \sum_i \sum_a^m (h_{ia}^*(s_t) - h_{ia}(s_t))^2
-\end{align*}
-and in case of Gaussian actor
-\begin{align*}
-	J_h(t)&	= \sum_i [\mu_i^*(s_t) - \mu_i(s_t)]^2 + [h_{i\sigma}^*(s_t) - h_{i\sigma}(s_t)]^2
-\end{align*}
-where $ i $ is index of the actor.
-
-Every time the network is trained the label outputs are fed to correct the weights of ANN.
-The resulting network has therefore a MSE that should be less than the original
-\begin{align*}
-	\delta'^2(t)&	= [v^*(s_t) - v'(s_{t+1})]^2
-\end{align*}
+The ANN is feed with normalized values label $ O^*_i $ so that the values are in the range $ -1, +1 $ by linear transformation
 
 \begin{align*}
-	J'_h(t)&		= \sum_i \sum_a^m (h_{ia}^*(s_t) - h'_{ia}(s_t))^2
+	O_i &= (O_C, O_{Ai})
+	\\
+	O_C &= m_c \delta_t + q_c
+	\\
+	O_{Ai} &= m_{ai} \delta_{hi} + q_{ai}
 \end{align*}
-for the discrete policy agent and
+
+The MSE of ANN is
 \begin{align*}
-	J'_h(t)&	= \sum_i [\mu_i^*(s_t) - \mu'_i(s_t)]^2 + [h_{i\sigma}^*(s_t) - h'_{i\sigma}(s_t)]^2
+	J(t)&	= \sum_i [O^*_i(t) - O_i(t)]^2
 \end{align*}
-for the Gaussian actors.
+and the MSE after the training is
+\begin{align*}
+	J'(t)&	= \sum_i [O^*_i(t) - O'_i(t)]^2
+\end{align*}
 
 The ratio between the total MSE after and before the training activity indicates the quality of such activity.
 \begin{align}
 \begin{split}
-	J(t)&	= \delta^2(t) + J_h(t)
-	\\
-	J'(t)&	= \delta'^2(t) + J'_h(t)
-	\\
 	K(t)&	= \frac{J'(t)}{J(t)}
 \end{split}
 \end{align}

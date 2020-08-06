@@ -62,13 +62,13 @@ object Main extends LazyLogging {
    *
    * @param args the line command arguments
    */
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     create()
 
     val cfgParms = parseArgs(args)
 
     try {
-      val file = cfgParms.get("conf").getOrElse("maze.yaml")
+      val file = cfgParms.getOrElse("conf", "maze.yaml")
       val epoch = cfgParms.get("epoch").map(_.toInt).getOrElse(0)
       val kpiFile = cfgParms.get("kpiFile")
       val dumpFile = cfgParms.get("dumpFile")
@@ -83,16 +83,16 @@ object Main extends LazyLogging {
       ).getOrElse(
         getRandom
       )
-      val env = EnvBuilder.fromJson(jsonConf.hcursor.downField("env"))(random)
-      env.actionConfig
-      val (agent, agentObs) = AgentBuilder.fromJson(jsonConf.hcursor.downField("agent"))(env.signalsSize, env.actionConfig)
+      val env = EnvBuilder.fromJson(jsonConf.hcursor.downField("env"))(random).get
+
+      val (agent, agentObs) = AgentBuilder.fromJson(jsonConf.hcursor.downField("agent"))(env.signalsSize, env.actionDimensions).get
       val session = SessionBuilder.fromJson(jsonConf.hcursor.downField("session"))(
         epoch,
         dumpFileParm = dumpFile,
         kpiFileParm = kpiFile,
         env = env,
         agent = agent,
-        agentEvents = agentObs)
+        agentEvents = agentObs).get
 
       session.lander().filterFinal().logInfo().subscribe()
       session.steps.monitorInfo().observable.sample(2 seconds).logInfo().subscribe()
@@ -104,11 +104,11 @@ object Main extends LazyLogging {
       val elapsed = java.time.Duration.between(start, end)
 
       dumpFile.foreach(filename => {
-        logger.info("Dump file {}", filename);
+        logger.info("Dump file {}", filename)
       })
 
       kpiFile.foreach(filename => {
-        logger.info("Kpi file {}", filename);
+        logger.info("Kpi file {}", filename)
       })
 
       logger.info("Session completed in {}.", formatDuration(elapsed))
@@ -127,17 +127,16 @@ object Main extends LazyLogging {
     val ms2 = ms1 - hours * (60 * 60 * 1000)
     val mins = ms2 / (60 * 1000)
     val secs = (ms2 - mins * (60 * 1000)).toDouble / 1000.0
-    val sec = ms / 1000
 
     val r = StringBuilder.newBuilder
     if (days != 0) {
-      r.append(f"""${days}%d days ${hours}%dh ${mins}%d' ${secs}%.3f"""")
+      r.append(f"""$days%d days $hours%dh $mins%d' $secs%.3f"""")
     } else if (hours != 0) {
-      r.append(f"""${hours}%dh ${mins}%d' ${secs}%.3f"""")
+      r.append(f"""$hours%dh $mins%d' $secs%.3f"""")
     } else if (mins != 0) {
-      r.append(f"""${mins}%d' ${secs}%.3f"""")
+      r.append(f"""$mins%d' $secs%.3f"""")
     } else {
-      r.append(f"""${secs}%.3f"""")
+      r.append(f"""$secs%.3f"""")
     }
     r.toString
   }

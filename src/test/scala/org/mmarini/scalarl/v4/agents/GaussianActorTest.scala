@@ -80,25 +80,25 @@ class GaussianActorTest extends FunSpec with Matchers {
         describe("with delta > 0") {
           val delta = ones(1)
 
-          val (_, _, mu1, h1) = actor(eta).muHStar(outs, actions, delta)
+          val map = actor(eta).computeLabels(outs, actions, delta)
 
-          it("should return mu' = mu") {
-            mu1 shouldBe mu
+          it("should return mu* = mu") {
+            map("mu*(0)") shouldBe map("mu(0)")
           }
-          it("should return sigma' < sigma") {
-            h1.getDouble(0L) should be < h.getDouble(0L)
+          it("should return h* < h") {
+            map("h*(0)").asInstanceOf[INDArray].getDouble(0L) should be < map("h(0)").asInstanceOf[INDArray].getDouble(0L)
           }
         }
 
         describe("with delta < 0") {
           val delta = create(Array[Double](-1))
-          val (_, _, mu1, h1) = actor(eta).muHStar(outs, actions, delta)
+          val map = actor(eta).computeLabels(outs, actions, delta)
 
-          it("should return mu' = mu") {
-            mu1 shouldBe mu
+          it("should return mu* = mu") {
+            map("mu*(0)") shouldBe map("mu(0)")
           }
-          it("should return sigma' > sigma") {
-            h1.getDouble(0L) should be > h.getDouble(0L)
+          it("should return h* > h") {
+            map("h*(0)").asInstanceOf[INDArray].getDouble(0L) should be > map("h(0)").asInstanceOf[INDArray].getDouble(0L)
           }
         }
       }
@@ -109,25 +109,25 @@ class GaussianActorTest extends FunSpec with Matchers {
         val outs = Array(out, out)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
-          val (_, _, mu1, h1) = actor(eta).muHStar(outs, actions, delta)
+          val map = actor(eta).computeLabels(outs, actions, delta)
 
-          it("should return mu' > mu") {
-            mu1.getDouble(0L) should be > mu.getDouble(0L)
+          it("should return mu* > mu") {
+            map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be > map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
           }
-          it("should return sigma' < sigma") {
-            h1.getDouble(0L) should be < h.getDouble(0L)
+          it("should return h* < h") {
+            map("h*(0)").asInstanceOf[INDArray].getDouble(0L) should be < map("h(0)").asInstanceOf[INDArray].getDouble(0L)
           }
         }
 
         describe("with delta < 0") {
           val delta = create(Array[Double](-1))
-          val (_, _, mu1, h1) = actor(eta).muHStar(outs, actions, delta)
+          val map = actor(eta).computeLabels(outs, actions, delta)
 
-          it("should return mu' < mu") {
-            mu1.getDouble(0L) should be < mu.getDouble(0L)
+          it("should return mu* < mu") {
+            map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be < map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
           }
-          it("should return sigma' > sigma") {
-            h1.getDouble(0L) should be > h.getDouble(0L)
+          it("should return h* > h") {
+            map("h*(0)").asInstanceOf[INDArray].getDouble(0L) should be > map("h(0)").asInstanceOf[INDArray].getDouble(0L)
           }
         }
       }
@@ -138,25 +138,25 @@ class GaussianActorTest extends FunSpec with Matchers {
         val outs = Array(out, out)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
-          val (_, _, mu1, h1) = actor(eta).muHStar(outs, actions, delta)
+          val map = actor(eta).computeLabels(outs, actions, delta)
 
-          it("should return mu' < mu") {
-            mu1.getDouble(0L) should be < mu.getDouble(0L)
+          it("should return mu* < mu") {
+            map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be < map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
           }
-          it("should return sigma' < sigma") {
-            h1.getDouble(0L) should be < h.getDouble(0L)
+          it("should return h* < h") {
+            map("h*(0)").asInstanceOf[INDArray].getDouble(0L) should be < map("h(0)").asInstanceOf[INDArray].getDouble(0L)
           }
         }
 
         describe("with delta < 0") {
           val delta = create(Array[Double](-1))
-          val (_, _, mu1, h1) = actor(eta).muHStar(outs, actions, delta)
+          val map = actor(eta).computeLabels(outs, actions, delta)
 
-          it("should return mu' > mu") {
-            mu1.getDouble(0L) should be > mu.getDouble(0L)
+          it("should return mu* > mu") {
+            map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be > map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
           }
-          it("should return sigma' > sigma") {
-            h1.getDouble(0L) should be > h.getDouble(0L)
+          it("should return h* > h") {
+            map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be > map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
           }
         }
       }
@@ -167,25 +167,25 @@ class GaussianActorTest extends FunSpec with Matchers {
         val outs = Array(out, out)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
-          val (_, _, mu1, h1) = actor(eta).muHStar(outs, actions, delta)
+          val map = actor(eta).computeLabels(outs, actions, delta)
 
-          it("should return mu' > mu") {
-            mu1.getDouble(0L) should be > mu.getDouble(0L)
+          it("should return mu* > mu") {
+            map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be > map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
           }
-          it("should return sigma' > sigma") {
-            h1.getDouble(0L) should be > h.getDouble(0L)
+          it("should return h* > h") {
+            map("h*(0)").asInstanceOf[INDArray].getDouble(0L) should be > map("h(0)").asInstanceOf[INDArray].getDouble(0L)
           }
         }
 
         describe("with delta < 0") {
           val delta = create(Array[Double](-1))
-          val (_, _, mu1, h1) = actor(eta).muHStar(outs, actions, delta)
+          val map = actor(eta).computeLabels(outs, actions, delta)
 
-          it("should return mu' < mu") {
-            mu1.getDouble(0L) should be < mu.getDouble(0L)
+          it("should return mu* < mu") {
+            map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be < map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
           }
-          it("should return sigma' < sigma") {
-            h1.getDouble(0L) should be < h.getDouble(0L)
+          it("should return h* < h") {
+            map("h*(0)").asInstanceOf[INDArray].getDouble(0L) should be < map("h(0)").asInstanceOf[INDArray].getDouble(0L)
           }
         }
       }
@@ -196,25 +196,25 @@ class GaussianActorTest extends FunSpec with Matchers {
         val outs = Array(out, out)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
-          val (_, _, mu1, h1) = actor(eta).muHStar(outs, actions, delta)
+          val map = actor(eta).computeLabels(outs, actions, delta)
 
-          it("should return mu' < mu") {
-            mu1.getDouble(0L) should be < mu.getDouble(0L)
+          it("should return mu* < mu") {
+            map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be < map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
           }
-          it("should return sigma' > sigma") {
-            h1.getDouble(0L) should be > h.getDouble(0L)
+          it("should return h* > h") {
+            map("h*(0)").asInstanceOf[INDArray].getDouble(0L) should be > map("h(0)").asInstanceOf[INDArray].getDouble(0L)
           }
         }
 
         describe("with delta < 0") {
           val delta = create(Array[Double](-1))
-          val (_, _, mu1, h1) = actor(eta).muHStar(outs, actions, delta)
+          val map = actor(eta).computeLabels(outs, actions, delta)
 
-          it("should return mu' > mu") {
-            mu1.getDouble(0L) should be > mu.getDouble(0L)
+          it("should return mu* > mu") {
+            map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be > map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
           }
-          it("should return sigma' < sigma") {
-            h1.getDouble(0L) should be < h.getDouble(0L)
+          it("should return h* < h") {
+            map("h*(0)").asInstanceOf[INDArray].getDouble(0L) should be < map("h(0)").asInstanceOf[INDArray].getDouble(0L)
           }
         }
       }

@@ -51,8 +51,8 @@ trait Env {
    */
   def change(actions: INDArray, random: Random): (Env, INDArray)
 
-  /** Returns the action configuration */
-  def actionConfig: Seq[ActionConfig]
+  /** Returns the action space dimension */
+  def actionDimensions: Int
 
   /** Returns the number of signals */
   def signalsSize: Int

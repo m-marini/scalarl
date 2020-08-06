@@ -83,7 +83,7 @@ case class MountingCarEnv(x: INDArray,
   }
 
   /** Returns the action configuration */
-  override def actionConfig: Seq[ActionConfig] = Seq(ContinuousAction)
+  override def actionDimensions: Int = 1
 }
 
 object MountingCarEnv {

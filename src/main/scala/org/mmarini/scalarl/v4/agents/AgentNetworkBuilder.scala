@@ -44,6 +44,8 @@ import org.deeplearning4j.util.ModelSerializer
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 
+import scala.util.{Failure, Success, Try}
+
 /**
  *
  */
@@ -56,36 +58,34 @@ object AgentNetworkBuilder extends LazyLogging {
    * @param noInputs the number of inputs
    * @param outputs  the outputs configuration
    */
-  def fromJson(conf: ACursor)(noInputs: Int, outputs: Seq[Int]): ComputationGraph = {
-    val seed = conf.get[Long]("seed").toOption
-    val numHiddens = conf.get[List[Int]]("numHiddens").toTry.get
-    val shortcuts = conf.get[List[List[Int]]]("shortcuts").toOption.getOrElse(Seq())
-    val maxAbsGradient = conf.get[Double]("maxAbsGradients").toTry.get
-    val maxAbsParams = conf.get[Double]("maxAbsParameters").toTry.get
-    val dropOut = conf.get[Double]("dropOut").toTry.get
-    val shortcutsMap = validateShortCut(shortcuts, numHiddens.length)
-    val activation = conf.get[String]("activation").toTry.get match {
-      case "SOFTPLUS" => Activation.SOFTPLUS
-      case "RELU" => Activation.RELU
-      case "TANH" => Activation.TANH
-      case "HARDTANH" => Activation.HARDTANH
-      case "SIGMOID" => Activation.SIGMOID
-      case "HARDSIGMOID" => Activation.HARDSIGMOID
-      case act =>
-        throw new IllegalArgumentException(s"Wrong activation function $act")
+  def fromJson(conf: ACursor)(noInputs: Int, outputs: Seq[Int]): Try[ComputationGraph] = for {
+    numHiddens <- conf.get[Seq[Int]]("numHiddens").toTry
+    maxAbsGradient <- conf.get[Double]("maxAbsGradients").toTry
+    maxAbsParams <- conf.get[Double]("maxAbsParameters").toTry
+    dropOut <- conf.get[Double]("dropOut").toTry
+    activation <- conf.get[String]("activation").toTry.flatMap {
+      case "SOFTPLUS" => Success(Activation.SOFTPLUS)
+      case "RELU" => Success(Activation.RELU)
+      case "TANH" => Success(Activation.TANH)
+      case "HARDTANH" => Success(Activation.HARDTANH)
+      case "SIGMOID" => Success(Activation.SIGMOID)
+      case "HARDSIGMOID" => Success(Activation.HARDSIGMOID)
+      case act => Failure(new IllegalArgumentException(s"Wrong activation function $act"))
     }
+    shortcuts = conf.get[Seq[Seq[Int]]]("shortcuts").toOption.getOrElse(Seq())
+    shortcutsMap <- validateShortCut(shortcuts, numHiddens.length)
+  } yield {
+    val seed = conf.get[Long]("seed").toOption
 
     // Computes the number of inputs for hidden layers
     val (noInputsByLayers, inputLayerNames) = inputLayersByLayer(noInputs, numHiddens, shortcutsMap)
-    val hiddenLayers = createHiddenLayers(noInputsByLayers.zip(numHiddens), dropOut,activation)
+    val hiddenLayers = createHiddenLayers(noInputsByLayers.zip(numHiddens), dropOut, activation)
     val outputLayers = createOutputLayers(outputs, noInputsByLayers.last)
     val noParms = numParms(hiddenLayers, outputLayers)
     val updater = UpdaterBuilder.fromJson(conf)(noParms.toInt)
     val annConf = seed.map(seed =>
       new NeuralNetConfiguration.Builder().seed(seed)
-    ).getOrElse(new NeuralNetConfiguration.Builder(
-
-    )).
+    ).getOrElse(new NeuralNetConfiguration.Builder()).
       weightInit(WeightInit.XAVIER).
       updater(updater).
       optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).
@@ -122,7 +122,7 @@ object AgentNetworkBuilder extends LazyLogging {
    * @param shortcuts the shortcuts
    * @param noHidden  the number of hidden layers
    */
-  def validateShortCut(shortcuts: Seq[Seq[Int]], noHidden: Int): Map[Int, Seq[Int]] = {
+  def validateShortCut(shortcuts: Seq[Seq[Int]], noHidden: Int): Try[Map[Int, Seq[Int]]] = Try {
     // Validates the inputs
     // inputs, hiddens, outputs
     for {

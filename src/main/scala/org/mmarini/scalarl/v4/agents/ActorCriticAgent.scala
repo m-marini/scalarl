@@ -39,7 +39,7 @@ import org.mmarini.scalarl.v4.{Agent, Feedback, Observation}
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
-import org.nd4j.linalg.ops.transforms.Transforms.pow
+import org.nd4j.linalg.ops.transforms.Transforms._
 
 /**
  * The agent generates action based on the signals from the environment and learns the correct behaviour trying to
@@ -99,42 +99,72 @@ case class ActorCriticAgent(actors: Seq[Actor],
   }
 
   /**
-   * Returns the fit agent, ythe average reward and and the score
+   * Returns the fit agent, the average reward and and the score
    * Optimizes the policy based on a single feedback
    *
    * @param feedback the feedback from the last step
    * @param random   the random generator
    */
   override def directLearn(feedback: Feedback, random: Random): (Agent, INDArray, INDArray) = {
+    val map = processForTrain(feedback)
+    //val newNet = network.clone()
+    val labels = map("labels").asInstanceOf[Array[INDArray]]
+
+    //    newNet.fit(Array(feedback.s0.signals), labels)
+    network.fit(Array(feedback.s0.signals), labels)
+    //    val newAgent = copy(network = newNet)
+    val map1 = processForTrain(feedback)
+    val event = AgentEvent(feedback, this, map, map1)
+    agentObserver.onNext(event)
+    val score = map("score").asInstanceOf[INDArray]
+    val newAvg = map("newAverage").asInstanceOf[INDArray]
+    (this, newAvg, score)
+  }
+
+  /**
+   *
+   * @param feedback
+   * @return
+   */
+  def processForTrain(feedback: Feedback): Map[String, Any] = {
     val Feedback(s0, actions, reward, s1) = feedback
     val outputs0 = network.output(s0.signals)
     val v0 = v(outputs0)
     val outputs1 = network.output(s1.signals)
     val v1 = v(outputs1)
-    val (delta, newv0, newAvg) = computeDelta(v0, v1, reward)
+
+    //    val newv0 = (v1 + reward - avg) * valueDecay + (1 - valueDecay) * avg
+    val target = v1.add(reward).subi(avg)
+    val newv0 = target.mul(valueDecay).subi(valueDecay.sub(1).muli(avg))
+    //val delta = target.sub(v0)
+    val delta = newv0.sub(v0)
+    //val newAvg = rewardDecay * avg + (1 - rewardDecay) * reward
+    val newAvg = rewardDecay.mul(avg).subi(rewardDecay.sub(1).muli(reward))
 
     // Critic update
     val criticLabel = clip(normalizer(newv0), -1, 1, copy = false)
-    val actorLabels = actors.map(_.computeLabels(outputs0, actions, delta, random))
 
-    val newNet = network.clone()
-    val labels = (criticLabel +: actorLabels).toArray
-    newNet.fit(Array(s0.signals), labels)
-    val score = pow(delta, 2)
-    val newAgent = copy(network = newNet)
-    val event = AgentEvent(feedback, this, newAgent, score)
-    agentObserver.onNext(event)
-    (newAgent, newAvg, score)
+    val actorMap = actors.flatMap(_.computeLabels(outputs0, actions, delta)).toMap
+    val actorLabels = actors.map(actor => actorMap(s"labels(${actor.dimension})").asInstanceOf[INDArray]).toArray
+
+    val labels = criticLabel +: actorLabels
+
+    val result = actorMap +
+      ("outputs0" -> outputs0) +
+      ("outputs1" -> outputs1) +
+      ("avg" -> avg) +
+      ("v0" -> v0) +
+      ("v1" -> v1) +
+      ("newAverage" -> newAvg) +
+      ("v0*" -> newv0) +
+      ("delta" -> delta) +
+      ("score" -> pow(delta, 2)) +
+      ("outputs0" -> outputs0) +
+      ("outputs1" -> outputs1) +
+      ("labels" -> labels)
+    result
   }
 
-  /**
-   *
-   * @param v0     initail state value
-   * @param v1     final state value
-   * @param reward reward
-   */
-  def computeDelta(v0: INDArray, v1: INDArray, reward: INDArray): (INDArray, INDArray, INDArray) =
-    ActorCriticAgent.computeDelta(v0, v1, reward, avg, valueDecay, rewardDecay)
 
   /**
    * Returns the score for a feedback
@@ -142,13 +172,8 @@ case class ActorCriticAgent(actors: Seq[Actor],
    * @param feedback the feedback from the last step
    */
   override def score(feedback: Feedback): INDArray = {
-    val Feedback(s0, _, reward, s1) = feedback
-    val outputs0 = network.output(s0.signals)
-    val v0 = v(outputs0)
-    val outputs1 = network.output(s1.signals)
-    val v1 = v(outputs1)
-    val (delta, _, _) = computeDelta(v0, v1, reward)
-    pow(delta, 2)
+    val result = processForTrain(feedback)("score").asInstanceOf[INDArray]
+    result
   }
 
   /**

@@ -91,7 +91,7 @@ class StepsWrapper(val observable: Observable[Step]) extends ObservableWrapper[S
    */
   private def createLanderTrace(step: Step): INDArray = {
     val Step(epoch, stepId, feedback, env0, _, _, _, score, _, _) = step
-    val LanderStatus(_, pos0, speed0, t0, fuel0, _, _) = env0
+    val LanderStatus(pos0, speed0, t0, fuel0, _) = env0
     val Feedback(o0, actions, reward, _) = feedback
     val s0 = env0.asInstanceOf[LanderStatus]
     val signalsId = find(o0.signals).hashCode() & ((1 << 12) - 1)
