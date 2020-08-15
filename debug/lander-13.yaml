@@ -81,14 +81,14 @@ agent:
     - type: PolicyActor
       noValues: 3
       range:
-        - [0, 2]
+        - [0, 3]
       alpha: 100e-3
       prefRange:
         - [-2.4, 2.4]
     - type: PolicyActor
       noValues: 5
       range:
-        - [-4, 4]
+        - [-6, 6]
       alpha: 100e-3
       prefRange:
         - [-2.4, 2.4]

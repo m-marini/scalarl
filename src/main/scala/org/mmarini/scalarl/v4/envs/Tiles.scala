@@ -67,7 +67,7 @@ class Tiles(val offsets: INDArray, limits: INDArray, strides: INDArray, noTiles:
   def tilings: Long = offsets.size(0)
 }
 
-/** Factory for [[Tiles]] */
+/** Factory for [[Tiles]]*/
 object Tiles {
   private val Primes = Seq(1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 43, 47, 53, 59).map(_.toLong)
 

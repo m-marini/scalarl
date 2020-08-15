@@ -40,8 +40,8 @@ import org.nd4j.linalg.api.ndarray.INDArray
 class LanderTilesEncoder(hash: Option[Int], normalize: INDArray => INDArray) extends LanderEncoder {
   /** Returns the number of signals */
   private val tilesCoder: Tiles = hash.map(h => Tiles.withHash(h, 1, 1, 1, 1, 1, 1)).getOrElse(Tiles(1, 1, 1, 1, 1, 1))
-  override val noSignals: Int = tilesCoder.noFeatures.toInt
   private val Size = 6
+  override val noSignals: Int = tilesCoder.noFeatures.toInt
 
   /**
    * Returns the input signals

@@ -50,26 +50,6 @@ object AgentBuilder extends LazyLogging {
 
 
   /**
-   * Returns the agent
-   *
-   * @param dimension the dimension index
-   * @param conf      the json configuration
-   * @param noInputs  the number ofr inputs
-   * @param modelPath the path of model to load
-   */
-  def actorFromJson(conf: ACursor)(dimension: Int,
-                                   noInputs: Int,
-                                   modelPath: Option[String]): Try[Actor] = for {
-    typ <- conf.get[String]("type").toTry
-    actor <- typ match {
-      case "PolicyActor" => PolicyActor.fromJson(conf)(dimension, noInputs, modelPath)
-      case "GaussianActor" => GaussianActor.fromJson(conf)(dimension, noInputs, modelPath)
-      case _ => Failure(new IllegalArgumentException(s"Actor $dimension '$typ' unrecognized"))
-    }
-  } yield actor
-
-
-  /**
    * Returns [[Agent]] from json configuration
    *
    * @param conf             the configuration
@@ -83,14 +63,6 @@ object AgentBuilder extends LazyLogging {
     }
     result
   }
-
-  def actorsFromJson(conf: ACursor)(noInputs: Int, actionDimensions: Int, modelPath: Option[String]): Try[Seq[Actor]] =
-    Try {
-      for {
-        i <- 0 until actionDimensions
-      } yield
-        actorFromJson(conf.downN(i))(i, noInputs, modelPath).get
-    }
 
   /**
    * Returns the [[ActorCriticAgent]] from json
@@ -113,7 +85,7 @@ object AgentBuilder extends LazyLogging {
       }).getOrElse(AgentNetworkBuilder.fromJson(conf.downField("network"))(noInputs, noOutputs))
       plannerCfg = conf.downField("planner")
       planner <- if (plannerCfg.succeeded) {
-        PriorityPlanner.fromJson(plannerCfg)(noInputs, noOutputs.sum).map(Some(_))
+        PriorityPlanner.fromJson(plannerCfg)(noInputs, actors.length).map(Some(_))
       } else {
         Success(None)
       }
@@ -132,6 +104,33 @@ object AgentBuilder extends LazyLogging {
       (agent, subj)
     }
   }
+
+  def actorsFromJson(conf: ACursor)(noInputs: Int, actionDimensions: Int, modelPath: Option[String]): Try[Seq[Actor]] =
+    Try {
+      for {
+        i <- 0 until actionDimensions
+      } yield
+        actorFromJson(conf.downN(i))(i, noInputs, modelPath).get
+    }
+
+  /**
+   * Returns the agent
+   *
+   * @param dimension the dimension index
+   * @param conf      the json configuration
+   * @param noInputs  the number ofr inputs
+   * @param modelPath the path of model to load
+   */
+  def actorFromJson(conf: ACursor)(dimension: Int,
+                                   noInputs: Int,
+                                   modelPath: Option[String]): Try[Actor] = for {
+    typ <- conf.get[String]("type").toTry
+    actor <- typ match {
+      case "PolicyActor" => PolicyActor.fromJson(conf)(dimension, noInputs, modelPath)
+      case "GaussianActor" => GaussianActor.fromJson(conf)(dimension, noInputs, modelPath)
+      case _ => Failure(new IllegalArgumentException(s"Actor $dimension '$typ' unrecognized"))
+    }
+  } yield actor
 
   /**
    * Returns the network loaded from a file

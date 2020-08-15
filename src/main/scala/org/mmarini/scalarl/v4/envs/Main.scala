@@ -46,18 +46,6 @@ import scala.concurrent.duration.DurationInt
 object Main extends LazyLogging {
   private implicit val scheduler: Scheduler = global
 
-  def parseArgs(args: Array[String]): Map[String, String] = {
-    val r = "--(.*)=(.*)".r
-    val c = for {
-      arg <- args
-      s <- r.findAllMatchIn(arg)
-      if s.groupCount == 2
-    } yield {
-      s.group(1) -> s.group(2)
-    }
-    c.toMap
-  }
-
   /**
    *
    * @param args the line command arguments
@@ -72,6 +60,7 @@ object Main extends LazyLogging {
       val epoch = cfgParms.get("epoch").map(_.toInt).getOrElse(0)
       val kpiFile = cfgParms.get("kpiFile")
       val dumpFile = cfgParms.get("dumpFile")
+      val traceFile = cfgParms.get("traceFile")
 
       logger.info("File {} epoch {}", file, epoch)
 
@@ -90,6 +79,7 @@ object Main extends LazyLogging {
         epoch,
         dumpFileParm = dumpFile,
         kpiFileParm = kpiFile,
+        traceFileParm = traceFile,
         env = env,
         agent = agent,
         agentEvents = agentObs).get
@@ -117,6 +107,18 @@ object Main extends LazyLogging {
         logger.error(ex.getMessage, ex)
         throw ex
     }
+  }
+
+  def parseArgs(args: Array[String]): Map[String, String] = {
+    val r = "--(.*)=(.*)".r
+    val c = for {
+      arg <- args
+      s <- r.findAllMatchIn(arg)
+      if s.groupCount == 2
+    } yield {
+      s.group(1) -> s.group(2)
+    }
+    c.toMap
   }
 
   def formatDuration(duration: java.time.Duration): String = {

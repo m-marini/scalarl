@@ -1,4 +1,3 @@
----
 version: "5"
 env:
   dt: 0.25
@@ -14,23 +13,44 @@ env:
     - [0, 150]
   landingRadius: 10
   landingSpeedLimits: [2, -4]
-  optimalSpeed: [1, -2]
+  optimalSpeedRanges:
+   - [0, 1]
+   - [-2, -2]
   jetAccRange:
     - [-1, 1]
     - [-1, 1]
     - [0, 3.2]
-  landedReward: 100
-  vCrashedOnPlatformReward: 100
-  hCrashedOnPlatformReward: 100
-  landedOutOfPlatformReward: -30
-  vCrashedOutOfPlatformReward: -30
-  hCrashedOutOfPlatformReward: -30
-  outOfRangeReward: -100
-  outOfFuelReward: -100
-  flyingReward: -6
-  directionReward: 5
-  hSpeedReward: -5
-  vSpeedReward: -1.25
+  rewards:
+    landed:
+      base: 100
+    hCrashedOnPlatform:
+      base: 100
+      hSpeed: -5
+    vCrashedOnPlatform:
+      base: 100
+      vSpeed: -0.125
+    landedOutOfPlatform:
+      base: -30
+      distance: -0.3
+    hCrashedOutOfPlatform:
+      base: -30
+      distance: -0.3
+    vCrashedOutOfPlatform:
+      base: -30
+      distance: -0.3
+    outOfRange:
+      base: -100
+      distance: -0.3
+      height: -0.3
+    outOfFuel:
+      base: -100
+      distance: -0.3
+      height: -0.3
+    flying:
+      base: -11
+      direction: 10
+      hSpeed: -3
+      vSpeed: -1
   actionDimensions: 3
   encoder: LanderContinuous
   signalRanges:
@@ -42,7 +62,7 @@ env:
     - [-16, 16]
 agent:
   type: ActorCritic
-  avgReward: 0
+  avgReward: -14
   rewardDecay: 0.999
   valueDecay: 0.99
   rewardRange: [-100, 100]
@@ -56,7 +76,7 @@ agent:
     shortcuts:
       - [ 1, 4 ]
     updater: Sgd
-    learningRate: 1000e-3
+    learningRate: 3000e-3
     maxAbsGradients: 100
     maxAbsParameters: 10e3
     dropOut: 0.8
@@ -71,17 +91,18 @@ agent:
     - type: PolicyActor
       noValues: 3
       range:
-        - [0, 2]
+        - [0, 3]
       alpha: 100e-3
       prefRange:
         - [-2.4, 2.4]
     - type: PolicyActor
       noValues: 5
       range:
-        - [-4, 4]
+        - [-6, 6]
       alpha: 100e-3
       prefRange:
         - [-2.4, 2.4]
 session:
-  numSteps: 1000000
+  numSteps: 30000
   seed: 1234
+  kpisOnPlanning: true

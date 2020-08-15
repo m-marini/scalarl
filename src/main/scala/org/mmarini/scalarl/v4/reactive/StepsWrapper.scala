@@ -120,8 +120,7 @@ class StepsWrapper(val observable: Observable[Step]) extends ObservableWrapper[S
       actions,
       reward,
       score,
-      prefs,
-      softmax(prefs))
+      prefs)
     trace
   }
 

@@ -93,9 +93,9 @@ class KeyTest extends FunSpec with Matchers with LazyLogging {
     }.timer
     logger.info("not equal v1 = {}, k1 = {}", timer6.avg, timer7.avg)
 
-//    it("should improve the inequality") {
-//      timer2.avg should be > timer3.avg
-//      timer6.avg should be > timer7.avg
-//    }
+    //    it("should improve the inequality") {
+    //      timer2.avg should be > timer3.avg
+    //      timer6.avg should be > timer7.avg
+    //    }
   }
 }

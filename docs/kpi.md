@@ -47,19 +47,19 @@ The kpis format is
 |      1 |     12 | Direction Actor $ h_\sigma $     |
 |      1 |     13 | Direction Actor $ h_\sigma^* $   |
 |      1 |     14 | Direction Actor $ h_\sigma' $    |
-|      1 |     15 | H Jet $ \alpha_\mu $             |
-|      1 |     16 | H Jet Actor $ \mu $              |
-|      1 |     17 | H Jet Actor $ \mu^* $            |
-|      1 |     18 | H Jet Actor $ \mu' $             |
-|      1 |     19 | H Jet $ \alpha_{h_\sigma} $      |
-|      1 |     20 | H Jet Actor $ h_\sigma $         |
-|      1 |     21 | H Jet Actor $ h_\sigma^* $       |
-|      1 |     22 | H Jet Actor $ h_\sigma' $        |
-|      1 |     23 | Z $ \alpha_\mu $                 |
-|      1 |     24 | Z Actor $ \mu $                  |
-|      1 |     25 | Z Actor $ \mu^* $                |
-|      1 |     26 | Z Actor $ \mu' $                 |
-|      1 |     27 | Z $ \alpha_{h_\sigma} $          |
-|      1 |     28 | Z Actor $ h_\sigma $             |
-|      1 |     29 | Z Actor $ h_\sigma^* $           |
-|      1 |     30 | Z Actor $ h_\sigma' $            |
+|      1 |     15 | H Speed $ \alpha_\mu $           |
+|      1 |     16 | H Speed Actor $ \mu $            |
+|      1 |     17 | H Speed Actor $ \mu^* $          |
+|      1 |     18 | H Speed Actor $ \mu' $           |
+|      1 |     19 | H Speed $ \alpha_{h_\sigma} $    |
+|      1 |     20 | H Speed Actor $ h_\sigma $       |
+|      1 |     21 | H Speed Actor $ h_\sigma^* $     |
+|      1 |     22 | H Speed Actor $ h_\sigma' $      |
+|      1 |     23 | Z Speed $ \alpha_\mu $           |
+|      1 |     24 | Z Speed Actor $ \mu $            |
+|      1 |     25 | Z Speed Actor $ \mu^* $          |
+|      1 |     26 | Z Speed Actor $ \mu' $           |
+|      1 |     27 | Z Speed $ \alpha_{h_\sigma} $    |
+|      1 |     28 | Z Speed Actor $ h_\sigma $       |
+|      1 |     29 | Z Speed Actor $ h_\sigma^* $     |
+|      1 |     30 | Z Speed Actor $ h_\sigma' $      |

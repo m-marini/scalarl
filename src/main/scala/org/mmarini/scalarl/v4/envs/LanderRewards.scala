@@ -26,23 +26,50 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
-
 package org.mmarini.scalarl.v4.envs
 
+import io.circe.ACursor
 import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.Nd4j._
+
+import scala.util.Try
 
 /**
- * The LanderConf with lander parameters
+ * Factory for reward functions
  */
-class LanderContinuousEncoder(normalize: INDArray => INDArray) extends LanderEncoder {
-
-  /** Returns the number of signals */
-  override val noSignals: Int = 6
+object LanderRewards {
+  /**
+   * Returns the reward function
+   *
+   * @param conf the json configuration
+   */
+  def fromJson(conf: ACursor): Try[LanderStatus => INDArray] =
+    paramsFromJson(conf).map(apply)
 
   /**
-   * Returns the input signals
+   * Returns the parameters of lander reward function in the order:
+   * (base, direction, distance, height, hSpeed, vSpeed)
    *
-   * @param s the signals
+   * @param conf the json configuration
    */
-  override def signals(s: INDArray): INDArray = normalize(s)
+  def paramsFromJson(conf: ACursor): Try[INDArray] = for {
+    base <- conf.get[Double]("base").toTry
+  } yield {
+    val direction = conf.get[Double]("direction").getOrElse(0.0)
+    val distance = conf.get[Double]("distance").getOrElse(0.0)
+    val height = conf.get[Double]("height").getOrElse(0.0)
+    val hSpeed = conf.get[Double]("hSpeed").getOrElse(0.0)
+    val vSpeed = conf.get[Double]("vSpeed").getOrElse(0.0)
+    val result = create(Array(base, direction, distance, height, hSpeed, vSpeed))
+    result
+  }
+
+  /**
+   * Returns the reward function
+   *
+   * @param parms the parameters
+   */
+  def apply(parms: INDArray): LanderStatus => INDArray =
+    (s: LanderStatus) =>
+      parms.mmul(s.rewardVector.transpose())
 }

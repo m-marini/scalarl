@@ -107,12 +107,9 @@ case class ActorCriticAgent(actors: Seq[Actor],
    */
   override def directLearn(feedback: Feedback, random: Random): (Agent, INDArray, INDArray) = {
     val map = processForTrain(feedback)
-    //val newNet = network.clone()
     val labels = map("labels").asInstanceOf[Array[INDArray]]
 
-    //    newNet.fit(Array(feedback.s0.signals), labels)
     network.fit(Array(feedback.s0.signals), labels)
-    //    val newAgent = copy(network = newNet)
     val map1 = processForTrain(feedback)
     val event = AgentEvent(feedback, this, map, map1)
     agentObserver.onNext(event)
@@ -165,6 +162,12 @@ case class ActorCriticAgent(actors: Seq[Actor],
     result
   }
 
+  /**
+   * Returns the estimation of state value
+   *
+   * @param outputs the network outputs
+   */
+  def v(outputs: Array[INDArray]): INDArray = denormalize(outputs(0))
 
   /**
    * Returns the score for a feedback
@@ -186,13 +189,6 @@ case class ActorCriticAgent(actors: Seq[Actor],
     ModelSerializer.writeModel(network, new File(path, s"network.zip"), false)
     this
   }
-
-  /**
-   * Returns the estimation of state value
-   *
-   * @param outputs the network outputs
-   */
-  def v(outputs: Array[INDArray]): INDArray = denormalize(outputs(0))
 }
 
 /**

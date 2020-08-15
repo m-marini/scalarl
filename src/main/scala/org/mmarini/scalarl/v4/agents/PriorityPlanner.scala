@@ -164,7 +164,7 @@ case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
   }
 }
 
-/** The object factory form [[PriorityPlanner]] */
+/** The object factory form [[PriorityPlanner]]*/
 object PriorityPlanner {
 
   /**

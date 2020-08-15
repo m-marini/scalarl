@@ -38,7 +38,7 @@ import org.nd4j.linalg.ops.transforms.Transforms
 
 import scala.util.{Failure, Success, Try}
 
-/** The factory object for [[INDArrayKeyGenerator]]*/
+/** The factory object for [[INDArrayKeyGenerator]] */
 object INDArrayKeyGenerator {
 
   val binary: INDArray => ModelKey = x => ModelKey(find(x).map(_.toInt))
@@ -50,7 +50,12 @@ object INDArrayKeyGenerator {
   })
 
   /**
-   * Returns the key generator from json configuration
+   * Returns the key generator from json configuration.
+   * Allowed type:
+   *  Binary: Vector of binary values e.g. [0 1 0 0 1 ] => [1 4]
+   *  Discrete: Vector of integer values [ 1 2 6 3 ] => [1 2 6 3 ]
+   *  Tiles: Vector of real values mapped with tiles (noTiles for each dimension, value ranges for each dimension )
+   *  NormalTiles: Vector of real values in -1, 1 raneg mapped with tiles (noTiles)
    *
    * @param cursor the configuration
    * @param noDims the number of dimension
@@ -79,7 +84,6 @@ object INDArrayKeyGenerator {
       require(n.length == noDims, s"tiles dimension ${n.length}: must be $noDims")
       val noTiles = create(n.map(_.toDouble))
       tiles(noTiles = noTiles, ranges)
-
     }
   } yield keyEncoder
 
