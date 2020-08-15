@@ -53,8 +53,7 @@ env:
       hSpeed: -3
       vSpeed: -1
   actionDimensions: 3
-  encoder: LanderTiles
-  hash: 300
+  encoder: LanderContinuous
   signalRanges:
     - [-3.14, 3.14]
     - [-3.14, 3.14]
@@ -83,28 +82,28 @@ agent:
     maxAbsParameters: 10e3
     dropOut: 0.8
   actors:
-    - type: PolicyActor
-      noValues: 8
-      range: 
-        - [0, 6.09]
-      alpha: 100e-3
-      prefRange:
-        - [-2.4, 2.4]
-    - type: PolicyActor
-      noValues: 3
-      range:
+    - type: GaussianActor
+      alphaMu: 60e-6
+      alphaSigma: 5e-3
+      muRange:
+        - [0, 6.28]
+      sigmaRange:
+        - [60e-3, 2]
+    - type: GaussianActor
+      alphaMu: 1e-3
+      alphaSigma: 5e-3
+      muRange:
         - [0, 3]
-      alpha: 100e-3
-      prefRange:
-        - [-2.4, 2.4]
-    - type: PolicyActor
-      noValues: 5
-      range:
+      sigmaRange:
+        - [20e-3, 0.667]
+    - type: GaussianActor
+      alphaMu: 100e-6
+      alphaSigma: 5e-3
+      muRange:
         - [-6, 6]
-      alpha: 100e-3
-      prefRange:
-        - [-2.4, 2.4]
+      sigmaRange:
+        - [80e-3, 2.67]
 session:
   numSteps: 300000
   seed: 1234
-  kpisOnPlanning: true
+  kpisOnPlanning: false

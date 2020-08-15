@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #95: ANN Output Normalization and Relu
 - Issue #97: Redesign rewards
 - Issue #100: Automatic jet controls
+- Issue #102: Final states rewards depending on platform distance and speed
 
 ### Fixed
 

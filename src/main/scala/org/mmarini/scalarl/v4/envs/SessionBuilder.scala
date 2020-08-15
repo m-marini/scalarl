@@ -62,6 +62,7 @@ object SessionBuilder extends LazyLogging {
     epoch: Int,
     kpiFileParm: Option[String],
     dumpFileParm: Option[String],
+    traceFileParm: Option[String],
     env: => Env,
     agent: => Agent,
     agentEvents: Observable[AgentEvent]): Try[Session] = {
@@ -70,7 +71,7 @@ object SessionBuilder extends LazyLogging {
       numSteps <- conf.get[Int]("numSteps").toTry
     } yield {
       val dump = dumpFileParm.orElse(conf.get[String]("dump").toOption)
-      val trace = conf.get[String]("trace").toOption
+      val trace = traceFileParm.orElse(conf.get[String]("trace").toOption)
       val saveModel = conf.get[String]("modelFile").toOption
       val kpiFile = kpiFileParm.orElse(conf.get[String]("kpiFile").toOption)
       // Clean up all files
@@ -100,7 +101,13 @@ object SessionBuilder extends LazyLogging {
 
       kpiFile.foreach(filename => {
         logger.info("Kpi file {}", filename)
-        agentEvents.kpis().writeCsv(new File(filename)).subscribe()
+        val kpisOnPlanning = conf.get[Boolean]("kpisOnPlanning")
+        val agentEventWrapper = if (kpisOnPlanning.getOrElse(false)) {
+          from(agentEvents)
+        } else {
+          agentEvents.sampleBySessionStep(session)
+        }
+        agentEventWrapper.kpis().writeCsv(new File(filename)).subscribe()
       })
 
       // Save model every 10 steps

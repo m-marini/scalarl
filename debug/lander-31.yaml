@@ -2,82 +2,108 @@
 version: "5"
 env:
   dt: 0.25
-  h0Range: 100
-  z0: 100
-  fuel: 300
-  zMax: 150
-  hRange: 500
-  zRange: 150
-  landingRadius: 10
-  landingVH: 2
-  landingVZ: 4
-  optimalVH: 1
-  optimalVZ: -2
   g: 1.6
-  maxAH: 1
-  maxAZ: 3.2
-  #landedReward: 100
-  #vCrashReward: -100
-  #hCrashReward: -10
-  #outOfPlatformReward: -3
-  #outOfRangeReward: -100
-  #outOfFuelReward: -100
-  #flyingReward: 0
-  #vSpeedReward: -2 
-  #hSpeedReward: -2
-  landedReward: 100
-  vCrashedOnPlatformReward: 100
-  hCrashedOnPlatformReward: 100
-  landedOutOfPlatformReward: -100
-  vCrashedOutOfPlatformReward: -100
-  hCrashedOutOfPlatformReward: -100
-  outOfRangeReward: -100
-  outOfFuelReward: -100
-  flyingReward: -2
-  directionReward: 1
-  hSpeedReward: -5
-  vSpeedReward: -1.25
-  # input encoder
+  fuel: 300
+  initialLocationRange:
+    - [-100, 100]
+    - [-100, 100]
+    - [100, 100]
+  spaceRanges:
+    - [-500, 500]
+    - [-500, 500]
+    - [0, 150]
+  landingRadius: 10
+  landingSpeedLimits: [2, -4]
+  optimalSpeedRanges:
+   - [0, 1]
+   - [-2, -2]
+  jetAccRange:
+    - [-1, 1]
+    - [-1, 1]
+    - [0, 3.2]
+  rewards:
+    landed:
+      base: 100
+    hCrashedOnPlatform:
+      base: 100
+      hSpeed: -5
+    vCrashedOnPlatform:
+      base: 100
+      vSpeed: -0.125
+    landedOutOfPlatform:
+      base: -30
+      distance: -0.3
+    hCrashedOutOfPlatform:
+      base: -30
+      distance: -0.3
+    vCrashedOutOfPlatform:
+      base: -30
+      distance: -0.3
+    outOfRange:
+      base: -100
+      distance: -0.3
+      height: -0.3
+    outOfFuel:
+      base: -100
+      distance: -0.3
+      height: -0.3
+    flying:
+      base: -11
+      direction: 10
+      hSpeed: -3
+      vSpeed: -1
+  actionDimensions: 3
   encoder: LanderTiles
   signalRanges:
-    - [-1, 1]
-    - [-1, 1]
+    - [-3.14, 3.14]
+    - [-3.14, 3.14]
     - [0, 64]
     - [0, 16]
     - [0, 8]
     - [-16, 16]
-  # output encoder
-  actionConfig: DiscreteActions
 agent:
   type: ActorCritic
-  avgReward: 0
+  avgReward: -14
   rewardDecay: 0.999
   valueDecay: 0.99
   rewardRange: [-100, 100]
   network:
     seed: 1234
+    activation: SOFTPLUS
     numHiddens:
     - 100
     - 30
     - 30
     shortcuts:
       - [ 1, 4 ]
-    activation: SOFTPLUS
     updater: Sgd
-    learningRate: 10e-3
+    learningRate: 1000e-3
     maxAbsGradients: 100
     maxAbsParameters: 10e3
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 7e-3
-      prefRange: [-2.4, 2.4]
+      noValues: 8
+      range: 
+        - [0, 6.09]
+      alpha: 100e-3
+      prefRange:
+        - [-2.4, 2.4]
     - type: PolicyActor
-      alpha: 4e-3
-      prefRange: [-2.4, 2.4]
+      noValues: 3
+      range:
+        - [0, 3]
+      alpha: 100e-3
+      prefRange:
+        - [-2.4, 2.4]
     - type: PolicyActor
-      alpha: 5e-3
-      prefRange: [-2.4, 2.4]
+      noValues: 5
+      range:
+        - [-6, 6]
+      alpha: 100e-3
+      prefRange:
+        - [-2.4, 2.4]
 session:
-  numSteps: 100000
+  numSteps: 300000
   seed: 1234
+  kpisOnPlanning: true

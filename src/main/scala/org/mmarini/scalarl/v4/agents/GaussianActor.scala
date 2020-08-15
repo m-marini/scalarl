@@ -92,18 +92,6 @@ case class GaussianActor(dimension: Int,
   }
 
   /**
-   * Returns the action choosen by the actor
-   *
-   * @param outputs the network outputs
-   * @param random  the random generator
-   */
-  override def chooseAction(outputs: Array[INDArray], random: Random): INDArray = {
-    val (mu, _, sigma) = muHSigma(outputs)
-    val action = sigma.mul(random.nextGaussian()).addi(mu)
-    action
-  }
-
-  /**
    * Returns mu, h, sigma
    *
    * @param outputs the output of actor network
@@ -114,6 +102,18 @@ case class GaussianActor(dimension: Int,
     val h = denorm.getColumn(1)
     val sigma = exp(h)
     (mu, h, sigma)
+  }
+
+  /**
+   * Returns the action choosen by the actor
+   *
+   * @param outputs the network outputs
+   * @param random  the random generator
+   */
+  override def chooseAction(outputs: Array[INDArray], random: Random): INDArray = {
+    val (mu, _, sigma) = muHSigma(outputs)
+    val action = sigma.mul(random.nextGaussian()).addi(mu)
+    action
   }
 
   /** Returns the number of outputs */

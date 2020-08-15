@@ -21,15 +21,6 @@ object Utils {
   def clip(x: INDArray, xMin: Double, xMax: Double, copy: Boolean = true): INDArray = Transforms.min(Transforms.max(x, xMin, copy), xMax, copy)
 
   /**
-   * Returns the clip values
-   *
-   * @param x     the values
-   * @param range range values row(0) = min, row(1) = max
-   * @param copy  true if return value is a new copy
-   */
-  def clip(x: INDArray, range: INDArray, copy: Boolean): INDArray = Transforms.min(Transforms.max(x, range.getRow(0), copy), range.getRow(1), copy)
-
-  /**
    * Returns the features vector with ones at indices
    *
    * @param indices indices to set ones
@@ -63,6 +54,23 @@ object Utils {
       cdf.putScalar(i, v)
     }
     cdf
+  }
+
+  /**
+   * Returns random integer for a cdf
+   *
+   * @param x      the cumulative distribution function
+   * @param random the random generator
+   */
+  def cdfRandomInt(x: INDArray)(random: Random): Int = {
+    val n = x.length()
+    val seq = for {
+      i <- 0L until n
+    } yield x.getDouble(i)
+    val y = random.nextDouble()
+    val result = seq.indexWhere(y < _)
+    require(result >= 0, s"$x")
+    result
   }
 
   /**
@@ -122,18 +130,6 @@ object Utils {
    * Returns the normalizer function of row vector
    * The function returns ranges 0, 1 for defined ranges
    *
-   * @param ranges the range of transformation the first row contains minimum values
-   *               and the second row contains the maximum values
-   */
-  def normalize01(ranges: INDArray): INDArray => INDArray = {
-    val toRanges = vstack(zeros(1, ranges.size(1)), ones(1, ranges.size(1)))
-    transform(ranges, toRanges)
-  }
-
-  /**
-   * Returns the normalizer function of row vector
-   * The function returns ranges 0, 1 for defined ranges
-   *
    * @param fromRanges the range of transformation the first row contains minimum values
    *                   and the second row contains the maximum values
    * @param toRanges   the range of transformation the first row contains minimum values
@@ -147,20 +143,24 @@ object Utils {
   }
 
   /**
-   * Returns random integer for a cdf
+   * Returns the clip values
    *
-   * @param x      the cumulative distribution function
-   * @param random the random generator
+   * @param x     the values
+   * @param range range values row(0) = min, row(1) = max
+   * @param copy  true if return value is a new copy
    */
-  def cdfRandomInt(x: INDArray)(random: Random): Int = {
-    val n = x.length()
-    val seq = for {
-      i <- 0L until n
-    } yield x.getDouble(i)
-    val y = random.nextDouble()
-    val result = seq.indexWhere(y < _)
-    require(result >= 0, s"$x")
-    result
+  def clip(x: INDArray, range: INDArray, copy: Boolean): INDArray = Transforms.min(Transforms.max(x, range.getRow(0), copy), range.getRow(1), copy)
+
+  /**
+   * Returns the normalizer function of row vector
+   * The function returns ranges 0, 1 for defined ranges
+   *
+   * @param ranges the range of transformation the first row contains minimum values
+   *               and the second row contains the maximum values
+   */
+  def normalize01(ranges: INDArray): INDArray => INDArray = {
+    val toRanges = vstack(zeros(1, ranges.size(1)), ones(1, ranges.size(1)))
+    transform(ranges, toRanges)
   }
 
   /**

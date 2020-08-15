@@ -55,18 +55,6 @@ object Configuration {
       create(data)
     })
 
-  def matrixFromJson(conf: ACursor)(n: Int, m: Int): Try[INDArray] =
-    conf.as[Array[Array[Double]]].toTry.flatMap(data => Try {
-      require(data.length == n, s"vector has ${data.length} elements: must have $n elements")
-      for {
-        (range, i) <- data.zipWithIndex
-      } {
-        require(range.length == 2, s"ranges($i) has ${range.length} elements: must have 2 elements")
-      }
-      create(data)
-    })
-
-
   /**
    * Returns ranges from Json configuration
    *
@@ -86,4 +74,15 @@ object Configuration {
         }
       }
     } yield data.transpose()
+
+  def matrixFromJson(conf: ACursor)(n: Int, m: Int): Try[INDArray] =
+    conf.as[Array[Array[Double]]].toTry.flatMap(data => Try {
+      require(data.length == n, s"vector has ${data.length} elements: must have $n elements")
+      for {
+        (range, i) <- data.zipWithIndex
+      } {
+        require(range.length == 2, s"ranges($i) has ${range.length} elements: must have 2 elements")
+      }
+      create(data)
+    })
 }

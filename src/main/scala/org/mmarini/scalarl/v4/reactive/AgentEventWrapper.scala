@@ -32,6 +32,7 @@ package org.mmarini.scalarl.v4.reactive
 import com.typesafe.scalalogging.LazyLogging
 import monix.eval.Task
 import monix.reactive.Observable
+import org.mmarini.scalarl.v4.Session
 import org.mmarini.scalarl.v4.agents.{ActorCriticAgent, AgentEvent, GaussianActor, PolicyActor}
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j._
@@ -59,12 +60,13 @@ class AgentEventWrapper(val observable: Observable[AgentEvent]) extends Observab
    */
   def kpis(): INDArrayWrapper = new INDArrayWrapper(observable.map(toKpi))
 
-  def computeJ(labels: Array[INDArray], outputs0: Array[INDArray]): INDArray = {
-    val l = hstack(labels: _ *)
-    val o = hstack(outputs0: _ *)
-    val result = pow(l.sub(o), 2).mean()
-    result
-  }
+  /**
+   *
+   * @param session
+   * @return
+   */
+  def sampleBySessionStep(session:Session): AgentEventWrapper =
+    new AgentEventWrapper(observable.sampleBy(session.steps))
 
   /**
    *
@@ -111,6 +113,13 @@ class AgentEventWrapper(val observable: Observable[AgentEvent]) extends Observab
         kpis
       case _ => zeros(0)
     }
+  }
+
+  def computeJ(labels: Array[INDArray], outputs0: Array[INDArray]): INDArray = {
+    val l = hstack(labels: _ *)
+    val o = hstack(outputs0: _ *)
+    val result = pow(l.sub(o), 2).mean()
+    result
   }
 
   /**

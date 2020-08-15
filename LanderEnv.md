@@ -144,6 +144,54 @@ In the all the other cases it receive a negative rewards of the sum of jet useag
 R = -j_x - j_y - j_z
 ```
 
+### Reward framework
+
+A reward system framework is necessary to better address the short term reward problem.
+
+The reward should consider the distance from the platform and the speed of shuttle.
+In particolar the reward should penalize
+
+- the horizontal distance from the platform
+- the height
+- speed directions opposite the platform direction
+- horizontal speeds exceeding the optimal horizontal speed 
+- vertical speeds exceeding the optimal vertical speed
+
+The speed direction reward is proportional to the scalar product of speed versor and platform versor:
+```math
+    \rho = -\frac{\vec v \cdot \vec r}{|\vec v| |\vec r|}
+```
+
+The optimal horizontal speed should be in range between 0 and the  horizontal landing speed.
+The optimal vertical speed should be in range between but 0 and the vertical landing speed.
+The speed surplus may be compute as
+```math
+    \Delta v = \max\left(
+        \left|v - v_0 \right| - dv, 0
+        \right) \\
+    v_0 = \frac{v_{min} + v_{max}}{2} \\
+    dv = \frac{v_{max} - v_{min}}{2} \\
+```
+
+For each state $ s $ we define the reward as
+```math
+    R = f_s(\vec r, \vec v) \\
+    R = g_s(\rho, r_h, z, \Delta v_h, \Delta v_z) \\
+    r_h = \sqrt{x^2+y^2} \\
+    v_h = \sqrt{v_x^2 + v_y^2} \\
+    g_s(\rho, r_h, z, v_h, v_z) = a_s + a_{\rho s} \rho + a_{rs} r_h + a_{zs} z + a_{hs} \Delta v_h  + a_{vs} \Delta v_z
+```
+
+The reward is composed by:
+- a fixed base value,
+- a value depending on direction difference,
+- a value depending on horizontal distance from platform,
+- a value depending on height,
+- a value depending on vertical speed exceeding the optimal vertical speed
+- a value depending on absolute difference between vertical speed and optimal speed.
+
+The coefficents $ a_{rs}, a_{zs}, a_{hs}, a_{vs} $ are non positive, $ a_{\rho s} $ is non negative and $ a_s $ may be positive if the state is desired or negative if the status is undesired.
+
 ## Input signals
 
 The base input signals are in the range -1, 1

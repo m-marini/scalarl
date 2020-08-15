@@ -35,7 +35,7 @@ import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j._
 import org.scalatest.{FunSpec, Matchers}
 
-class LanderConfTest extends FunSpec with Matchers {
+class LanderStatusTest extends FunSpec with Matchers {
   private val Dt = 0.25
   private val DefaultFuel = 10.0
   private val H0Range = 5.0
@@ -54,21 +54,16 @@ class LanderConfTest extends FunSpec with Matchers {
   private val OutOfRangeReward = -100.0
   private val OutOfFuelReward = -100.0
   private val FlyingReward = -1.0
-  private val DirectionReward = 0.1
-  private val HSpeedReward = 0.1
-  private val VSpeedReward = 0.1
 
   create()
-
   private val defaultFuel: INDArray = ones(1).mul(DefaultFuel)
-
-  private def encoder = new LanderContinuousEncoder(
-    Utils.normalize(
-      create(Array(
-        Array(-1.0, -1.0, 0.0, 0.0, 0.0, -12.0),
-        Array(1.0, 1.0, 10.0, 10.0, 24.0, 12.0)
-      ))))
-
+  private val landerReward = LanderRewards(vector(LandedReward, 0.0, 0.0, 0.0, 0.0))
+  private val hCrashReward = LanderRewards(vector(HCrashReward, 0.0, 0.0, 0.0, 0.0))
+  private val vCrashReward = LanderRewards(vector(VCrashReward, 0.0, 0.0, 0.0, 0.0))
+  private val outOfPlatformReward = LanderRewards(vector(OutOfPlatformReward, 0.0, 0.0, 0.0, 0.0))
+  private val outOfRangeReward = LanderRewards(vector(OutOfRangeReward, 0.0, 0.0, 0.0, 0.0))
+  private val outOfFuelReward = LanderRewards(vector(OutOfFuelReward, 0.0, 0.0, 0.0, 0.0))
+  private val flyingReward = LanderRewards(vector(FlyingReward, 0.0, 0.0, 0.0, 0.0))
   private val conf: LanderConf = new LanderConf(
     dt = ones(1).mul(Dt),
     fuel = defaultFuel,
@@ -82,227 +77,250 @@ class LanderConfTest extends FunSpec with Matchers {
       Array(-HRange, -HRange, 0),
       Array(HRange, HRange, ZMax)
     )),
-    landingSpeed = create(
-      Array(LandingVH, -LandingVZ),
-    ),
+    landingSpeed = vector(LandingVH, -LandingVZ),
     jetAccRange = create(Array(
       Array(-1.0, -1.0, -MaxAZ),
       Array(1.0, 1.0, MaxAZ)
     )),
-    optimalSpeed = create(Array(LandingVH, LandingVZ)),
-    landedReward = ones(1).mul(LandedReward),
-    landedOutOfPlatformReward = ones(1).mul(VCrashReward),
-    vCrashedOnPlatformReward = ones(1).mul(VCrashReward),
-    hCrashedOnPlatformReward = ones(1).mul(HCrashReward),
-    hCrashedOutOfPlatformReward = ones(1).mul(OutOfPlatformReward),
-    vCrashedOutOfPlatformReward = ones(1).mul(OutOfPlatformReward),
-    outOfRangeReward = ones(1).mul(OutOfRangeReward),
-    outOfFuelReward = ones(1).mul(OutOfFuelReward),
-    flyingReward = ones(1).mul(FlyingReward),
-    directionReward = ones(1).mul(DirectionReward),
-    hSpeedReward = ones(1).mul(HSpeedReward),
-    vSpeedReward = ones(1).mul(VSpeedReward),
+    optimalSpeed = create(Array(
+      Array(0.0, -LandingVZ),
+      Array(LandingVH, 0.0)
+    )),
+    landedReward = landerReward,
+    landedOutOfPlatformReward = outOfPlatformReward,
+    hCrashedOnPlatformReward = hCrashReward,
+    vCrashedOnPlatformReward = vCrashReward,
+    hCrashedOutOfPlatformReward = hCrashReward,
+    vCrashedOutOfPlatformReward = vCrashReward,
+    outOfRangeReward = outOfRangeReward,
+    outOfFuelReward = outOfFuelReward,
+    flyingReward = flyingReward,
     encoder = encoder
   )
-  /*
-  maxVH = ones(1).mul(LandingVH),
-  maxVZ = ones(1).mul(LandingVZ),
-  maxAH = ones(1),
-  maxAZ = ones(1).mul(MaxAZ)
-*/
+
+  def status(pos: INDArray, speed: INDArray = zeros(3), time: Double = 0.0, fuel: Double = DefaultFuel): LanderStatus =
+    LanderStatus(
+      pos = pos,
+      speed = speed,
+      time = ones(1).muli(time),
+      fuel = ones(1).muli(fuel),
+      conf
+    )
+
+  private def vector(data: Double*): INDArray = create(data.toArray)
+
+  private def encoder = new LanderContinuousEncoder(
+    Utils.normalize(
+      create(Array(
+        Array(-1.0, -1.0, 0.0, 0.0, 0.0, -12.0),
+        Array(1.0, 1.0, 10.0, 10.0, 24.0, 12.0)
+      ))))
 
   describe("LanderConf at land point") {
     describe("at (0,0,-0.1), (0,0,1)") {
-      val pos = create(Array[Double](0, 0, -0.1))
-      val speed = create(Array[Double](0, 0, 1))
+      val s = status(
+        pos = vector(0.0, 0.0, -0.1),
+        speed = vector(0, 0, 1))
 
       it("should be landed") {
-        conf.status(pos, speed, defaultFuel) shouldBe Landed
+        s.status shouldBe Landed
       }
     }
 
     describe("at (0,0,-0.1) speed (0,0,-4)") {
-      val pos = create(Array[Double](0, 0, -0.1))
-      val speed = create(Array[Double](0, 0, -4.0))
+      val s = status(
+        pos = vector(0, 0, -0.1),
+        speed = vector(0, 0, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, defaultFuel) shouldBe Landed
+        s.status shouldBe Landed
       }
     }
 
     describe("a at (0,0,-0.1) speed (0.5,0,-4)") {
-      val pos = create(Array[Double](0, 0, -0.1))
-      val speed = create(Array[Double](0.5, 0, -4.0))
+      val s = status(
+        pos = vector(0, 0, -0.1),
+        speed = vector(0.5, 0, -4.0))
 
       it("should be landed") {
-        val x = conf.status(pos, speed, defaultFuel)
+        val x = s.status
         x shouldBe Landed
       }
     }
 
     describe("at (0,0,-0.1) speed (-0.5,0,-4)") {
-      val pos = create(Array[Double](0, 0, -0.1))
-      val speed = create(Array[Double](-0.5, 0, -4.0))
+      val s = status(
+        pos = vector(0, 0, -0.1),
+        speed = vector(-0.5, 0, -4.0))
+
       it("should be landed") {
-        val s = conf.status(pos, speed, defaultFuel)
-        s shouldBe Landed
+        val st = s.status
+        st shouldBe Landed
       }
     }
 
     describe("at(0,0,0) speed (0,0.5,-4)") {
-      val pos = create(Array[Double](0, 0, -0.1))
-      val speed = create(Array[Double](0, 0.5, -4.0))
+      val s = status(
+        pos = vector(0, 0, -0.1),
+        speed = vector(0, 0.5, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, defaultFuel) shouldBe Landed
+        s.status shouldBe Landed
       }
     }
 
     describe("at(0,0,-0.1) speed (0,-0.5,-4)") {
-      val pos = create(Array[Double](0, 0, -0.1))
-      val speed = create(Array[Double](0, -0.5, -4.0))
+      val s = status(
+        pos = vector(0, 0, -0.1),
+        speed = vector(0, -0.5, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, defaultFuel) shouldBe Landed
+        s.status shouldBe Landed
       }
     }
 
     describe("at(10,0,-0.1) speed (0,0,-4)") {
-      val pos = create(Array[Double](10.0, 0, -0.1))
-      val speed = create(Array[Double](0, 0, -4.0))
+      val s = status(
+        pos = vector(10.0, 0, -0.1),
+        speed = vector(0, 0, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, defaultFuel) shouldBe Landed
+        s.status shouldBe Landed
       }
     }
 
     describe("at(-10,0,-0.1) speed (0,0,-4)") {
-      val pos = create(Array[Double](-10.0, 0, -0.1))
-      val speed = create(Array[Double](0, 0, -4.0))
+      val s = status(
+        pos = vector(-10.0, 0, -0.1),
+        speed = vector(0, 0, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, defaultFuel) shouldBe Landed
+        s.status shouldBe Landed
       }
     }
 
     describe("at(0,10,-0.1) speed (0,0,-4)") {
-      val pos = create(Array[Double](0, 10.0, -0.1))
-      val speed = create(Array[Double](0, 0, -4.0))
+      val s = status(
+        pos = vector(0, 10.0, -0.1),
+        speed = vector(0, 0, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, defaultFuel) shouldBe Landed
+        s.status shouldBe Landed
       }
     }
 
     describe("at(0,-10,-0.1) speed (0,0,-4)") {
-      val pos = create(Array[Double](0, 10.0, -0.1))
-      val speed = create(Array[Double](0, 0, -4.0))
+      val s = status(
+        pos = vector(0, 10.0, -0.1),
+        speed = vector(0, 0, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, defaultFuel) shouldBe Landed
+        s.status shouldBe Landed
       }
     }
 
     describe("at(7.07,7.07,-0.1) speed (0,0,-4)") {
-      val pos = create(Array[Double](7.07, 7.07, -0.1))
-      val speed = create(Array[Double](0, 0, -4.0))
+      val s = status(
+        pos = vector(7.07, 7.07, -0.1),
+        speed = vector(0, 0, -4.0)
+      )
       it("should be landed") {
-        conf.status(pos, speed, defaultFuel) shouldBe Landed
+        s.status shouldBe Landed
       }
     }
 
     describe("at(0,0,-0.1) speed (0.353,0.353,-4)") {
-      val pos = create(Array[Double](0, 0, -0.1))
-      val speed = create(Array[Double](0.353, 0.353, -4.0))
+      val s = status(
+        pos = vector(0, 0, -0.1),
+        speed = vector(0.353, 0.353, -4.0))
       it("should be landed") {
-        conf.status(pos, speed, defaultFuel) shouldBe Landed
+        s.status shouldBe Landed
       }
     }
   }
 
   describe("LanderConf at crash point") {
     //    describe("at (0,0,-0.1) speed (0,0,-4.1)") {
-    //      val pos = create(Array[Double](0, 0, -0.1))
-    //      val speed = create(Array[Double](0, 0, -4.1))
+    //      val pos = create(vector(0, 0, -0.1))
+    //      val speed = create(vector(0, 0, -4.1))
     //      it("should be crashed") {
     //        conf.status(pos, speed, DefaultFuel) shouldBe Crashed
     //      }
     //    }
 
     //    describe("at (0,0,-0.1) speed (0.354,0.354,-4.1)") {
-    //      val pos = create(Array[Double](0, 0, -0.1))
-    //      val speed = create(Array[Double](0.354, 0.354, -4.1))
+    //      val pos = create(vector(0, 0, -0.1))
+    //      val speed = create(vector(0.354, 0.354, -4.1))
     //      it("should be crashed") {
     //        conf.status(pos, speed, DefaultFuel) shouldBe Crashed
     //      }
     //    }
 
     describe("at (7.08,7-08,-0.1) speed (0, 0, 0)") {
-      val pos = create(Array[Double](7.08, 7.08, -0.1))
-      val speed = create(Array[Double](0, 0, 0))
+      val s = status(
+        pos = vector(7.08, 7.08, -0.1))
       it("should be crashed") {
-        conf.status(pos, speed, defaultFuel) shouldBe LandedOutOfPlatform
+        s.status shouldBe LandedOutOfPlatform
       }
     }
   }
 
   describe("LanderConf at out of range point") {
     describe("at (0,0,100.1) speed (0,0,0)") {
-      val pos = create(Array[Double](0, 0, 100.1))
-      val speed = zeros(3)
+      val s = status(
+        pos = vector(0, 0, 100.1))
       it("should be out of range") {
-        conf.status(pos, speed, defaultFuel) shouldBe OutOfRange
+        s.status shouldBe OutOfRange
       }
     }
 
     describe("at (600.1,0,10) speed (0,0,0)") {
-      val pos = create(Array[Double](600.1, 0, 10.0))
-      val speed = zeros(3)
+      val s = status(
+        pos = vector(600.1, 0, 10.0))
       it("should be out of range") {
-        conf.status(pos, speed, defaultFuel) shouldBe OutOfRange
+        s.status shouldBe OutOfRange
       }
     }
 
     describe("at (-600.1,0,10) speed (0,0,0)") {
-      val pos = create(Array[Double](-600.1, 0, 10.0))
-      val speed = zeros(3)
+      val s = status(
+        pos = vector(-600.1, 0, 10.0))
       it("should be out of range") {
-        conf.status(pos, speed, defaultFuel) shouldBe OutOfRange
+        s.status shouldBe OutOfRange
       }
     }
 
     describe("at (0, 600.1,10) speed (0,0,0)") {
-      val pos = create(Array[Double](0, 600.1, 10.0))
-      val speed = zeros(3)
+      val s = status(
+        pos = vector(0, 600.1, 10.0))
       it("should be out of range") {
-        conf.status(pos, speed, defaultFuel) shouldBe OutOfRange
+        s.status shouldBe OutOfRange
       }
     }
 
     describe("a lander status at (0, -600.1,10) speed (0,0,0)") {
-      val pos = create(Array[Double](0, -600.1, 10.0))
-      val speed = zeros(3)
+      val s = status(
+        pos = vector(0, -600.1, 10.0))
       it("should be out of range") {
-        conf.status(pos, speed, defaultFuel) shouldBe OutOfRange
+        s.status shouldBe OutOfRange
       }
     }
   }
   describe("LanderConf flying") {
     describe("at (0,0,10.0) speed (0,0,0)") {
-      val pos = create(Array[Double](0, 0, 10.0))
-      val speed = zeros(3)
+      val s = status(
+        pos = vector(0, 0, 10.0))
       it("should be Flying") {
-        conf.status(pos, speed, defaultFuel) shouldBe Flying
-        conf.rewardFromDirection(pos, speed) shouldBe ones(1).muli(-DirectionReward)
+        s.status shouldBe Flying
       }
     }
     describe("at (1,2,10.0) speed (-0.1,-0.2,-1)") {
-      val pos = create(Array[Double](1, 2, 10.0))
-      val speed = create(Array[Double](-0.1, -0.2, -1.0))
+      val s = status(
+        pos = vector(1, 2, 10.0),
+        speed = vector(-0.1, -0.2, -1.0))
       it("should be Flying") {
-        conf.status(pos, speed, defaultFuel) shouldBe Flying
-        conf.rewardFromDirection(pos, speed) shouldBe ones(1).muli(DirectionReward)
+        s.status shouldBe Flying
       }
     }
     describe("at (1,2,10.0) speed (0.1,0.2,1)") {
-      val pos = create(Array[Double](1, 2, 10.0))
-      val speed = create(Array[Double](0.1, 0.2, 1.0))
+      val s = status(
+        pos = vector(1, 2, 10.0),
+        speed = vector(0.1, 0.2, 1.0))
       it("should be Flying") {
-        conf.status(pos, speed, defaultFuel) shouldBe Flying
-        conf.rewardFromDirection(pos, speed) shouldBe ones(1).muli(-DirectionReward)
+        s.status shouldBe Flying
       }
     }
   }

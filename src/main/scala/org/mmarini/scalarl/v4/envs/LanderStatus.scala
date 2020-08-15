@@ -35,6 +35,7 @@ import org.mmarini.scalarl.v4.envs.StatusCode._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
+import org.nd4j.linalg.ops.transforms.Transforms
 import org.nd4j.linalg.ops.transforms.Transforms._
 
 /**
@@ -52,18 +53,125 @@ case class LanderStatus(pos: INDArray,
                         time: INDArray,
                         fuel: INDArray,
                         conf: LanderConf) extends Env with LazyLogging {
-  /**
-   * Return the observation of the current land status
-   */
+
+  /** Return the observation of the current land status */
   override lazy val observation: Observation = INDArrayObservation(
-    signals = conf.signals(this),
+    signals = conf.encoder.signals(baseSignals),
     time = time)
 
   /** Returns true if the status is final */
-  def isFinal: Boolean = status != Flying
-
-  /** Returns the status code */
-  def status: StatusCode.Value = conf.status(pos, speed, fuel)
+  lazy val isFinal: Boolean = status != Flying
+  /**
+   * Returns the direction of target
+   * The direction is in the range of -Pi, Pi
+   * 0 toward x axis
+   * Pi/2 toward y axis
+   * Pi backward x axis
+   * -Pi/2 backward y axis
+   */
+  lazy val direction: INDArray = atan2(pos.getColumn(1).neg(), pos.getColumn(0).neg())
+  /** Returns the distance from platform */
+  lazy val distance: INDArray = pos.getColumns(0, 1).norm2()
+  /**
+   * Returns the speed direction
+   * The direction is in the range of -Pi, Pi
+   * 0 toward x axis
+   * Pi/2 toward y axis
+   * Pi backward x axis
+   * -Pi/2 backward y axis
+   */
+  lazy val speedDirection: INDArray = atan2(speed.getColumn(1), speed.getColumn(0))
+  /** Returns the horizontal speed */
+  lazy val hSpeed: INDArray = speed.getColumns(0, 1).norm2()
+  /** Returns the height from ground */
+  lazy val height: INDArray = pos.getColumn(2)
+  /** Returns the vertical speed */
+  lazy val vSpeed: INDArray = speed.getColumn(2)
+  /**
+   * Returns the input base signals
+   * The signals are composed by:
+   *  - platform direction
+   *  - speed direction
+   *  - platfrom distance
+   *  - height
+   *  - horizontal speed
+   *  - vertical speed
+   */
+  lazy val baseSignals: INDArray = {
+    val signals = hstack(direction, speedDirection, distance, height, hSpeed, vSpeed)
+    signals
+  }
+  /** Returns the status of lander */
+  lazy val status: StatusCode.Value = {
+    if (pos.getDouble(2L) <= 0) {
+      // has touched ground
+      val vh = hSpeed.getDouble(0L)
+      val vz = vSpeed.getDouble(0L)
+      val dist = distance.getDouble(0L)
+      val isLandPosition = dist <= conf.landingRadius.getDouble(0L)
+      if (vz < conf.landingSpeed.getDouble(1L)) {
+        if (isLandPosition) {
+          VCrashedOnPlatform
+        } else {
+          VCrashedOutOfPlatform
+        }
+      } else if (vh > conf.landingSpeed.getDouble(0L)) {
+        if (isLandPosition) {
+          HCrashedOnPlatform
+        } else {
+          HCrashedOutOfPlatform
+        }
+      } else if (isLandPosition) {
+        Landed
+      } else {
+        LandedOutOfPlatform
+      }
+    } else if (greaterThanOrEqual(pos, conf.spaceRange.getRow(1)).sumNumber().intValue() > 0) {
+      OutOfRange
+    } else if (lessThanOrEqual(pos, conf.spaceRange.getRow(0)).sumNumber().intValue() > 0) {
+      OutOfRange
+    } else if (fuel.getDouble(0L) <= 0) {
+      OutOfFuel
+    } else {
+      Flying
+    }
+  }
+  /**
+   * Returns the vector for reward in the order:
+   * <ul>
+   *   <li>1</li>
+   *   <li>rho (-1, 1)</li>
+   *   <li>hdistance (m)</li>
+   *   <li>deltaHSpeed (m/s)</li>
+   *   <li>deltaVSpeed (m/s)</li>
+   * </li>
+   * </ul>
+   */
+  lazy val rewardVector: INDArray = {
+    val v = hstack(hSpeed, vSpeed)
+    val d1 = abs(v.sub(conf.v0))
+    val d2 = d1.sub(conf.dv)
+    val deltav = Transforms.max(d2, 0.0)
+    val hdistance = pos.getColumns(0, 1).norm2()
+    val result = hstack(ones(1), rho, hdistance, pos.getColumn(2), deltav)
+    result
+  }
+  /** Returns the direction coefficient */
+  lazy val rho: INDArray = {
+    val dir = pos.getColumns(0, 1)
+    val vdir = speed.getColumns(0, 1)
+    val prod = dir.norm2().muli(vdir.norm2())
+    val result = if (prod.getDouble(0L) > EPS_THRESHOLD) {
+      dir.mmul(vdir.transpose()).negi().divi(prod)
+    } else {
+      zeros(1)
+    }
+    result
+  }
+  /** Returns the reward */
+  lazy val reward: INDArray = conf.rewardFunctionTable(status)(this)
+  /** Returns the action configuration */
+  override val actionDimensions: Int = LanderConf.NumActors
 
   /**
    * Returns the next status and the reward.
@@ -78,73 +186,19 @@ case class LanderStatus(pos: INDArray,
   override def change(actions: INDArray, random: Random): (Env, INDArray) = status match {
     case Flying =>
       val newEnv = drive(actions)
-      val reward = newEnv.status match {
-        case OutOfRange =>
-          conf.outOfRangeReward
-        case VCrashedOnPlatform =>
-          conf.vCrashedOnPlatformReward
-        case HCrashedOnPlatform =>
-          conf.hCrashedOnPlatformReward
-        case Landed =>
-          conf.landedReward
-        case LandedOutOfPlatform =>
-          conf.landedOutOfPlatformReward
-        case HCrashedOutOfPlatform =>
-          conf.hCrashedOutOfPlatformReward
-        case VCrashedOutOfPlatform =>
-          conf.vCrashedOutOfPlatformReward
-        case OutOfFuel =>
-          conf.outOfFuelReward
-        case Flying =>
-          conf.flyingReward.
-            add(conf.rewardFromDirection(pos, speed)).
-            addi(conf.rewardFromVSpeed(speed)).
-            addi(conf.rewardFromHSpeed(speed))
-      }
-      (newEnv, reward)
+      (newEnv, newEnv.reward)
     case _ =>
       (initial(random), zeros(1))
   }
 
   /**
-   * Returns the direction of target
-   * The direction is in the range of -Pi, Pi
-   * 0 toward x axis
-   * Pi/2 toward y axis
-   * Pi backward x axis
-   * -Pi/2 backward y axis
-   */
-  def direction: INDArray = atan2(pos.getColumn(1).neg(), pos.getColumn(0).neg())
-
-  /** Returns the distance from platform */
-  def distance: INDArray = pos.getColumns(0, 1).norm2()
-
-  /**
-   * Returns the speed direction
-   * The direction is in the range of -Pi, Pi
-   * 0 toward x axis
-   * Pi/2 toward y axis
-   * Pi backward x axis
-   * -Pi/2 backward y axis
-   */
-  def speedDirection: INDArray = atan2(speed.getColumn(1), speed.getColumn(0))
-
-  /** Returns the horizontal speed */
-  def hSpeed: INDArray = speed.getColumns(0, 1).norm2()
-
-  /** Returns the height from ground */
-  def height: INDArray = pos.getColumn(2)
-
-  /** Returns the vertical speed */
-  def vSpeed: INDArray = speed.getColumn(2)
-
-  /**
+   * Returns a new initial status
    *
    * @param random the random generator
    */
   private def initial(random: Random): LanderStatus = {
     val newEnv = copy(
-      pos = conf.initialPos(random),
+      pos = conf.initial(random),
       speed = zeros(3),
       fuel = conf.fuel,
       time = time.add(conf.dt))
@@ -157,15 +211,31 @@ case class LanderStatus(pos: INDArray,
    * @param actions the actions
    */
   def drive(actions: INDArray): LanderStatus = {
-    val (p, v) = conf.drive(actions, pos, speed)
+    val a = acceleration(actions).add(conf.gVect)
+    val dv = a.mul(conf.dt)
+    val dp = speed.mul(conf.dt)
+    val p = pos.add(dp)
+    val v = speed.add(dv)
     copy(pos = p, speed = v, fuel = fuel.sub(1), time = time.add(conf.dt))
+  }
+
+  /**
+   * Returns the jet accelerations
+   *
+   * @param actions the actions
+   */
+  private def acceleration(actions: INDArray): INDArray = {
+    val dir = actions.getColumn(0)
+    val speedHVersor = hstack(cos(dir), sin(dir))
+    val targetHSpeed = speedHVersor.mul(actions.getColumn(1))
+    val targetSpeed = hstack(targetHSpeed, actions.getColumn(2))
+    val targetJetAcc = targetSpeed.sub(speed).div(conf.dt).sub(conf.gVect)
+    val jetAcc = Utils.clip(targetJetAcc, conf.jetAccRange, copy = true)
+    jetAcc
   }
 
   /** Returns the number of signals */
   override def signalsSize: Int = conf.noSignals
-
-  /** Returns the action configuration */
-  override val actionDimensions: Int = LanderConf.NumActors
 }
 
 /** Factory for [[LanderStatus]] instances */
@@ -180,7 +250,7 @@ object LanderStatus {
   def apply(conf: LanderConf,
             random: Random): LanderStatus = LanderStatus(
     conf = conf,
-    pos = conf.initialPos(random),
+    pos = conf.initial(random),
     speed = zeros(3),
     time = zeros(1),
     fuel = conf.fuel)
