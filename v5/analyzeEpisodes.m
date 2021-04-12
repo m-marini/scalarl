@@ -49,9 +49,7 @@ function analyzeEpisodes(X,              # The trace data
   [STEPB R RTREND RMODE] = meanchart(R, NPOINTS, LENGTH);
   
   NFS = sum(SCHIST >= 1);
-  NCHARTS = NFS + 3;
-  NC = ceil(2 * sqrt(NCHARTS / 3));
-  NR = ceil(NCHARTS / NC);
+  NR = max(3, NFS);
   
   # Draw charts
   clf;
@@ -63,14 +61,14 @@ function analyzeEpisodes(X,              # The trace data
   ylabel("Unit");
   xlabel("Step");
 
-  subplot(NR, NC, 2);
+  subplot(NR, NC, 1 + NC);
   hist(X1(:, StatusCode), NSC);
   grid on;
   title(sprintf("Status distribution"));
   ylabel("# Episodes");
   xlabel("StatusCode");
   
-  subplot(NR, NC, 3);
+  subplot(NR, NC, 1 + 2 * NC);
   autoplot(EpisodeStep(STEPB), [DP DPTREND]);
   grid on;
   title(sprintf("Platform distance\n%s Trend", DPMODE));
@@ -81,7 +79,7 @@ function analyzeEpisodes(X,              # The trace data
     SC = NSCHIST(I);
     if SCHIST(I) >= 1
       Y = F{SC, 1};
-      subplot(NR, NC, I + 3);
+      subplot(NR, NC, 2 + (I - 1) * NC);
       autoplot(Y(:, 1), Y(:, 2));
       grid on;
       title(sprintf("Frequency of %s", StatusDescr{SC + 1}));
@@ -91,16 +89,13 @@ function analyzeEpisodes(X,              # The trace data
   endfor
 
   
-  printf("Episodes Exam\n");
+  printf("Episodes\n");
   printf("%s rewards trend from %.1f to %.1f.\n", RMODE, RTREND(1), RTREND(end));
   printf("%s platform distance trend from %.0f m to %.0f m.\n", DPMODE, DPTREND(1), DPTREND(end));
   for I = 1 : length(NSCHIST)
     SC = NSCHIST(I);
     if SCHIST(I) > 0
-      FIRST = F{SC, 1}(2, 1);
-      LAST = F{SC, 1}(end, 1);
-      printf("%d cases of %s between %d and %d steps.\n",
-        SCHIST(I), StatusDescr{SC+1}, FIRST, LAST);
+      printf("%d cases of %s.\n", SCHIST(I), StatusDescr{SC+1});
     endif
   endfor
    

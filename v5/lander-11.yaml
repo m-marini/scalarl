@@ -3,11 +3,11 @@ version: "5"
 env:
   dt: 0.25
   g: 1.6
-  fuel: 300
+  fuel: 100
   initialLocationRange:
     - [-100, 100]
     - [-100, 100]
-    - [100, 100]
+    - [80, 100]
   spaceRanges:
     - [-500, 500]
     - [-500, 500]
@@ -16,45 +16,43 @@ env:
   landingSpeedLimits: [2, -4]
   optimalSpeedRanges:
    - [0, 1]
-   - [-2, -2]
+   - [-2, 0]
   jetAccRange:
     - [-1, 1]
     - [-1, 1]
     - [0, 3.2]
   rewards:
-    landed:
-      base: 100
-    hCrashedOnPlatform:
-      base: 100
-      hSpeed: -5
-    vCrashedOnPlatform:
-      base: 100
-      vSpeed: -0.125
-    landedOutOfPlatform:
-      base: -30
-      distance: -0.3
-    hCrashedOutOfPlatform:
-      base: -30
-      distance: -0.3
-    vCrashedOutOfPlatform:
-      base: -30
-      distance: -0.3
-    outOfRange:
-      base: -100
-      distance: -0.3
-      height: -0.3
-    outOfFuel:
-      base: -100
-      distance: -0.3
-      height: -0.3
     flying:
-      base: -11
-      direction: 10
-      hSpeed: -3
-      vSpeed: -1
+      base: -0.55
+      direction: 0.45
+    landed:
+      base: 60
+    hCrashedOnPlatform:
+      base: 0
+      hspeed: -200
+    vCrashedOnPlatform:
+      base: 0
+      vspeed: -100
+    landedOutOfPlatform:
+      base: 5
+      distance: -9
+    hCrashedOutOfPlatform:
+      base: -85
+      distance: -9
+      hspeed: -405
+    vCrashedOutOfPlatform:
+      base: -85
+      distance: -9
+      vspeed: -202
+    outOfFuel:
+      base: -333
+      distance: -36
+      height: -24
+    outOfRange:
+      base: -497
+      distance: -45
   actionDimensions: 3
-  encoder: LanderTiles
-  hash: 300
+  encoder: LanderContinuous
   signalRanges:
     - [-3.14, 3.14]
     - [-3.14, 3.14]
@@ -64,12 +62,13 @@ env:
     - [-16, 16]
 agent:
   type: ActorCritic
-  avgReward: -14
+  avgReward: 0.2
   rewardDecay: 0.999
   valueDecay: 0.99
-  rewardRange: [-100, 100]
+  rewardRange: [-7000, 100]
   network:
-    seed: 1234
+#    seed: 1234
+    learningRate: 100e-3
     activation: SOFTPLUS
     numHiddens:
     - 100
@@ -78,7 +77,6 @@ agent:
     shortcuts:
       - [ 1, 4 ]
     updater: Sgd
-    learningRate: 300e-3
     maxAbsGradients: 100
     maxAbsParameters: 10e3
     dropOut: 0.8
@@ -87,23 +85,24 @@ agent:
       noValues: 8
       range: 
         - [0, 6.09]
-      alpha: 100e-3
+      alpha: 1e-3
       prefRange:
         - [-2.4, 2.4]
     - type: PolicyActor
       noValues: 3
       range:
         - [0, 3]
-      alpha: 100e-3
+      alpha: 1e-3
       prefRange:
         - [-2.4, 2.4]
     - type: PolicyActor
       noValues: 5
       range:
         - [-6, 6]
-      alpha: 100e-3
+      alpha: 1e-3
       prefRange:
         - [-2.4, 2.4]
 session:
   numSteps: 100000
+#  seed: 1234
   kpisOnPlanning: true

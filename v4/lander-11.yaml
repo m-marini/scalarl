@@ -1,43 +1,73 @@
----
 version: "5"
 env:
-  type: LanderContinuous
-  actionConfig: DiscreteActions
   dt: 0.25
-  h0Range: 10
-  z0: 20
-  fuel: 100
-  zMax: 150
-  hRange: 500
-  zRange: 150
-  vhRange: 24
-  vzRange: 12
-  landingRadius: 10
-  landingVH: 2
-  landingVZ: 4
   g: 1.6
-  maxAH: 1
-  maxAZ: 3.2
-  landedReward: 100
-  vCrashReward: -100
-  hCrashReward: -10
-  outOfPlatformReward: -3
-  outOfRangeReward: -100
-  outOfFuelReward: -100
-  rewardDistanceScale: 0
-  flyingReward: -1
-  normalize:
-    clipMin: [-10, -10, -10, -24, -24, -12]
-    clipMax: [10, 10, 10, 24, 24, 12]
-    offset: [0, 0, 0, 0, 0, 0]
-    max: [20, 20, 20, 8, 8, 4]
+  fuel: 300
+  initialLocationRange:
+    - [-100, 100]
+    - [-100, 100]
+    - [100, 100]
+  spaceRanges:
+    - [-500, 500]
+    - [-500, 500]
+    - [0, 150]
+  landingRadius: 10
+  landingSpeedLimits: [2, -4]
+  optimalSpeedRanges:
+   - [0, 1]
+   - [-2, -2]
+  jetAccRange:
+    - [-1, 1]
+    - [-1, 1]
+    - [0, 3.2]
+  rewards:
+    landed:
+      base: 100
+    hCrashedOnPlatform:
+      base: 100
+      hSpeed: -5
+    vCrashedOnPlatform:
+      base: 100
+      vSpeed: -0.125
+    landedOutOfPlatform:
+      base: -30
+      distance: -0.3
+    hCrashedOutOfPlatform:
+      base: -30
+      distance: -0.3
+    vCrashedOutOfPlatform:
+      base: -30
+      distance: -0.3
+    outOfRange:
+      base: -100
+      distance: -0.3
+      height: -0.3
+    outOfFuel:
+      base: -100
+      distance: -0.3
+      height: -0.3
+    flying:
+      base: -11
+      direction: 10
+      hSpeed: -3
+      vSpeed: -1
+  actionDimensions: 3
+  encoder: LanderContinuous
+  signalRanges:
+    - [-3.14, 3.14]
+    - [-3.14, 3.14]
+    - [0, 64]
+    - [0, 16]
+    - [0, 8]
+    - [-16, 16]
 agent:
   type: ActorCritic
-  avgReward: 0
-  rewardDecay: 0.99
+  avgReward: -14
+  rewardDecay: 0.999
   valueDecay: 0.99
   rewardRange: [-100, 100]
   network:
+    activation: SOFTPLUS
     numHiddens:
     - 100
     - 30
@@ -45,19 +75,32 @@ agent:
     shortcuts:
       - [ 1, 4 ]
     updater: Sgd
-    learningRate: 300e-3
+    learningRate: 1000e-3
     maxAbsGradients: 100
     maxAbsParameters: 10e3
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 200
-      prefRange: [-2, 2]
+      noValues: 8
+      range: 
+        - [0, 6.09]
+      alpha: 90e-3
+      prefRange:
+        - [-2.4, 2.4]
     - type: PolicyActor
-      alpha: 200
-      prefRange: [-2, 2]
+      noValues: 3
+      range:
+        - [0, 3]
+      alpha: 250e-3
+      prefRange:
+        - [-2.4, 2.4]
     - type: PolicyActor
-      alpha: 200
-      prefRange: [-2, 2]
+      noValues: 5
+      range:
+        - [-6, 6]
+      alpha: 80e-3
+      prefRange:
+        - [-2.4, 2.4]
 session:
-  numSteps: 3000
+  numSteps: 100000
+  kpisOnPlanning: true

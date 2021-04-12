@@ -90,7 +90,7 @@ function analyzeFlight(
   ylabel("m/s");
   xlabel("Step");
 
-  printf("Flying Status Exam\n");
+  printf("Flying status\n");
   printf("%s rewards trend from %.1f to %.1f.\n", RWFMODE, RWFTREND(1), RWFTREND(end));
   printf("%s direction error trend from %.0f DEG to %.0f DEG.\n", MERHOMODE, MERHOTREND(1), MERHOTREND(end));
   printf("%s horizontal speed trend from %.1f m/s to %.1f m/s.\n", VHFMODE, VHFTREND(1), VHFTREND(end));

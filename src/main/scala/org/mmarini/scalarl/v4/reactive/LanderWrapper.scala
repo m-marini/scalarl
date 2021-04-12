@@ -44,6 +44,14 @@ class LanderWrapper(val observable: Observable[LanderStatus]) extends Observable
 
   /** Return the status logged observable */
   def logInfo(): LanderWrapper = new LanderWrapper(observable.doOnNext(lander => Task.eval {
-    logger.info("{} {} v={}", lander.status, lander.pos, lander.speed)
+    logger.whenInfoEnabled {
+      val dis = lander.distance.getDouble(0l)
+      val dir = Math.round(Math.toDegrees(lander.direction.getDouble(0l) + 2 * Math.PI)) % 360
+      val hs = lander.hSpeed.getDouble(0l)
+      val vs = lander.vSpeed.getDouble(0l)
+      val alt = lander.height.getDouble((0l))
+      val sd = Math.round(Math.toDegrees(lander.speedDirection.getDouble(0l) + 2 * Math.PI)) % 360
+      logger.info(f"${lander.status} D$dis%.0f R$dir alt=$alt%.0f hs=$hs%.1f R$sd vs=$vs%.1f")
+    }
   }))
 }

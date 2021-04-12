@@ -166,7 +166,7 @@ function analyzeDiscreteAgent(
     ylabel("# samples");
   endfor
   
-  printf("ANN Exam\n");
+  printf("ANN\n");
   printf("%s rewards trend from %.1f to %.1f\n", RMODE, RTREND(1), RTREND(end));
   printf("%s MSE (RMSE) trend from %.1f (%.1f) to %.1f (%.1f)\n",
     TDMODE, TDTREND(1), sqrt(TDTREND(1)), TDTREND(end), sqrt(TDTREND(end)));

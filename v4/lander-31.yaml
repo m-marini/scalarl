@@ -1,37 +1,75 @@
 ---
-version: "4"
+version: "5"
 env:
-  type: LanderTiles
-  actionConfig: DiscreteActions
   dt: 0.25
-  h0Range: 10
-  z0: 20
-  fuel: 100
-  zMax: 150
-  hRange: 500
-  zRange: 150
-  vhRange: 24
-  vzRange: 12
-  landingRadius: 10
-  landingVH: 2
-  landingVZ: 4
   g: 1.6
-  maxAH: 1
-  maxAZ: 3.2
-  landedReward: 1
-  vCrashReward: -1
-  hCrashReward: -100e-3
-  outOfPlatformReward: -30e-3
-  outOfRangeReward: -1
-  outOfFuelReward: -1
-  rewardDistanceScale: 0
-  flyingReward: -10e-3
+  fuel: 300
+  initialLocationRange:
+    - [-100, 100]
+    - [-100, 100]
+    - [100, 100]
+  spaceRanges:
+    - [-500, 500]
+    - [-500, 500]
+    - [0, 150]
+  landingRadius: 10
+  landingSpeedLimits: [2, -4]
+  optimalSpeedRanges:
+   - [0, 1]
+   - [-2, -2]
+  jetAccRange:
+    - [-1, 1]
+    - [-1, 1]
+    - [0, 3.2]
+  rewards:
+    landed:
+      base: 100
+    hCrashedOnPlatform:
+      base: 100
+      hSpeed: -5
+    vCrashedOnPlatform:
+      base: 100
+      vSpeed: -0.125
+    landedOutOfPlatform:
+      base: -30
+      distance: -0.3
+    hCrashedOutOfPlatform:
+      base: -30
+      distance: -0.3
+    vCrashedOutOfPlatform:
+      base: -30
+      distance: -0.3
+    outOfRange:
+      base: -100
+      distance: -0.3
+      height: -0.3
+    outOfFuel:
+      base: -100
+      distance: -0.3
+      height: -0.3
+    flying:
+      base: -11
+      direction: 10
+      hSpeed: -3
+      vSpeed: -1
+  actionDimensions: 3
+  encoder: LanderTiles
+  signalRanges:
+    - [-3.14, 3.14]
+    - [-3.14, 3.14]
+    - [0, 64]
+    - [0, 16]
+    - [0, 8]
+    - [-16, 16]
 agent:
   type: ActorCritic
-  avgReward: 0
-  rewardDecay: 0.99
+  avgReward: -14
+  rewardDecay: 0.999
   valueDecay: 0.99
+  rewardRange: [-100, 100]
   network:
+    seed: 1234
+    activation: SOFTPLUS
     numHiddens:
     - 100
     - 30
@@ -39,16 +77,32 @@ agent:
     shortcuts:
       - [ 1, 4 ]
     updater: Sgd
-    learningRate: 1000e-6
+    learningRate: 300e-3
     maxAbsGradients: 100
     maxAbsParameters: 10e3
     dropOut: 0.8
   actors:
     - type: PolicyActor
-      alpha: 100
+      noValues: 8
+      range: 
+        - [0, 6.09]
+      alpha: 100e-3
+      prefRange:
+        - [-2.4, 2.4]
     - type: PolicyActor
-      alpha: 100
+      noValues: 3
+      range:
+        - [0, 3]
+      alpha: 100e-3
+      prefRange:
+        - [-2.4, 2.4]
     - type: PolicyActor
-      alpha: 100
+      noValues: 5
+      range:
+        - [-6, 6]
+      alpha: 100e-3
+      prefRange:
+        - [-2.4, 2.4]
 session:
-  numSteps: 10000
+  numSteps: 30000
+  kpisOnPlanning: true
