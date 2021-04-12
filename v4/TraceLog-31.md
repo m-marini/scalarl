@@ -1,3 +1,10 @@
+[TOC]
+
+File: `lander31.yaml`
+
+## 2020-08-25 - #1
+
+```yaml
 ---
 version: "5"
 env:
@@ -54,7 +61,6 @@ env:
       vSpeed: -1
   actionDimensions: 3
   encoder: LanderTiles
-  hash: 300
   signalRanges:
     - [-3.14, 3.14]
     - [-3.14, 3.14]
@@ -105,5 +111,31 @@ agent:
       prefRange:
         - [-2.4, 2.4]
 session:
-  numSteps: 100000
+  numSteps: 30000
   kpisOnPlanning: true
+```
+
+**ANN Exam**
+Linear Increasing rewards trend from -11.4 to -8.0
+Linear Increasing MSE (RMSE) trend from 108.9 (10.4) to 122.2 (11.1)
+16% red class
+51% yellow class
+32% green class
+Optimal actor alpha: 7.4e-02, 7.4e-02, 6.2e-02
+
+**Flying Status Exam**
+Linear Increasing rewards trend from -10.2 to -8.1.
+Linear Decreasing direction error trend from 105 DEG to 80 DEG.
+Linear Decreasing horizontal speed trend from 1.0 m/s to 0.8 m/s.
+Linear Decreasing vertical speed trend from -0.5 m/s to -1.8 m/s.
+
+**Episodes Exam**
+Linear Increasing rewards trend from -116.9 to -51.8.
+Linear Decreasing platform distance trend from 63 m to 49 m.
+56 cases of landed out of platform between 616 and 29906 steps.
+41 cases of out of fuel between 485 and 26902 steps.
+26 cases of out of range between 58 and 29153 steps.
+19 cases of vertical crash out of platform between 2852 and 29764 steps.
+5 cases of landed between 13588 and 25737 steps.
+2 cases of vertical crashed on platform between 6114 and 12087 steps.
+2 cases of horizontal crash out of platform between 18802 and 28389 steps.
