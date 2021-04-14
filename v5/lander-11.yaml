@@ -3,7 +3,7 @@ version: "5"
 env:
   dt: 0.25
   g: 1.6
-  fuel: 100
+  fuel: 244
   initialLocationRange:
     - [-100, 100]
     - [-100, 100]
@@ -26,31 +26,31 @@ env:
       base: -0.55
       direction: 0.45
     landed:
-      base: 60
+      base: 51
     hCrashedOnPlatform:
-      base: 0
-      hspeed: -200
+      base: 4
+      hspeed: -7
     vCrashedOnPlatform:
-      base: 0
-      vspeed: -100
+      base: 4
+      vspeed: -3.5
     landedOutOfPlatform:
-      base: 5
-      distance: -9
+      base: -8.33
+      distance: -0.167
     hCrashedOutOfPlatform:
-      base: -85
-      distance: -9
-      hspeed: -405
+      base: -8.33
+      distance: -0.167
+      hspeed: -7.5
     vCrashedOutOfPlatform:
-      base: -85
-      distance: -9
-      vspeed: -202
+      base: -8.33
+      distance: -0.167
+      vspeed: -3.75
     outOfFuel:
-      base: -333
-      distance: -36
-      height: -24
+      base: -45
+      distance: -0.15
+      height: -0.1
     outOfRange:
-      base: -497
-      distance: -45
+      base: -47
+      distance: -0.142
   actionDimensions: 3
   encoder: LanderContinuous
   signalRanges:
@@ -65,7 +65,7 @@ agent:
   avgReward: 0.2
   rewardDecay: 0.999 # tau = -dt / ln 0.999 = 250 s
   valueDecay: 0.99 # tau = -dt / ln 0.999 = 25 s
-  rewardRange: [-7000, 100]
+  rewardRange: [-100, 100]
   network:
 #    seed: 1234
     learningRate: 30e-3
@@ -85,24 +85,24 @@ agent:
       noValues: 8
       range: 
         - [0, 6.09]
-      alpha: 1e-3
+      alpha: 100e-3
       prefRange:
         - [-2.4, 2.4]
     - type: PolicyActor
       noValues: 3
       range:
         - [0, 3]
-      alpha: 1e-3
+      alpha: 100e-3
       prefRange:
         - [-2.4, 2.4]
     - type: PolicyActor
       noValues: 5
       range:
         - [-6, 6]
-      alpha: 1e-3
+      alpha: 100e-3
       prefRange:
         - [-2.4, 2.4]
 session:
-  numSteps: 100000
+  numSteps: 10000
 #  seed: 1234
   kpisOnPlanning: true
