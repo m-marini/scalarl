@@ -21,6 +21,7 @@ do
     fi
     kpifile="kpi-$1-$id.csv"
     dumpfile="dump-$1-$id.csv"
-    echo "../target/universal/stage/bin/scalarl --conf=$infile --epoch=$i --dumpFile=$dumpfile --kpiFile=$kpifile"
-    ../target/universal/stage/bin/scalarl --conf=$infile --epoch=$i --dumpFile=$dumpfile --kpiFile=$kpifile
+    traceFile="trace-$1-$id.csv"
+    echo "../target/universal/stage/bin/scalarl --conf=$infile --epoch=$i --dumpFile=$dumpfile --kpiFile=$kpifile --traceFile=$traceFile"
+    ../target/universal/stage/bin/scalarl --conf=$infile --epoch=$i --dumpFile=$dumpfile --kpiFile=$kpifile --traceFile=$traceFile
 done

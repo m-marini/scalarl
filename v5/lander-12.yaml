@@ -85,24 +85,39 @@ agent:
       noValues: 8
       range: 
         - [0, 6.09]
-      alpha: 100e-3
+      alpha: 10e-3
       prefRange:
         - [-2.4, 2.4]
     - type: PolicyActor
       noValues: 3
       range:
         - [0, 3]
-      alpha: 100e-3
+      alpha: 10e-3
       prefRange:
         - [-2.4, 2.4]
     - type: PolicyActor
       noValues: 5
       range:
         - [-6, 6]
-      alpha: 100e-3
+      alpha: 10e-3
       prefRange:
         - [-2.4, 2.4]
+  planner:
+    planningSteps: 2
+    threshold: 1e-3
+    minModelSize: 300
+    maxModelSize: 1000
+    stateKey:
+      type: NormalTiles
+      noTiles: [32, 32, 32, 32, 32, 32]
+    actionsKey:
+      type: Tiles
+      noTiles: [8, 3, 5]
+      ranges:
+        - [0, 6.09]
+        - [0, 3]
+        - [-6, 6]
 session:
-  numSteps: 10000
+  numSteps: 100000
 #  seed: 1234
   kpisOnPlanning: true
