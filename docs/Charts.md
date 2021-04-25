@@ -62,46 +62,50 @@ Agent processForTrain
 
 ```dot
 digraph plannerLoop {
-    ra [label="residual advantage"]
-    outputs0 [label="network.outputs(...)"]
-    outputs1 [label="network.outputs(...)"]
-    v0 [label="v(...)"]
-    v1 [label="v(...)"]
+    foutputs0 [label="network.outputs(...)"]
+    foutputs1 [label="network.outputs(...)"]
+    fv0 [label="agent.v(...)"]
+    fv1 [label="agent.v(...)"]
+    ra [label="residual advantage(...)"]
+    normalizeAndClip [label="normalizeAndClip(...)"]
+    computeLabels [label="actors.computeLabels(...)"]
+    concat [label="concat(...)"]
+    toMap [label="toMap(...)"]
+    pow [label="pow(...)"]
 
-    in->feedback
-    feedback->signals0
-    feedback->signals1
-    feedback->actions
+    feedback->signals0->foutputs0->outputs0->fv0->v0
 
-    signals0 -> outputs0
-    network -> outputs0
-    outputs0 -> v0
+    feedback->signals1->foutputs1->outputs1->fv1->v1
     
-    signals1 -> outputs1
-    network -> outputs1
-    outputs1 -> v1
+    feedback->actions
 
     v0 -> ra
     v1 -> ra
 
-    ra -> normalizeAndClip [label=newV0]
+    ra -> newV0 ->normalizeAndClip -> criticalLabels
     ra -> delta
     ra -> newAvg
     
     outputs1 -> computeLabels
     actions-> computeLabels
     delta ->  computeLabels
-    actors -> computeLabels
 
-    normalizeAndClip -> concat [label="critic labels"]
-    computeLabels -> concat [label="actors label"]
+    computeLabels -> actorLabels -> toMap-> actorsDictionary
 
-    computeLabels -> out [label="actors dictionary"]
-    concat -> out [label="labels"]
+    criticalLabels -> concat
+    actorLabels -> concat-> labels
+
+    labels -> out [label="labels"]
+    v0 -> out [label="v0"]
+    v1 -> out [label="v1"]
+    newV0-> out [label="v0*"]
     outputs0 -> out [label="outputs0"]
     outputs1 -> out [label="outputs1"]
     delta -> out [label="delta"]
-    delta -> out [label="delta"]
+    delta -> pow
+    pow ->out [label="score"]
     newAvg-> out [label="newAverage"]
+    avg-> out [label="avg"]
+    actorsDictionary-> out
 }
 ```
