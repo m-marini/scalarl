@@ -66,7 +66,6 @@ case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
     val key = (skey, akey)
     // Compute the score for the feedback
     val score = agent.score(feedback).getDouble(0L)
-
     // Adds the feedback to the model
     val m1 = enqueue(key -> (feedback, score))
 
@@ -81,17 +80,20 @@ case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
    * @param entry the entry
    */
   def enqueue(entry: ((KS, KA), (Feedback, Double))): Map[(KS, KA), (Feedback, Double)] = {
-    val model1 = model + entry
-    val result = if (model1.size >= maxModelSize) {
-      // shrink data removing the lower ones
-      val ordering = Ordering.by((t: ((KS, KA), (Feedback, Double))) => t._2._2).reverse
-      val sorted = model1.toSeq.sorted(ordering)
-      val shrunk = sorted.take(minModelSize)
-      shrunk.toMap
+    if (entry._2._2 >= threshold) {
+      val model1 = model + entry
+      if (model1.size >= maxModelSize) {
+        // shrink data removing the lower ones
+        val ordering = Ordering.by((t: ((KS, KA), (Feedback, Double))) => t._2._2).reverse
+        val sorted = model1.toSeq.sorted(ordering)
+        val shrunk = sorted.take(minModelSize)
+        shrunk.toMap
+      } else {
+        model1
+      }
     } else {
-      model1
+      model - entry._1
     }
-    result
   }
 
   /**
@@ -164,7 +166,7 @@ case class PriorityPlanner[KS, KA](stateKeyGen: INDArray => KS,
   }
 }
 
-/** The object factory form [[PriorityPlanner]]*/
+/** The object factory form [[PriorityPlanner]] */
 object PriorityPlanner {
 
   /**
