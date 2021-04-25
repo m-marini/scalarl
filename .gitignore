@@ -34,3 +34,4 @@
 /stop
 /docs/*.toc
 /v5/*.csv
+/.bsp/
