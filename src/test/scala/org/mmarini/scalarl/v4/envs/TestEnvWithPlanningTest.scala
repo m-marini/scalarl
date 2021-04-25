@@ -180,8 +180,8 @@ class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
     }
 
     val planner = agent1.planner.get.asInstanceOf[PriorityPlanner[Seq[Int], Seq[Int]]]
-    it("should have model with 6 entries") {
-      planner.model should have size 6
+    it("should have model with 0 entries") {
+      planner.model should have size 0
     }
   }
 }
