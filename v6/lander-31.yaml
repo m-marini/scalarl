@@ -1,0 +1,112 @@
+---
+version: "5"
+env:
+  dt: 0.25
+  g: 1.6
+  fuel: 244
+  initialLocationRange:
+    - [-100, 100]
+    - [-100, 100]
+    - [80, 100]
+  spaceRanges:
+    - [-500, 500]
+    - [-500, 500]
+    - [0, 150]
+  landingRadius: 10
+  landingSpeedLimits: [2, -4]
+  optimalSpeedRanges:
+   - [0, 1]
+   - [-2, 0]
+  jetAccRange:
+    - [-1, 1]
+    - [-1, 1]
+    - [0, 3.2]
+  rewards:
+    flying:
+      base: -0.55
+      direction: 0.45
+    landed:
+      base: 1
+    hCrashedOnPlatform:
+      base: -0.2
+      hspeed: -0.5
+      vspeed: -0.25
+    vCrashedOnPlatform:
+      base: -0.2
+      hspeed: -0.5
+      vspeed: -0.25
+    landedOutOfPlatform:
+      base: -0.219
+      distance: -0.0111
+    hCrashedOutOfPlatform:
+      base: -0.49
+      distance: -0.0111
+      hspeed: -0.5
+      vspeed: -0.25
+    vCrashedOutOfPlatform:
+      base: -0.49
+      distance: -0.0111
+      hspeed: -0.5
+      vspeed: -0.25
+    outOfFuel:
+      base: -0.8
+      distance: -0.1
+      height: -6.67e-3
+    outOfRange:
+      base: -1
+      distance: -0.0943
+  actionDimensions: 3
+agent:
+  type: ActorCritic
+  avgReward: -0.5
+  rewardDecay: 0.999 # tau = -dt / ln 0.999 = 250 s
+  valueDecay: 0.99 # tau = -dt / ln 0.999 = 25 s
+  rewardRange: [-30, -4]
+  encoder: Continuous
+  ranges:
+    - [-3.14, 3.14]
+    - [-3.14, 3.14]
+    - [0, 64]
+    - [0, 16]
+    - [0, 8]
+    - [-16, 16]
+  actors:
+    - type: PolicyActor
+      noValues: 8
+      range: 
+        - [0, 6.09]
+      alpha: 1
+      prefRange:
+        - [-2.4, 2.4]
+    - type: PolicyActor
+      noValues: 3
+      range:
+        - [0, 3]
+      alpha: 1
+      prefRange:
+        - [-2.4, 2.4]
+    - type: PolicyActor
+      noValues: 5
+      range:
+        - [-6, 6]
+      alpha: 1
+      prefRange:
+        - [-2.4, 2.4]
+  network:
+#    seed: 1234
+    learningRate: 30e-3
+    activation: SOFTPLUS
+    numHiddens:
+    - 100
+    - 30
+    - 30
+    shortcuts:
+      - [ 1, 4 ]
+    updater: Sgd
+    maxAbsGradients: 100
+    maxAbsParameters: 10e3
+    dropOut: 0.8
+session:
+  numSteps: 10000
+#  seed: 1234
+  kpisOnPlanning: true

@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #102: Final states rewards depending on platform distance and speed
 - Issue #106: New reward model
 - Issue #111: Enqueue only by threshold on priority planner
+- Issue #112: Separate the observation from encoder (v6)
 
 ### Fixed
 
