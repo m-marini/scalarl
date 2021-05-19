@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Issue #73: Mounting car error
+- Issue #117: Change version configuration
 
 ## [0.1.0] - 2019-01-28
 

@@ -37,17 +37,17 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.nn.weights.WeightInit
+import org.mmarini.scalarl.v6.Session
 import org.mmarini.scalarl.v6.agents._
-import org.mmarini.scalarl.v6.{Feedback, Session}
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
 import org.nd4j.linalg.learning.config.Sgd
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction
 import org.nd4j.linalg.ops.transforms.Transforms._
-import org.scalatest.{FunSpec, Matchers}
+import org.scalatest.Matchers
 
-class TestEnvWithPlanningTest extends FunSpec with Matchers with LazyLogging {
+object TestEnvWithPlanningCase extends App with Matchers with LazyLogging {
   private val Trace = false
   private val Seed = 12345L
   private val NoSteps = 300
