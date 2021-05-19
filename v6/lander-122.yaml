@@ -68,7 +68,7 @@ agent:
     - [0, 8]
     - [-16, 16]
     noTiles: [3, 3, 3, 3, 3, 3]
-  avgReward: 0.2
+  avgReward: -0.6
   rewardDecay: 0.999 # tau = -dt / ln 0.999 = 250 s
   valueDecay: 0.99 # tau = -dt / ln 0.999 = 25 s
   rewardRange:
@@ -92,23 +92,23 @@ agent:
       noValues: 8
       range: 
         - [0, 6.09]
-      alpha: 100e-3
+      alpha: 300e-3
       prefRange:
-        - [-2.4, 2.4]
+        - [-1.15, 1.15]
     - type: PolicyActor
       noValues: 3
       range:
         - [0, 3]
-      alpha: 100e-3
+      alpha: 300e-3
       prefRange:
-        - [-2.4, 2.4]
+        - [-1.15, 1.15]
     - type: PolicyActor
       noValues: 5
       range:
         - [-6, 6]
-      alpha: 100e-3
+      alpha: 300e-3
       prefRange:
-        - [-2.4, 2.4]
+        - [-1.15, 1.15]
   planner:
     planningSteps: 2
     threshold: 1e-3
@@ -132,6 +132,6 @@ agent:
         - [0, 3]
         - [-6, 6]
 session:
-  numSteps: 10000
+  numSteps: 30000
 #  seed: 1234
   kpisOnPlanning: true
