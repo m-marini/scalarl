@@ -58,6 +58,7 @@ env:
   actionDimensions: 3
 agent:
   type: ActorCritic
+#  modelPath: lander-122
   stateEncoder:
     type: Tiles
     ranges:
@@ -132,6 +133,7 @@ agent:
         - [0, 3]
         - [-6, 6]
 session:
-  numSteps: 100000
+  numSteps: 1000
 #  seed: 1234
   kpisOnPlanning: false
+  modelFile: lander-122
