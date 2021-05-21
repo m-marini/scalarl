@@ -160,6 +160,7 @@ class StepsWrapper(val observable: Observable[Step]) extends ObservableWrapper[S
    */
   def saveAgent(path: File): StepsWrapper = new StepsWrapper(
     observable.doOnNext(step => Task.eval {
+      logger.info("saving model {}", path)
       step.context.agent.writeModel(path)
     })
   )
