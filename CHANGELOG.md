@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #111: Enqueue only by threshold on priority planner
 - Issue #112: Separate the observation from encoder (v6)
 - Issue #120: Saving model parameters
+- Issue #122: Upload network error
 
 ### Fixed
 
