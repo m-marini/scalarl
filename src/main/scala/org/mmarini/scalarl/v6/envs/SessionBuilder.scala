@@ -39,6 +39,7 @@ import org.mmarini.scalarl.v6.agents.AgentEvent
 import org.mmarini.scalarl.v6.reactive.Implicits._
 
 import java.io.File
+import scala.concurrent.duration.DurationInt
 import scala.util.Try
 
 /**
@@ -46,22 +47,27 @@ import scala.util.Try
  */
 object SessionBuilder extends LazyLogging {
   private implicit val scheduler: Scheduler = global
-  private val SaveStepInterval = 10
+  private val SaveStepInterval = 60
 
   /**
    * Returns the session
    *
-   * @param conf        the json configuration
-   * @param epoch       the number of epoch
-   * @param env         the environment
-   * @param agent       the agent
-   * @param agentEvents the agent event observable
+   * @param conf           the json configuration
+   * @param epoch          the number of epoch
+   * @param kpiFileParam   the filename of kpi
+   * @param dumpFileParam  the filename of dump
+   * @param traceFileParam the filename of trace
+   * @param modelFileParam the path name of agent model
+   * @param env            the environment
+   * @param agent          the agent
+   * @param agentEvents    the agent event observable
    */
   def fromJson(conf: ACursor)(
     epoch: Int,
     kpiFileParam: Option[String],
     dumpFileParam: Option[String],
     traceFileParam: Option[String],
+    modelPathParam: Option[String],
     env: => Env,
     agent: => Agent,
     agentEvents: Observable[AgentEvent]): Try[Session] = {
@@ -71,8 +77,9 @@ object SessionBuilder extends LazyLogging {
     } yield {
       val dump = dumpFileParam.orElse(conf.get[String]("dump").toOption)
       val trace = traceFileParam.orElse(conf.get[String]("trace").toOption)
-      val saveModel = conf.get[String]("modelFile").toOption
+      val saveModel = modelPathParam.orElse(conf.get[String]("modelPath").toOption)
       val kpiFile = kpiFileParam.orElse(conf.get[String]("kpiFile").toOption)
+      val saveInterval = conf.get[Int]("saveInterval").getOrElse(SaveStepInterval)
       // Clean up all files
       if (epoch == 0) {
         (dump.toSeq ++ trace ++ saveModel ++ kpiFile).foreach(new File(_).delete())
@@ -111,9 +118,9 @@ object SessionBuilder extends LazyLogging {
 
       // Save model every 10 steps
       saveModel.foreach(file => {
-        logger.info("Model file {}", file)
+        logger.info("Saving model in {} every {} secs.", file, saveInterval)
         val path = new File(file)
-        session.steps.takeEveryNth(SaveStepInterval).saveAgent(path).subscribe()
+        session.steps.sample(saveInterval seconds).saveAgent(path).subscribe()
         session.steps.last.saveAgent(path).subscribe()
       })
       session

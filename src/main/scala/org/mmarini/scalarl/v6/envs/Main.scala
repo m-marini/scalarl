@@ -61,6 +61,7 @@ object Main extends LazyLogging {
       val kpiFile = cfgParams.get("kpiFile")
       val dumpFile = cfgParams.get("dumpFile")
       val traceFile = cfgParams.get("traceFile")
+      val modelPath = cfgParams.get("modelPath")
 
       logger.info("File {} epoch {}", file, epoch)
 
@@ -80,6 +81,7 @@ object Main extends LazyLogging {
         dumpFileParam = dumpFile,
         kpiFileParam = kpiFile,
         traceFileParam = traceFile,
+        modelPathParam = modelPath,
         env = env,
         agent = agent,
         agentEvents = agent.conf.agentObserver).get
