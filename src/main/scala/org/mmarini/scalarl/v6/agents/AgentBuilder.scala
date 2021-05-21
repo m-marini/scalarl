@@ -108,12 +108,14 @@ object AgentBuilder extends LazyLogging {
       net.layerInputSize(0) match {
         case x if x != noInputs =>
           throw new IllegalArgumentException(s"Network $file with wrong ($x) input number: expected $noInputs")
+        case _ =>
       }
       net.getNumOutputArrays match {
         case n if n != noOutputs.length =>
           throw new IllegalArgumentException(s"Network $file with wrong ($n) output layers: expected ${
             noOutputs.length
           }")
+        case _ =>
       }
       net
     }
