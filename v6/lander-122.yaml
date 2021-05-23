@@ -93,21 +93,27 @@ agent:
       noValues: 8
       range: 
         - [0, 6.09]
-      alpha: 30e-3
+      alpha: 1000e-3
+      epsilon: 0.05
+      alphaDecay: 0.999
       prefRange:
         - [-1.15, 1.15]
     - type: PolicyActor
       noValues: 3
       range:
         - [0, 3]
-      alpha: 30e-3
+      alpha: 1000e-3
+      epsilon: 0.05
+      alphaDecay: 0.999
       prefRange:
         - [-1.15, 1.15]
     - type: PolicyActor
       noValues: 5
       range:
         - [-6, 6]
-      alpha: 30e-3
+      alpha: 1000e-3
+      epsilon: 0.05
+      alphaDecay: 0.999
       prefRange:
         - [-1.15, 1.15]
   planner:
