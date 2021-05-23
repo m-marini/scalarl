@@ -46,12 +46,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #112: Separate the observation from encoder (v6)
 - Issue #119: dynamic actor alpha
 - Issue #120: Saving model parameters
-- Issue #122: Upload network error
+- Issue #125: More test on environment
 
 ### Fixed
 
 - Issue #73: Mounting car error
 - Issue #117: Change version configuration
+- Issue #122: Upload network error
 
 ## [0.1.0] - 2019-01-28
 
