@@ -53,6 +53,24 @@ import org.scalatest.Matchers
 import java.io.File
 
 object MountingCarCase extends App with Matchers with LazyLogging {
+  val s0 = MountingCarEnv.initial(random)
+  val session = new Session(numSteps = NoSteps,
+    epoch = 0,
+    env = s0,
+    agent = agent)
+  val (_, agent1: ActorCriticAgent) = session.run(random)
+  val s1 = MountingCarEnv(
+    MidX,
+    ones(1).muli(-0.07),
+    zeros(1))
+  val outs1 = agent1.network.output(stateEncode(s1.observation.signals))
+  val (mu1, _, _) = actor.muHSigma(outs1)
+  val s2 = MountingCarEnv(
+    MidX,
+    ones(1).muli(0.07),
+    zeros(1))
+  val outs2 = agent1.network.output(stateEncode(s2.observation.signals))
+  val (mu2, _, _) = actor.muHSigma(outs2)
   private val Seed = 12345L
   private val NoSteps = 1000
   private val Alpha = 30000e-6
@@ -64,41 +82,47 @@ object MountingCarCase extends App with Matchers with LazyLogging {
   private val ModelThreshold = 1e-9
   private val ValueDecay = 0.99
   private val RewardDecay = 0.97
-  private val StateModelSize = 11
-  private val ActionModelSize = 11
-  private val Trace = false
-  private val KpiFile = new File("mc-kpi.csv")
-
-  private val MuRange = create(Array(MinActionValue, MaxActionValue)).muli(2).transposei()
-  private val SigmaRange = create(Array(0.1, 1)).transposei()
-
-  private val StateRanges = create(Array(
-    Array(XLeft, VMin),
-    Array(XRight, VMax)
-  ))
-
-  private val ActionRange = create(Array(-1, 2.0)).transpose()
-
-  private val (stateEncode, netInputDimensions) = Encoder.tiles(
-    ranges = StateRanges,
-    sizes = ones(2).muli(3),
-    hash = None)
 
   private implicit val sch: Scheduler = Scheduler.global
 
   create()
+  private val StateModelSize = 11
+  private val ActionModelSize = 11
+  private val Trace = false
+  private val KpiFile = new File("mc-kpi.csv")
+  private val MuRange = create(Array(MinActionValue, MaxActionValue)).muli(2).transposei()
+  private val SigmaRange = create(Array(0.1, 1)).transposei()
+  private val StateRanges = create(Array(
+    Array(XLeft, VMin),
+    Array(XRight, VMax)
+  ))
+  private val ActionRange = create(Array(-1, 2.0)).transpose()
+  private val (stateEncode, netInputDimensions) = Encoder.tiles(
+    ranges = StateRanges,
+    sizes = ones(2).muli(3),
+    hash = None)
   private val random: Random = getRandomFactory.getNewRandomInstance(Seed)
 
+  KpiFile.delete()
+  if (Trace) {
+    session.monitorInfo().logInfo().subscribe()
+    agentConf.agentObserver.doOnNext(_ => Task.eval {
+    }).kpis().writeCsv(KpiFile).subscribe()
+  } else {
+    agentConf.agentObserver.kpis().writeCsv(KpiFile).subscribe()
+  }
+
+  logger.info("Mounting car case")
   private val MidX: INDArray = ones(1).muli((MountingCarEnv.XLeft + MountingCarEnv.XRight) / 2)
   private val RewardRange: INDArray = create(Array(-2.0, 2.0)).transposei()
-
-  private val actor = GaussianActor(dimension = 0,
+  private val actor = GaussianActor.createActor(dimension = 0,
     alphaMu = EtaMu,
     alphaSigma = EtaHs,
+    epsilon = 0.1,
+    alphaDecay = 1.0,
     muRange = MuRange,
     sigmaRange = SigmaRange
   )
-
   private val agentConf = ActorCriticAgentConf(
     rewardDecay = ones(1).muli(RewardDecay),
     valueDecay = ones(1).muli(ValueDecay),
@@ -107,7 +131,7 @@ object MountingCarCase extends App with Matchers with LazyLogging {
     stateEncode = stateEncode,
     netInputDimensions = netInputDimensions
   )
-
+  mu1.getDouble(0L) should be < 0.0
   private val network: ComputationGraph = {
     val criticOutLayer = new OutputLayer.Builder().
       nIn(netInputDimensions).
@@ -143,7 +167,6 @@ object MountingCarCase extends App with Matchers with LazyLogging {
     net.init()
     net
   }
-
   private val planner = if (PlanningStep > 0) {
     Some(PriorityPlanner(
       stateKeyGen = INDArrayKeyGenerator.discrete(StateRanges, ones(2).muli(StateModelSize)),
@@ -157,47 +180,12 @@ object MountingCarCase extends App with Matchers with LazyLogging {
   } else {
     None
   }
-
   private val agent = ActorCriticAgent(
     conf = agentConf,
     network = network,
     avg = zeros(1),
-    planner = planner)
-
-  val s0 = MountingCarEnv.initial(random)
-
-  val session = new Session(numSteps = NoSteps,
-    epoch = 0,
-    env = s0,
-    agent = agent)
-
-  KpiFile.delete()
-  if (Trace) {
-    session.monitorInfo().logInfo().subscribe()
-    agentConf.agentObserver.doOnNext(_ => Task.eval {
-    }).kpis().writeCsv(KpiFile).subscribe()
-  } else {
-    agentConf.agentObserver.kpis().writeCsv(KpiFile).subscribe()
-  }
-
-  logger.info("Mounting car case")
-
-  val (_, agent1: ActorCriticAgent) = session.run(random)
-
-  val s1 = MountingCarEnv(
-    MidX,
-    ones(1).muli(-0.07),
-    zeros(1))
-  val outs1 = agent1.network.output(stateEncode(s1.observation.signals))
-  val (mu1, _, _) = actor.muHSigma(outs1)
-  mu1.getDouble(0L) should be < 0.0
-
-  val s2 = MountingCarEnv(
-    MidX,
-    ones(1).muli(0.07),
-    zeros(1))
-  val outs2 = agent1.network.output(stateEncode(s2.observation.signals))
-  val (mu2, _, _) = actor.muHSigma(outs2)
+    planner = planner,
+    alpha = Seq(create(Array(EtaMu, EtaHs))))
   mu2.getDouble(0L) should be > 0.0
 
   logger.info("Test completed")

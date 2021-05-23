@@ -76,11 +76,31 @@ digraph computeLabels {
     hStar->invPreference->labels
     invPreference [label="normalize(...)"]
 
+    deltaH->hrms
+    hrms-> deltaHRMS
+    hrms [label="sqrt(mean(&Delta;h ^ 2))"]
+    deltaHRMS [label="&Delta;havg"]
+
+    deltaHRMS -> falpha1
+    epsilon->falpha1
+    falpha1->alpha1
+    alpha1 [label="&alpha;'"]
+    epsilon [label="&epsilon;"]
+    falpha1 [label="&epsilon; / &Delta;havg"]
+
+    alpha1 -> falphaStar
+    alphaDecay -> falphaStar
+    falphaStar -> alphaStar
+    alphaDecay [label="&gamma;"]
+    alphaStar [label="&alpha;*"]
+    falphaStar [label="&alpha; * &gamma; + &alpha;' * (1 - &gamma;)"]
+
     pi->out
     hStar->out
     labels->out
     deltaH->out
     h->out
+    alphaStar->out
 
 
 }
@@ -182,12 +202,47 @@ digraph chooseAction {
     flabels->labels
     flabels [label="normalize(...)"]
 
+    deltaMu->falphaMu1
+    epsilon->falphaMu1
+    falphaMu1->alphaMu1
+    epsilon [label="&epsilon;"]
+    alphaMu1 [label="&alpha;&mu;'"]
+    falphaMu1 [label="&epsilon; / abs(&Delta;&mu;)"]
+
+    alphaMu1->falphaMuStar
+    alphaMu->falphaMuStar
+    falphaMuStar->alphaMuStar
+    tau->falphaMuStar
+    alphaMuStar [label="&alpha;&mu;*"]
+    tau [label="&tau;"]
+    falphaMuStar [label="&alpha;&mu; * &tau; + &alpha;&mu;' * (1 - &tau;)"]
+    
+    deltaH->falphaH1
+    epsilon->falphaH1
+    falphaH1->alphaH1
+    alphaH1 [label="&alpha;h'"]
+    falphaH1 [label="&epsilon; / abs(&Delta;h)"]
+
+    alphaH1->falphaHStar
+    alphaH->falphaHStar
+    tau->falphaHStar
+    falphaHStar->alphaHStar
+    alphaHStar [label="&alpha;h*"]
+    falphaHStar [label="&alpha;h * &tau; + &alpha;h' * (1 - &tau;)"]
+
+    alphaMuStar->fcatAlpha
+    alphaHStar->fcatAlpha
+    fcatAlpha->alphaStar
+    alphaStar [label="&alpha;*"]
+    fcatAlpha [label="[&alpha;&mu;*, &alpha;h*]"]
+
     labels->out
     muStar->out
     hStar->out
     deltaMu->out
     deltaH->out
     mu->out
+    alphaStar->out
     h->out
 }
 ```

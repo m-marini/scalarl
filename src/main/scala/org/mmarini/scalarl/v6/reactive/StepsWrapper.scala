@@ -96,7 +96,7 @@ class StepsWrapper(val observable: Observable[Step]) extends ObservableWrapper[S
     val s0 = env0.asInstanceOf[LanderStatus]
     val signalsId = find(o0.signals).hashCode() & ((1 << 12) - 1)
     val agent = step.agent0.asInstanceOf[ActorCriticAgent]
-    val out = agent.network.output(agent.conf.stateEncode( o0.signals))
+    val out = agent.network.output(agent.conf.stateEncode(o0.signals))
 
     val preferences = hstack(agent.conf.actors.map {
       case actor: PolicyActor =>

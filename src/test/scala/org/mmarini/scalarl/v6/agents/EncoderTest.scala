@@ -308,7 +308,7 @@ class EncoderTest extends FunSpec with Matchers with LazyLogging {
       Array(3.5, 3.5)
     ))
     val sizes = create(Array(3.0, 3.0))
-    val (encoder, n) = Encoder.features( ranges, sizes)
+    val (encoder, n) = Encoder.features(ranges, sizes)
     it("should generate feature vector of dimension 9") {
       n shouldBe 9
     }

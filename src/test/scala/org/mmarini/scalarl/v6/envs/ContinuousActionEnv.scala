@@ -38,16 +38,6 @@ import org.nd4j.linalg.ops.transforms.Transforms
 case class ContinuousActionEnv(x: INDArray, t: INDArray) extends Env {
 
   /**
-   * Returns the clip values
-   *
-   * @param x    the values
-   * @param xMin minimum value
-   * @param xMax maximum values
-   * @param copy true if return value is a new copy
-   */
-  def clip(x: INDArray, xMin: Double, xMax: Double, copy: Boolean = true): INDArray = Transforms.min(Transforms.max(x, xMin, copy), xMax, copy)
-
-  /**
    * Computes the next status of environment executing an action.
    *
    * @param action the executing action
@@ -64,6 +54,16 @@ case class ContinuousActionEnv(x: INDArray, t: INDArray) extends Env {
       x = x1),
       reward)
   }
+
+  /**
+   * Returns the clip values
+   *
+   * @param x    the values
+   * @param xMin minimum value
+   * @param xMax maximum values
+   * @param copy true if return value is a new copy
+   */
+  def clip(x: INDArray, xMin: Double, xMax: Double, copy: Boolean = true): INDArray = Transforms.min(Transforms.max(x, xMin, copy), xMax, copy)
 
   /** Returns the number of signals */
   override def signalsSize: Int = 1

@@ -172,7 +172,7 @@ class UtilsTest extends FunSpec with Matchers {
     val to = create(Array(
       Array(1.0, -4.0),
       Array(11.0, 8.0)))
-    val f = Utils.clipAndTransform(from , to)
+    val f = Utils.clipAndTransform(from, to)
 
     f(create(Array(-0.1, -2.1))) shouldBe (create(Array(1.0, -4.0)))
     f(create(Array(0.0, -2.0))) shouldBe (create(Array(1.0, -4.0)))

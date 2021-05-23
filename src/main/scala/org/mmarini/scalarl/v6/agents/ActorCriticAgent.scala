@@ -29,6 +29,7 @@
 
 package org.mmarini.scalarl.v6.agents
 
+import com.typesafe.scalalogging.LazyLogging
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.deeplearning4j.util.ModelSerializer
 import org.mmarini.scalarl.v6.{Agent, Feedback, Observation}
@@ -46,12 +47,14 @@ import java.io.File
  * @param conf    the agent configuration
  * @param network the  network
  * @param avg     the average reward
+ * @param alpha   actor alpha parameters
  * @param planner the model to run planning
  */
 case class ActorCriticAgent(conf: ActorCriticAgentConf,
                             network: ComputationGraph,
                             avg: INDArray,
-                            planner: Option[Planner]) extends Agent {
+                            alpha: Seq[INDArray],
+                            planner: Option[Planner]) extends Agent with LazyLogging {
 
   /**
    * Returns chosen action.
@@ -96,6 +99,7 @@ case class ActorCriticAgent(conf: ActorCriticAgentConf,
    */
   override def directLearn(feedback: Feedback, random: Random): (Agent, INDArray, INDArray) = {
     val map = processForTrain(feedback)
+
     val labels = map("labels").asInstanceOf[Array[INDArray]]
 
     network.fit(Array(conf.stateEncode(feedback.s0.signals)), labels)
@@ -104,7 +108,24 @@ case class ActorCriticAgent(conf: ActorCriticAgentConf,
     conf.agentObserver.onNext(event)
     val score = map("score").asInstanceOf[INDArray]
     val newAvg = map("newAverage").asInstanceOf[INDArray]
-    (this, newAvg, score)
+
+    // Compute new alpha
+    val alphaStar = for {
+      i <- 0 until conf.actors.length
+    } yield
+      map(s"alpha*($i)").asInstanceOf[INDArray]
+    val newAgent = copy(alpha = alphaStar)
+    (newAgent, newAvg, score)
+  }
+
+  /**
+   * Returns the score for a feedback
+   *
+   * @param feedback the feedback from the last step
+   */
+  override def score(feedback: Feedback): INDArray = {
+    val result = processForTrain(feedback)("score").asInstanceOf[INDArray]
+    result
   }
 
   /**
@@ -130,7 +151,12 @@ case class ActorCriticAgent(conf: ActorCriticAgentConf,
     // Critic update
     val criticLabel = conf.normalizeActionValue(newV0)
 
-    val actorMap = conf.actors.flatMap(_.computeLabels(outputs0, actions, delta)).toMap
+    val actorMap = (for {
+      (actor, alph) <- conf.actors.zip(alpha)
+      map <- actor.computeLabels(outputs0, actions, delta, alph)
+    } yield map
+      ).toMap
+
     val actorLabels = conf.actors.map(actor => actorMap(s"labels(${actor.dimension})").asInstanceOf[INDArray]).toArray
 
     val labels = criticLabel +: actorLabels
@@ -157,16 +183,6 @@ case class ActorCriticAgent(conf: ActorCriticAgentConf,
    * @param outputs the network outputs
    */
   def v(outputs: Array[INDArray]): INDArray = conf.denormalizeActionValue(outputs(0))
-
-  /**
-   * Returns the score for a feedback
-   *
-   * @param feedback the feedback from the last step
-   */
-  override def score(feedback: Feedback): INDArray = {
-    val result = processForTrain(feedback)("score").asInstanceOf[INDArray]
-    result
-  }
 
   /**
    * Writes the agent status to a path

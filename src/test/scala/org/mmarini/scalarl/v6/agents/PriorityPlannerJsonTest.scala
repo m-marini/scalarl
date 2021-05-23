@@ -40,21 +40,6 @@ class PriorityPlannerJsonTest extends FunSpec with Matchers with MockitoSugar {
   val dt = 1
 
   create()
-
-  def state(n: Int): INDArray = ones(1).muli(n)
-
-  def action(n: Int): INDArray = ones(1).muli(n)
-
-  def feedback(time: Double, s0: INDArray, a: INDArray, r: Double, s1: INDArray): Feedback = Feedback(
-    s0 = obs(time, s0),
-    actions = a,
-    reward = ones(1).muli(r),
-    s1 = obs(time + dt, s1)
-  )
-
-  def obs(time: Double, s: INDArray): INDArrayObservation =
-    INDArrayObservation(time = ones(1).muli(time), signals = s)
-
   private val jsonText1 =
     """
       |---
@@ -74,6 +59,20 @@ class PriorityPlannerJsonTest extends FunSpec with Matchers with MockitoSugar {
       |        - [-0.5, 1.5]
       |        noValues: [ 2 ]
       |""".stripMargin
+
+  def state(n: Int): INDArray = ones(1).muli(n)
+
+  def action(n: Int): INDArray = ones(1).muli(n)
+
+  def feedback(time: Double, s0: INDArray, a: INDArray, r: Double, s1: INDArray): Feedback = Feedback(
+    s0 = obs(time, s0),
+    actions = a,
+    reward = ones(1).muli(r),
+    s1 = obs(time + dt, s1)
+  )
+
+  def obs(time: Double, s: INDArray): INDArrayObservation =
+    INDArrayObservation(time = ones(1).muli(time), signals = s)
   describe(s"The PriorityPlanner build from $jsonText1") {
     val conf = Configuration.jsonFormString(jsonText1)
     val planner = PriorityPlanner.fromJson(conf.hcursor.downField("planner"))(1, 1).get

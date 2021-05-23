@@ -88,7 +88,7 @@ class AgentEventWrapper(val observable: Observable[AgentEvent]) extends Observab
             val h = map(s"h($i)").asInstanceOf[INDArray]
             val hStar = map(s"h*($i)").asInstanceOf[INDArray]
             val h1 = map1(s"h($i)").asInstanceOf[INDArray]
-            hstack(a.alpha, h, hStar, h1)
+            hstack(agent.alpha(i), h, hStar, h1)
           case a: GaussianActor =>
             val mu = map(s"mu($i)").asInstanceOf[INDArray]
             val h = map(s"h($i)").asInstanceOf[INDArray]
@@ -96,8 +96,8 @@ class AgentEventWrapper(val observable: Observable[AgentEvent]) extends Observab
             val hStar = map(s"h*($i)").asInstanceOf[INDArray]
             val mu1 = map1(s"mu($i)").asInstanceOf[INDArray]
             val h1 = map1(s"h($i)").asInstanceOf[INDArray]
-            hstack(a.eta.getColumn(0), mu, muStar, mu1,
-              a.eta.getColumn(1L), h, hStar, h1)
+            hstack(agent.alpha(i).getColumn(0), mu, muStar, mu1,
+              agent.alpha(i).getColumn(1L), h, hStar, h1)
           case _ => zeros(0)
         }
 

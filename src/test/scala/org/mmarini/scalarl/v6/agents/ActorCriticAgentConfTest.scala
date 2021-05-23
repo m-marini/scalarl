@@ -69,7 +69,7 @@ class ActorCriticAgentConfTest extends FunSpec with Matchers {
         |""".stripMargin
     it(s"should load from json $jsonText1") {
       val conf = Configuration.jsonFormString(jsonText1)
-      val agentConf = ActorCriticAgentConf.fromJson(conf.hcursor.downField("agent"))(2, 2).get
+      val (agentConf, _) = ActorCriticAgentConf.fromJson(conf.hcursor.downField("agent"))(2, 2).get
 
       agentConf.netInputDimensions shouldBe 2
       agentConf.valueDecay shouldBe ones(1).muli(0.99)
@@ -112,7 +112,7 @@ class ActorCriticAgentConfTest extends FunSpec with Matchers {
         |""".stripMargin
     it(s"should load from json $jsonText2") {
       val conf = Configuration.jsonFormString(jsonText2)
-      val agentConf = ActorCriticAgentConf.fromJson(conf.hcursor.downField("agent"))(2, 2).get
+      val (agentConf, _) = ActorCriticAgentConf.fromJson(conf.hcursor.downField("agent"))(2, 2).get
 
       agentConf.netInputDimensions shouldBe 32
       agentConf.valueDecay shouldBe ones(1).muli(0.99)

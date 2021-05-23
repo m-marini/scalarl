@@ -54,6 +54,8 @@ object TestEnv2Case extends Matchers with LazyLogging with App {
   private val ValueDecay = 0.99
   private val RewardDecay = 0.98
   private val Alpha = 1000e-3
+  private val AlphaDecay = 1.0
+  private val Epsilon = 0.1
   private implicit val sch: Scheduler = Scheduler.global
 
   create()
@@ -105,12 +107,13 @@ object TestEnv2Case extends Matchers with LazyLogging with App {
     net
   }
 
-  private val actor = PolicyActor(
+  private val actor = PolicyActor.create(
     dimension = 0,
     noValues = NoActionValues,
     actionRange = ActionRange,
     prefRange = PrefRange,
-    alpha = ones(1).muli(Alpha)
+    alphaDecay = AlphaDecay,
+    epsilon = Epsilon
   )
 
   private val agentConfig = {
@@ -129,7 +132,8 @@ object TestEnv2Case extends Matchers with LazyLogging with App {
     conf = agentConfig,
     network = network,
     avg = zeros(1),
-    planner = None
+    planner = None,
+    alpha = Seq(ones(1).muli(Alpha))
   )
 
   logger.info(
@@ -167,7 +171,7 @@ object TestEnv2Case extends Matchers with LazyLogging with App {
           val in = agent.conf.stateEncode(st)
           val out = agent.network.output(in)
           val v = agent.v(out)
-          val pref = agent.conf.actors(0).asInstanceOf[PolicyActor].preferences(out)
+          val pref = agent.conf.actors.head.asInstanceOf[PolicyActor].preferences(out)
           logger.debug(s" s$i: $v $pref")
         }
       }).subscribe()

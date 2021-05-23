@@ -37,47 +37,6 @@ import org.scalatest.{FunSpec, Matchers}
 import scala.math._
 
 class LanderStatusTest1 extends FunSpec with Matchers {
-  private val DefaultFuel = 10.0
-  private val Dt = 4
-  private val G = 1.6
-  private val Z0 = 10.0
-  private val VH0 = 0.0
-  private val VH1 = 0.5
-  private val VH2 = 1.0
-  private val VZ_2 = -4.0
-  private val VZ_1 = -2.0
-  private val VZ0 = 0.0
-  private val VZ1 = 2.0
-  private val VZ2 = 4.0
-  private val R0 = 0.0
-  private val R45 = Pi / 4
-  private val R225 = Pi * 5 / 4
-  private val JetHAcc = 1.0
-  private val JetVAcc = 3.2
-  private val LandingVH = 1.0
-  private val LandingVZ = 4.0
-  private val LandedReward = 100.0
-  private val VCrashReward = -100.0
-  private val HCrashReward = -100.0
-  private val OutOfPlatformReward = -100.0
-  private val OutOfRangeReward = -100.0
-  private val OutOfFuelReward = -100.0
-  private val FlyingReward = -1.0
-
-  create()
-
-  private val landerReward = LanderRewards(vector(LandedReward, 0.0, 0.0, 0.0, 0.0))
-  private val hCrashReward = LanderRewards(vector(HCrashReward, 0.0, 0.0, 0.0, 0.0))
-  private val vCrashReward = LanderRewards(vector(VCrashReward, 0.0, 0.0, 0.0, 0.0))
-  private val outOfPlatformReward = LanderRewards(vector(OutOfPlatformReward, 0.0, 0.0, 0.0, 0.0))
-  private val outOfRangeReward = LanderRewards(vector(OutOfRangeReward, 0.0, 0.0, 0.0, 0.0))
-  private val outOfFuelReward = LanderRewards(vector(OutOfFuelReward, 0.0, 0.0, 0.0, 0.0))
-  private val flyingReward = LanderRewards(vector(FlyingReward, 0.0, 0.0, 0.0, 0.0))
-  //private val ActionJet: INDArray = create(Array(0.0, 1.0,))
-  private val ActionMax: INDArray = vector(1.0, 2.0, 4.0)
-  private val ActionSED: INDArray = vector(5.0, 1.0, 1.0)
-  private val ActionSEDMax: INDArray = vector(5.0, 2.0, 0.0)
-
   private lazy val conf: LanderConf = new LanderConf(
     dt = ones(1).mul(Dt),
     fuel = ones(1).muli(DefaultFuel),
@@ -104,6 +63,45 @@ class LanderStatusTest1 extends FunSpec with Matchers {
     outOfFuelReward = outOfFuelReward,
     flyingReward = flyingReward
   )
+  private val DefaultFuel = 10.0
+  private val Dt = 4
+  private val G = 1.6
+  private val Z0 = 10.0
+  private val VH0 = 0.0
+  private val VH1 = 0.5
+  private val VH2 = 1.0
+  private val VZ_2 = -4.0
+  private val VZ_1 = -2.0
+  private val VZ0 = 0.0
+  private val VZ1 = 2.0
+  private val VZ2 = 4.0
+  private val R0 = 0.0
+  private val R45 = Pi / 4
+  private val R225 = Pi * 5 / 4
+  private val JetHAcc = 1.0
+  private val JetVAcc = 3.2
+  private val LandingVH = 1.0
+  private val LandingVZ = 4.0
+  private val LandedReward = 100.0
+  private val VCrashReward = -100.0
+  private val HCrashReward = -100.0
+  private val OutOfPlatformReward = -100.0
+  private val OutOfRangeReward = -100.0
+  private val OutOfFuelReward = -100.0
+
+  create()
+  private val FlyingReward = -1.0
+  private val landerReward = LanderRewards(vector(LandedReward, 0.0, 0.0, 0.0, 0.0))
+  private val hCrashReward = LanderRewards(vector(HCrashReward, 0.0, 0.0, 0.0, 0.0))
+  private val vCrashReward = LanderRewards(vector(VCrashReward, 0.0, 0.0, 0.0, 0.0))
+  private val outOfPlatformReward = LanderRewards(vector(OutOfPlatformReward, 0.0, 0.0, 0.0, 0.0))
+  private val outOfRangeReward = LanderRewards(vector(OutOfRangeReward, 0.0, 0.0, 0.0, 0.0))
+  private val outOfFuelReward = LanderRewards(vector(OutOfFuelReward, 0.0, 0.0, 0.0, 0.0))
+  private val flyingReward = LanderRewards(vector(FlyingReward, 0.0, 0.0, 0.0, 0.0))
+  //private val ActionJet: INDArray = create(Array(0.0, 1.0,))
+  private val ActionMax: INDArray = vector(1.0, 2.0, 4.0)
+  private val ActionSED: INDArray = vector(5.0, 1.0, 1.0)
+  private val ActionSEDMax: INDArray = vector(5.0, 2.0, 0.0)
 
   def status(pos: INDArray, speed: INDArray = zeros(3), time: Double = 0.0, fuel: Double = DefaultFuel): LanderStatus =
     LanderStatus(

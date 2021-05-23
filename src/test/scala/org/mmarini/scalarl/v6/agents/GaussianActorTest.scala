@@ -42,16 +42,17 @@ class GaussianActorTest extends FunSpec with Matchers {
 
   create()
 
-  private val Eta: INDArray = ones(2)
   private val Range = create(Array(
     Array(-MuRange, -HRange),
     Array(MuRange, HRange)
   ))
   private val norm = clipAndNormalize(Range)
 
-  private def actor = GaussianActor(dimension = 0,
+  private def actor = GaussianActor.createActor(dimension = 0,
     alphaMu = 1,
     alphaSigma = 1,
+    epsilon = 0.1,
+    alphaDecay = 0.2,
     muRange = create(Array(-MuRange, MuRange)).transposei(),
     sigmaRange = create(Array(1 / SigmaRange, SigmaRange)).transposei())
 
@@ -81,7 +82,7 @@ class GaussianActorTest extends FunSpec with Matchers {
         describe("with delta > 0") {
           val delta = ones(1)
 
-          val map = actor.computeLabels(outs, actions, delta)
+          val map = actor.computeLabels(outs, actions, delta, eta)
 
           it("should return mu* = mu") {
             map("mu*(0)") shouldBe map("mu(0)")
@@ -89,11 +90,14 @@ class GaussianActorTest extends FunSpec with Matchers {
           it("should return h* < h") {
             map("h*(0)").asInstanceOf[INDArray].getDouble(0L) should be < map("h(0)").asInstanceOf[INDArray].getDouble(0L)
           }
+          it("should return alpha* = Alpha") {
+            map("alpha*(0)") shouldBe create(Array(1.0, 16.2))
+          }
         }
 
         describe("with delta < 0") {
           val delta = create(Array[Double](-1))
-          val map = actor.computeLabels(outs, actions, delta)
+          val map = actor.computeLabels(outs, actions, delta, eta)
 
           it("should return mu* = mu") {
             map("mu*(0)") shouldBe map("mu(0)")
@@ -110,7 +114,7 @@ class GaussianActorTest extends FunSpec with Matchers {
         val outs = Array(out, out)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
-          val map = actor.computeLabels(outs, actions, delta)
+          val map = actor.computeLabels(outs, actions, delta, eta)
 
           it("should return mu* > mu") {
             map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be > map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
@@ -118,11 +122,14 @@ class GaussianActorTest extends FunSpec with Matchers {
           it("should return h* < h") {
             map("h*(0)").asInstanceOf[INDArray].getDouble(0L) should be < map("h(0)").asInstanceOf[INDArray].getDouble(0L)
           }
+          it("should return alpha* = Alpha") {
+            map("alpha*(0)") shouldBe create(Array(32.2, 32.2))
+          }
         }
 
         describe("with delta < 0") {
           val delta = create(Array[Double](-1))
-          val map = actor.computeLabels(outs, actions, delta)
+          val map = actor.computeLabels(outs, actions, delta, eta)
 
           it("should return mu* < mu") {
             map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be < map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
@@ -139,7 +146,7 @@ class GaussianActorTest extends FunSpec with Matchers {
         val outs = Array(out, out)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
-          val map = actor.computeLabels(outs, actions, delta)
+          val map = actor.computeLabels(outs, actions, delta, eta)
 
           it("should return mu* < mu") {
             map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be < map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
@@ -151,7 +158,7 @@ class GaussianActorTest extends FunSpec with Matchers {
 
         describe("with delta < 0") {
           val delta = create(Array[Double](-1))
-          val map = actor.computeLabels(outs, actions, delta)
+          val map = actor.computeLabels(outs, actions, delta, eta)
 
           it("should return mu* > mu") {
             map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be > map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
@@ -168,7 +175,7 @@ class GaussianActorTest extends FunSpec with Matchers {
         val outs = Array(out, out)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
-          val map = actor.computeLabels(outs, actions, delta)
+          val map = actor.computeLabels(outs, actions, delta, eta)
 
           it("should return mu* > mu") {
             map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be > map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
@@ -180,7 +187,7 @@ class GaussianActorTest extends FunSpec with Matchers {
 
         describe("with delta < 0") {
           val delta = create(Array[Double](-1))
-          val map = actor.computeLabels(outs, actions, delta)
+          val map = actor.computeLabels(outs, actions, delta, eta)
 
           it("should return mu* < mu") {
             map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be < map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
@@ -197,7 +204,7 @@ class GaussianActorTest extends FunSpec with Matchers {
         val outs = Array(out, out)
         describe("with delta > 0") {
           val delta = create(Array[Double](1))
-          val map = actor.computeLabels(outs, actions, delta)
+          val map = actor.computeLabels(outs, actions, delta, eta)
 
           it("should return mu* < mu") {
             map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be < map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
@@ -209,7 +216,7 @@ class GaussianActorTest extends FunSpec with Matchers {
 
         describe("with delta < 0") {
           val delta = create(Array[Double](-1))
-          val map = actor.computeLabels(outs, actions, delta)
+          val map = actor.computeLabels(outs, actions, delta, eta)
 
           it("should return mu* > mu") {
             map("mu*(0)").asInstanceOf[INDArray].getDouble(0L) should be > map("mu(0)").asInstanceOf[INDArray].getDouble(0L)
@@ -221,6 +228,7 @@ class GaussianActorTest extends FunSpec with Matchers {
       }
     }
   }
+
   describe("create from json") {
     val conf = jsonFormString(
       """
@@ -234,20 +242,66 @@ class GaussianActorTest extends FunSpec with Matchers {
         |    - [0.01, 0.1]
         |""".stripMargin)
 
-    val actor = GaussianActor.fromJson(conf.hcursor.downField("actor"))(0).get
+    val (actor, alpha) = GaussianActor.fromJson(conf.hcursor.downField("actor"))(0).get
 
-    actor.eta shouldBe create(Array(0.1, 0.2))
+    it("should load alpha") {
+      alpha shouldBe create(Array(0.1, 0.2))
+    }
+    it("should load epsilonMu") {
+      actor.epsilonMu shouldBe ones(1).muli(0.4)
+    }
+    it("should load epsilonH") {
+      actor.epsilonH shouldBe ones(1).muli(Math.log(100) / 20)
+    }
+    it("should load alphaDecay") {
+      actor.alphaDecay shouldBe 1.0
+    }
 
-    actor.denormalize(ones(2).muli(-1.1)) shouldBe create(Array(-2, Math.log(0.01)))
-    actor.denormalize(ones(2).negi()) shouldBe create(Array(-2, Math.log(0.01)))
-    actor.denormalize(zeros(2)) shouldBe create(Array(0.0, (Math.log(0.01) + Math.log(0.1)) / 2))
-    actor.denormalize(ones(2)) shouldBe create(Array(2.0, Math.log(0.1)))
-    actor.denormalize(ones(2).muli(1.1)) shouldBe create(Array(2.0, Math.log(0.1)))
+    it("should denormalize output") {
+      actor.denormalize(ones(2).muli(-1.1)) shouldBe create(Array(-2, Math.log(0.01)))
+      actor.denormalize(ones(2).negi()) shouldBe create(Array(-2, Math.log(0.01)))
+      actor.denormalize(zeros(2)) shouldBe create(Array(0.0, (Math.log(0.01) + Math.log(0.1)) / 2))
+      actor.denormalize(ones(2)) shouldBe create(Array(2.0, Math.log(0.1)))
+      actor.denormalize(ones(2).muli(1.1)) shouldBe create(Array(2.0, Math.log(0.1)))
+    }
 
-    actor.normalize(create(Array(-2.1, Math.log(0.009)))) shouldBe ones(2).negi()
-    actor.normalize(create(Array(-2.0, Math.log(0.01)))) shouldBe ones(2).negi()
-    actor.normalize(create(Array(0.0, (Math.log(0.01) + Math.log(0.1)) / 2))) shouldBe zeros(2)
-    actor.normalize(create(Array(2.0, Math.log(0.1)))) shouldBe ones(2)
-    actor.normalize(create(Array(2.1, Math.log(0.11)))) shouldBe ones(2)
+    it("should normalize output") {
+      actor.normalize(create(Array(-2.1, Math.log(0.009)))) shouldBe ones(2).negi()
+      actor.normalize(create(Array(-2.0, Math.log(0.01)))) shouldBe ones(2).negi()
+      actor.normalize(create(Array(0.0, (Math.log(0.01) + Math.log(0.1)) / 2))) shouldBe zeros(2)
+      actor.normalize(create(Array(2.0, Math.log(0.1)))) shouldBe ones(2)
+      actor.normalize(create(Array(2.1, Math.log(0.11)))) shouldBe ones(2)
+    }
+  }
+
+  describe("create from json with dynamic alpha") {
+    val conf = jsonFormString(
+      """
+        |---
+        |actor:
+        |    alphaMu: 0.1
+        |    alphaSigma: 0.2
+        |    muRange:
+        |    - [-2, 2]
+        |    sigmaRange:
+        |    - [0.01, 0.1]
+        |    epsilon: 0.2
+        |    alphaDecay: 0.9
+        |""".stripMargin)
+
+    val (actor, alpha) = GaussianActor.fromJson(conf.hcursor.downField("actor"))(0).get
+
+    it("should load alpha") {
+      alpha shouldBe create(Array(0.1, 0.2))
+    }
+    it("should load epsilonMu") {
+      actor.epsilonMu shouldBe ones(1).muli(0.8)
+    }
+    it("should load epsilonH") {
+      actor.epsilonH shouldBe ones(1).muli(Math.log(100) / 10)
+    }
+    it("should load alphaDecay") {
+      actor.alphaDecay shouldBe 0.9
+    }
   }
 }
