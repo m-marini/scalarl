@@ -109,67 +109,68 @@ class LanderStatusTest2 extends FunSpec with Matchers {
         s1.pos shouldBe vector(100.25, 100.25, 50)
       }
     }
+    /*
+        describe("speed 0,0,0") {
+          val s0 = status(
+            pos = vector(100, 100, 50),
+            speed = vector(0, 0, 0))
+          val (s1: LanderStatus, reward) = s0.change(actions = vector(-Math.PI * 3 / 4, 1, 0), random = random)
+          it("should change the speed") {
+            s1.speed shouldBe vector(-0.25, -0.25, 0)
+          }
+          it("should change the pos") {
+            s1.pos shouldBe vector(100, 100, 50)
+          }
+          it("should reward") {
+            reward shouldBe ones(1).muli(-0.1)
+          }
+        }
 
-    describe("speed 0,0,0") {
-      val s0 = status(
-        pos = vector(100, 100, 50),
-        speed = vector(0, 0, 0))
-      val (s1: LanderStatus, reward) = s0.change(actions = vector(-Math.PI * 3 / 4, 1, 0), random = random)
-      it("should change the speed") {
-        s1.speed shouldBe vector(-0.25, -0.25, 0)
-      }
-      it("should change the pos") {
-        s1.pos shouldBe vector(100, 100, 50)
-      }
-      it("should reward") {
-        reward shouldBe ones(1).muli(-0.1)
-      }
-    }
+        describe("at 100,100") {
+          val s0 = status(
+            pos = vector(100, 100, 50),
+            speed = vector(0, 0, 0))
 
-    describe("at 100,100") {
-      val s0 = status(
-        pos = vector(100, 100, 50),
-        speed = vector(0, 0, 0))
+          it("should move to NE") {
+            val (s1, r) = s0.change(vector(Math.PI * 1 / 4, 1, 0), random)
+            r shouldBe ones(1).muli(-1)
+          }
+          it("should move to SE") {
+            val (s1, r) = s0.change(vector(Math.PI * 3 / 4, 1, 0), random)
+            r shouldBe ones(1).muli(-0.55)
+          }
+          it("should move to NW") {
+            val (s1, r) = s0.change(vector(-Math.PI * 1 / 4, 1, 0), random)
+            r shouldBe ones(1).muli(-0.55)
+          }
+          it("should move to SW") {
+            val (s1, r) = s0.change(vector(-Math.PI * 3 / 4, 1, 0), random)
+            r shouldBe ones(1).muli(-0.1)
+          }
+        }
 
-      it("should move to NE") {
-        val (s1, r) = s0.change(vector(Math.PI * 1 / 4, 1, 0), random)
-        r shouldBe ones(1).muli(-1)
-      }
-      it("should move to SE") {
-        val (s1, r) = s0.change(vector(Math.PI * 3 / 4, 1, 0), random)
-        r shouldBe ones(1).muli(-0.55)
-      }
-      it("should move to NW") {
-        val (s1, r) = s0.change(vector(-Math.PI * 1 / 4, 1, 0), random)
-        r shouldBe ones(1).muli(-0.55)
-      }
-      it("should move to SW") {
-        val (s1, r) = s0.change(vector(-Math.PI * 3 / 4, 1, 0), random)
-        r shouldBe ones(1).muli(-0.1)
-      }
-    }
+        describe("at -100,100") {
+          val s0 = status(
+            pos = vector(-100, 100, 50),
+            speed = vector(0, 0, 0))
 
-    describe("at -100,100") {
-      val s0 = status(
-        pos = vector(-100, 100, 50),
-        speed = vector(0, 0, 0))
-
-      it("should move to NE") {
-        val (s1, r) = s0.change(vector(Math.PI * 1 / 4, 1, 0), random)
-        r shouldBe ones(1).muli(-0.55)
-      }
-      it("should move to SE") {
-        val (s1, r) = s0.change(vector(Math.PI * 3 / 4, 1, 0), random)
-        r shouldBe ones(1).muli(-1)
-      }
-      it("should move to NW") {
-        val (s1, r) = s0.change(vector(-Math.PI * 1 / 4, 1, 0), random)
-        r shouldBe ones(1).muli(-0.1)
-      }
-      it("should move to SW") {
-        val (s1, r) = s0.change(vector(-Math.PI * 3 / 4, 1, 0), random)
-        r shouldBe ones(1).muli(-0.55)
-      }
-    }
+          it("should move to NE") {
+            val (s1, r) = s0.change(vector(Math.PI * 1 / 4, 1, 0), random)
+            r shouldBe ones(1).muli(-0.55)
+          }
+          it("should move to SE") {
+            val (s1, r) = s0.change(vector(Math.PI * 3 / 4, 1, 0), random)
+            r shouldBe ones(1).muli(-1)
+          }
+          it("should move to NW") {
+            val (s1, r) = s0.change(vector(-Math.PI * 1 / 4, 1, 0), random)
+            r shouldBe ones(1).muli(-0.1)
+          }
+          it("should move to SW") {
+            val (s1, r) = s0.change(vector(-Math.PI * 3 / 4, 1, 0), random)
+            r shouldBe ones(1).muli(-0.55)
+          }
+        }
+      */
   }
 }
