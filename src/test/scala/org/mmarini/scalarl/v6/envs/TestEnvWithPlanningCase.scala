@@ -54,6 +54,8 @@ object TestEnvWithPlanningCase extends App with Matchers with LazyLogging {
   private val ValueDecay = 0.99
   private val RewardDecay = 0.98
   private val Alpha = 1000e-3
+  private val Epsilon = 0.1
+  private val AlphaDecay = 1
   private val PlanningSteps = 5
   private val MinModelSize = 6
   private val MaxModelSize = 10
@@ -109,12 +111,13 @@ object TestEnvWithPlanningCase extends App with Matchers with LazyLogging {
     net
   }
 
-  private val actor = PolicyActor(
+  private val actor = PolicyActor.create(
     dimension = 0,
     noValues = NoActionValues,
     actionRange = ActionRange,
     prefRange = PrefRange,
-    alpha = ones(1).muli(Alpha)
+    alphaDecay = AlphaDecay,
+    epsilon = Epsilon
   )
 
   private val agentConfig = {
@@ -143,7 +146,8 @@ object TestEnvWithPlanningCase extends App with Matchers with LazyLogging {
     conf = agentConfig,
     network = network,
     avg = zeros(1),
-    planner = Some(planner)
+    planner = Some(planner),
+    alpha = Seq(ones(1).muli(Alpha))
   )
 
   logger.info(

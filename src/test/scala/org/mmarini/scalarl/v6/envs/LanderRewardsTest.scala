@@ -122,9 +122,9 @@ class LanderRewardsTest extends FunSpec with Matchers {
       conf
     )
 
-  private def vector(data: Double*): INDArray = create(data.toArray)
-
   private def cyl(angle: Double, radius: Double, z: Double) = vector(radius * cos(angle), radius * sin(angle), z)
+
+  private def vector(data: Double*): INDArray = create(data.toArray)
 
   describe("LanderConf at land point") {
     describe("at (0,0,-0.1), (0,0,1)") {

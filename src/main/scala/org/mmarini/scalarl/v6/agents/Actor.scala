@@ -43,8 +43,9 @@ trait Actor {
    * @param outputs the outputs
    * @param actions the actions
    * @param delta   the td error
+   * @param alpha   the alpha parameter
    */
-  def computeLabels(outputs: Array[INDArray], actions: INDArray, delta: INDArray): Map[String, Any]
+  def computeLabels(outputs: Array[INDArray], actions: INDArray, delta: INDArray, alpha: INDArray): Map[String, Any]
 
   /**
    * Returns the action chosen by the actor

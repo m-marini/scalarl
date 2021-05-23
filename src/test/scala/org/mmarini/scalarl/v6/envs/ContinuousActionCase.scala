@@ -51,23 +51,29 @@ import org.nd4j.linalg.ops.transforms.Transforms._
 import org.scalatest.Matchers
 
 object ContinuousActionCase extends Matchers with LazyLogging with App {
+  val s0 = ContinuousActionEnv(ones(1).muli(2), zeros(1))
+  val session = new Session(numSteps = NoSteps,
+    epoch = 0,
+    env = s0,
+    agent = agent)
+  val (_, agent1: ActorCriticAgent) = session.run(random)
+  val outputs = agent1.network.output(s0.observation.signals)
+  val (mu, _, sigma) = actor.muHSigma(outputs)
   private val Trace = false
   private val Seed = 12345L
   private val NoSteps = 1000
   private val NoInputs: Long = 1
+
+  create()
+
+  private implicit val sch: Scheduler = Scheduler.global
   private val EtaMu = 0.03
   private val EtaH = 0.03
   private val RewardDecay = 0.97
   private val ValueDecay = 0.99
   private val LearningRate = 1000e-3
-
-  create()
-
-  private implicit val sch: Scheduler = Scheduler.global
-
   private val random: Random =
     getRandomFactory.getNewRandomInstance(Seed)
-
   private val MuRange = create(Array(MinActionValue, MaxActionValue)).transposei()
   private val SigmaRange = create(Array(0.05, 1)).transposei()
   private val RewardRange: INDArray = pow(create(Array(MaxStateValue - MinStateValue, 0.0)), 2).
@@ -76,15 +82,45 @@ object ContinuousActionCase extends Matchers with LazyLogging with App {
   private val SignalsRange = create(Array(MinStateValue, MaxStateValue)).
     muli(2).
     transposei()
-  private val stateEncode = clipAndNormalize(ranges = SignalsRange)
 
-  private val actor = GaussianActor(
+  logger.info(
+    s"""
+       | Given a process with continuous 1D state
+       |   and the rewards maximum when the action is equal to the state
+       |   and an agent implementing actor critic method
+       | When acting in the environment
+       | Then the actor should improve its policy approaching the optimal policy
+       |   and reaching a good policy within $NoSteps interaction steps
+       |""".stripMargin)
+  private val stateEncode = clipAndNormalize(ranges = SignalsRange)
+  private val actor = GaussianActor.createActor(
     dimension = 0,
     alphaMu = EtaMu,
     alphaSigma = EtaH,
+    epsilon = 0.1,
+    alphaDecay = 1.0,
     muRange = MuRange,
     sigmaRange = SigmaRange)
 
+  if (Trace) {
+    agentConf.agentObserver.doOnNext(event => Task {
+      logger.debug(
+        s"""
+           |  s=${event.feedback.s0.signals}
+           |  a=${event.feedback.actions}
+           |  r=${event.feedback.reward}
+           |  v0=${event.map("v0")}
+           |  v1=${event.map("v1")}
+           |  v0*=${event.map("v0*")}
+           |  mu=${event.map("mu(0)")}
+           |  mu*=${event.map("mu*(0)")}
+           |  sigma=${event.map("sigma(0)")}
+           |  h0=${event.map("h(0)")}
+           |  h*0=${event.map("h*(0)")}
+           |  avg=${event.map("avg")}
+           |  avg*=${event.map("newAverage")}""".stripMargin)
+    }).subscribe()
+  }
   private val agentConf = ActorCriticAgentConf(
     rewardDecay = ones(1).muli(RewardDecay),
     valueDecay = ones(1).muli(ValueDecay),
@@ -92,7 +128,6 @@ object ContinuousActionCase extends Matchers with LazyLogging with App {
     actors = Seq(actor),
     stateEncode = stateEncode,
     netInputDimensions = 1)
-
   private val network = {
     val criticOutLayer = new OutputLayer.Builder().
       nIn(NoInputs).
@@ -124,53 +159,12 @@ object ContinuousActionCase extends Matchers with LazyLogging with App {
     net.init()
     net
   }
-
   private val agent = ActorCriticAgent(
     conf = agentConf,
     network = network,
     avg = zeros(1),
-    planner = None)
-
-  logger.info(
-    s"""
-       | Given a process with continuous 1D state
-       |   and the rewards maximum when the action is equal to the state
-       |   and an agent implementing actor critic method
-       | When acting in the environment
-       | Then the actor should improve its policy approaching the optimal policy
-       |   and reaching a good policy within $NoSteps interaction steps
-       |""".stripMargin)
-
-  val s0 = ContinuousActionEnv(ones(1).muli(2), zeros(1))
-
-  val session = new Session(numSteps = NoSteps,
-    epoch = 0,
-    env = s0,
-    agent = agent)
-
-  if (Trace) {
-    agentConf.agentObserver.doOnNext(event => Task {
-      logger.debug(
-        s"""
-           |  s=${event.feedback.s0.signals}
-           |  a=${event.feedback.actions}
-           |  r=${event.feedback.reward}
-           |  v0=${event.map("v0")}
-           |  v1=${event.map("v1")}
-           |  v0*=${event.map("v0*")}
-           |  mu=${event.map("mu(0)")}
-           |  mu*=${event.map("mu*(0)")}
-           |  sigma=${event.map("sigma(0)")}
-           |  h0=${event.map("h(0)")}
-           |  h*0=${event.map("h*(0)")}
-           |  avg=${event.map("avg")}
-           |  avg*=${event.map("newAverage")}""".stripMargin)
-    }).subscribe()
-  }
-  val (_, agent1: ActorCriticAgent) = session.run(random)
-
-  val outputs = agent1.network.output(s0.observation.signals)
-  val (mu, _, sigma) = actor.muHSigma(outputs)
+    planner = None,
+    alpha = Seq(create(Array(EtaMu, EtaH))))
 
   logger.info("mu=    {}", mu)
   logger.info("sigma= {}", sigma)

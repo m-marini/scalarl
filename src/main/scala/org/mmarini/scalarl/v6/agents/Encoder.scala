@@ -139,25 +139,6 @@ object Encoder {
   }
 
   /**
-   * Returns the discrete encoder and the number of features
-   *
-   * @param ranges  the ranges of each dimension
-   * @param noTiles the number of tiles for each dimension
-   */
-  def discrete(ranges: INDArray, noTiles: INDArray): (INDArray => INDArray, Int) = {
-    val noDims = ranges.size(1).toInt
-    val toRanges = vstack(zeros(noDims), noTiles)
-    val transform = Utils.clipAndTransform(ranges, toRanges)
-    val max = noTiles.sub(1)
-    val result = (x: INDArray) => {
-      val y = transform(x)
-      val z = Transforms.min(Transforms.floor(y), max)
-      z
-    }
-    (result, noDims)
-  }
-
-  /**
    * Returns the tile encoder
    *
    * @param conf   the json configuration
@@ -197,5 +178,24 @@ object Encoder {
       Utils.features(Seq(idx), noFeatures)
     }
     (result, noFeatures)
+  }
+
+  /**
+   * Returns the discrete encoder and the number of features
+   *
+   * @param ranges  the ranges of each dimension
+   * @param noTiles the number of tiles for each dimension
+   */
+  def discrete(ranges: INDArray, noTiles: INDArray): (INDArray => INDArray, Int) = {
+    val noDims = ranges.size(1).toInt
+    val toRanges = vstack(zeros(noDims), noTiles)
+    val transform = Utils.clipAndTransform(ranges, toRanges)
+    val max = noTiles.sub(1)
+    val result = (x: INDArray) => {
+      val y = transform(x)
+      val z = Transforms.min(Transforms.floor(y), max)
+      z
+    }
+    (result, noDims)
   }
 }

@@ -69,7 +69,7 @@ object AgentBuilder extends LazyLogging {
    */
   def actorCriticFromJson(conf: ACursor)(signalDimensions: Int, actionDimensions: Int): Try[ActorCriticAgent] = {
     for {
-      agentConf <- ActorCriticAgentConf.fromJson(conf)(signalDimensions, actionDimensions)
+      (agentConf, alpha) <- ActorCriticAgentConf.fromJson(conf)(signalDimensions, actionDimensions)
       avg <- conf.get[Double]("avgReward").toTry.map(ones(1).muli(_))
       modelPath = conf.get[String]("modelPath").toOption
       noOutputs = agentConf.noOutputs
@@ -88,6 +88,7 @@ object AgentBuilder extends LazyLogging {
         network = network,
         avg = avg,
         planner = planner,
+        alpha = alpha
       )
       agent
     }

@@ -73,12 +73,13 @@ object ActorCriticAgentConf {
    * @param stateDimensions  number of signal dimensions
    * @param actionDimensions number of action dimensions
    */
-  def fromJson(conf: ACursor)(stateDimensions: Int, actionDimensions: Int): Try[ActorCriticAgentConf] = {
+  def fromJson(conf: ACursor)(stateDimensions: Int, actionDimensions: Int):
+  Try[(ActorCriticAgentConf, Seq[INDArray])] = {
     for {
       rewardDecay <- scalarFromJson(conf.downField("rewardDecay"))
       valueDecay <- scalarFromJson(conf.downField("valueDecay"))
       rewardRange <- rangesFromJson(conf.downField("rewardRange"))(1)
-      actors <- actorsFromJson(conf.downField("actors"))(actionDimensions)
+      (actors, alpha) <- actorsFromJson(conf.downField("actors"))(actionDimensions)
       (encode, noInputs) <- Encoder.fromJson(conf.downField("stateEncoder"))(stateDimensions)
     } yield {
       val conf = apply(netInputDimensions = noInputs,
@@ -87,7 +88,7 @@ object ActorCriticAgentConf {
         rewardDecay = rewardDecay,
         rewardRange = rewardRange,
         actors = actors)
-      conf
+      (conf, alpha)
     }
   }
 
@@ -118,26 +119,28 @@ object ActorCriticAgentConf {
   )
 
   /**
-   * Returns the list of actors
+   * Returns the list of actors and the alpha parameters
    *
    * @param conf             the json configuration
    * @param actionDimensions the number of actors
    */
-  def actorsFromJson(conf: ACursor)(actionDimensions: Int): Try[Seq[Actor]] =
+  def actorsFromJson(conf: ACursor)(actionDimensions: Int): Try[(Seq[Actor], Seq[INDArray])] =
     Try {
-      for {
+      val seq = for {
         i <- 0 until actionDimensions
-      } yield
+      } yield {
         actorFromJson(conf.downN(i))(i).get
+      }
+      seq.unzip
     }
 
   /**
-   * Returns the agent
+   * Returns the agent and the alpha parameters
    *
    * @param conf      the json configuration
    * @param dimension the dimension index
    */
-  def actorFromJson(conf: ACursor)(dimension: Int): Try[Actor] = for {
+  def actorFromJson(conf: ACursor)(dimension: Int): Try[(Actor, INDArray)] = for {
     typ <- conf.get[String]("type").toTry
     actor <- typ match {
       case "PolicyActor" => PolicyActor.fromJson(conf)(dimension)

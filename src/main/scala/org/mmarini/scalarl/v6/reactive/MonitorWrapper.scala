@@ -34,6 +34,7 @@ import monix.reactive.Observable
 import org.mmarini.scalarl.v6.Step
 import org.mmarini.scalarl.v6.agents.{ActorCriticAgent, PriorityPlanner}
 import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.Nd4j._
 
 /**
  * Wrapper of [[Observable[INDArray]]] to add functionalities
@@ -55,6 +56,10 @@ class MonitorWrapper(val observable: Observable[(Step, INDArray)]) extends Obser
       case actor: ActorCriticAgent => actor.avg
       case _ => avg.getColumn(0)
     }
+    val alphas = step.agent0 match {
+      case actor: ActorCriticAgent => hstack(actor.alpha: _*)
+      case _ => zeros(1)
+    }
     logger.info(f"Epoch ${
       step.epoch
     }%,3d, Steps ${
@@ -63,6 +68,8 @@ class MonitorWrapper(val observable: Observable[(Step, INDArray)]) extends Obser
       rew.getDouble(0L)
     }%12g, avgScore=${
       avg.getDouble(1L)
-    }%12g, model=$modelSize%4d")
+    }%12g, model=$modelSize%4d, alpha=${
+      alphas
+    }")
   }))
 }

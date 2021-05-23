@@ -87,13 +87,6 @@ object Tiles {
 
   /**
    * Returns coarse tile code
-   *
-   * @param sizes sizes per dimension
-   */
-  def apply(sizes: Long*): Tiles = apply(None, sizes: _*)
-
-  /**
-   * Returns coarse tile code
    * The space coordinates are limited to 0 ... size(1)
    *
    * @param hash  The hash size
@@ -137,4 +130,11 @@ object Tiles {
     }
     new Tiles(offsets, sizeV, strides, noTiles, hash)
   }
+
+  /**
+   * Returns coarse tile code
+   *
+   * @param sizes sizes per dimension
+   */
+  def apply(sizes: Long*): Tiles = apply(None, sizes: _*)
 }

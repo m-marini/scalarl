@@ -75,7 +75,7 @@ class Session(env: => Env,
   def run(random: Random): (Env, Agent) = {
     logger.info("Running session with agent with {} inputs and {} actors ...",
       agent.asInstanceOf[ActorCriticAgent].network.layerInputSize(0),
-//      env.signalsSize,
+      //      env.signalsSize,
       env.actionDimensions
     )
 

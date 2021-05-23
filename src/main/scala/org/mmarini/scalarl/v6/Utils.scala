@@ -194,18 +194,6 @@ object Utils {
    * Returns the normalizer function of row vector after clipping
    * The function returns ranges -1, 1 for defined ranges
    *
-   * @param ranges the range of transformation the first row contains minimum values
-   *               and the second row contains the maximum values
-   */
-  def clipAndNormalize(ranges: INDArray): INDArray => INDArray = {
-    val toRanges = vstack(ones(1, ranges.size(1)).negi(), ones(1, ranges.size(1)))
-    clipAndTransform(ranges, toRanges)
-  }
-
-  /**
-   * Returns the normalizer function of row vector after clipping
-   * The function returns ranges -1, 1 for defined ranges
-   *
    * @param fromRanges the range of inputs the first row contains minimum values
    *                   and the second row contains the maximum values
    * @param toRanges   the range of outputs the first row contains minimum values
@@ -225,6 +213,18 @@ object Utils {
    */
   def clip(range: INDArray): INDArray => INDArray = (x: INDArray) =>
     Transforms.min(Transforms.max(x, range.getRow(0), true), range.getRow(1), false)
+
+  /**
+   * Returns the normalizer function of row vector after clipping
+   * The function returns ranges -1, 1 for defined ranges
+   *
+   * @param ranges the range of transformation the first row contains minimum values
+   *               and the second row contains the maximum values
+   */
+  def clipAndNormalize(ranges: INDArray): INDArray => INDArray = {
+    val toRanges = vstack(ones(1, ranges.size(1)).negi(), ones(1, ranges.size(1)))
+    clipAndTransform(ranges, toRanges)
+  }
 
   /**
    * Returns the distribution function for linear preferences

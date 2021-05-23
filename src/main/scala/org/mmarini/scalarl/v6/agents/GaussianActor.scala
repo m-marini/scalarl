@@ -44,24 +44,33 @@ import scala.util.Try
  * Gaussian Actor
  *
  * @param dimension   the dimension index
- * @param eta         the eta (mu, sigma) parameters
+ * @param epsilonMu   the epsilon mu parameter
+ * @param epsilonH    the epsilon H parameter
+ * @param alphaDecay  the alpha decay parameter
  * @param denormalize the output denormalize function
  * @param normalize   the output normalizer function
  */
 case class GaussianActor(dimension: Int,
-                         eta: INDArray,
+                         epsilonMu: INDArray,
+                         epsilonH: INDArray,
+                         alphaDecay: Double,
                          denormalize: INDArray => INDArray,
                          normalize: INDArray => INDArray) extends Actor with LazyLogging {
+
+  import GaussianActor._
+
   /**
    * Returns the actor labels
    *
    * @param outputs the outputs
    * @param actions the actions
    * @param delta   the td error
+   * @param alpha   the alpha parameters
    */
   override def computeLabels(outputs: Array[INDArray],
                              actions: INDArray,
-                             delta: INDArray): Map[String, Any] = {
+                             delta: INDArray,
+                             alpha: INDArray): Map[String, Any] = {
     val (mu, h, sigma) = muHSigma(outputs)
     val action = actions.getColumn(dimension)
     val sigma2 = sigma.mul(sigma)
@@ -72,13 +81,31 @@ case class GaussianActor(dimension: Int,
       div(sigma2).
       muli(delta).
       muli(2).
-      muli(eta.getColumn(0))
+      muli(alpha.getColumn(0))
     // deltaH = (2 (action - mu)^2 / sigma^2) - 1) delta
-    val deltaH = ratio.mul(ratio).muli(2).subi(1).muli(delta).muli(eta.getColumn(1))
+    val deltaH = ratio.mul(ratio).muli(2).subi(1).muli(delta).muli(alpha.getColumn(1))
 
     val muStar = mu.add(deltaMu)
     val hStar = h.add(deltaH)
     val labels = normalize(hstack(muStar, hStar))
+
+    // Compute alpha
+    val deltaMuRMS = abs(deltaMu)
+    val alphaMu1 = if (deltaMuRMS.getDouble(0L) > MinEpsilonH) {
+      epsilonMu.div(deltaMuRMS)
+    } else {
+      alpha.getColumn(0)
+    }
+    val deltaHRMS = abs(deltaH)
+    val alphaH1 = if (deltaHRMS.getDouble(0L) > MinEpsilonH) {
+      epsilonMu.div(deltaHRMS)
+    } else {
+      alpha.getColumn(1)
+    }
+
+    val alpha1 = hstack(alphaMu1, alphaH1)
+    val alphaStar = alpha.mul(alphaDecay).addi(alpha1.mul(1 - alphaDecay))
+
     Map(s"mu($dimension)" -> mu,
       s"h($dimension)" -> h,
       s"sigma($dimension)" -> sigma,
@@ -86,7 +113,8 @@ case class GaussianActor(dimension: Int,
       s"deltaH($dimension)" -> deltaH,
       s"mu*($dimension)" -> muStar,
       s"h*($dimension)" -> hStar,
-      s"labels($dimension)" -> labels
+      s"labels($dimension)" -> labels,
+      s"alpha*(0)" -> alphaStar
     )
   }
 
@@ -121,13 +149,16 @@ case class GaussianActor(dimension: Int,
 
 object GaussianActor {
 
+  val MinEpsilonH = 1e-3
+
+
   /**
-   * Returns the discrete action agent
+   * Returns the gaussian actor and the alpha parameters
    *
    * @param conf      the configuration element
    * @param dimension the dimension index
    */
-  def fromJson(conf: ACursor)(dimension: Int): Try[GaussianActor] = for {
+  def fromJson(conf: ACursor)(dimension: Int): Try[(GaussianActor, INDArray)] = for {
     alphaMu <- conf.get[Double]("alphaMu").toTry
     alphaSigma <- conf.get[Double]("alphaSigma").toTry
     muRange <- rangesFromJson(conf.downField("muRange"))(1)
@@ -138,13 +169,17 @@ object GaussianActor {
       }
     }}
   yield {
-    apply(
+    val alphaDecay = conf.get[Double]("alphaDecay").getOrElse(1.0)
+    val epsilon = conf.get[Double]("epsilon").getOrElse(0.1)
+    (createActor(
       dimension = dimension,
       alphaMu = alphaMu,
       alphaSigma = alphaSigma,
       muRange = muRange,
-      sigmaRange = sigmaRange
-    )
+      sigmaRange = sigmaRange,
+      alphaDecay = alphaDecay,
+      epsilon = epsilon
+    ), create(Array(alphaMu, alphaSigma)))
   }
 
   /**
@@ -153,20 +188,27 @@ object GaussianActor {
    * @param dimension  the dimension index
    * @param alphaMu    the alpha mu parameter
    * @param alphaSigma the alpha sigma parameter
+   * @param epsilon    the epsilon parameter
+   * @param alphaDecay the alpha decay parameter
    * @param muRange    the mu range
    * @param sigmaRange the sigma range
    */
-  def apply(dimension: Int,
-            alphaMu: Double,
-            alphaSigma: Double,
-            muRange: INDArray,
-            sigmaRange: INDArray): GaussianActor = {
+  def createActor(dimension: Int,
+                  alphaMu: Double,
+                  alphaSigma: Double,
+                  epsilon: Double,
+                  alphaDecay: Double,
+                  muRange: INDArray,
+                  sigmaRange: INDArray): GaussianActor = {
     val range = hstack(muRange, log(sigmaRange))
     val fDenormalize = clipAndDenormalize(range)
     val norm = clipAndNormalize(range)
+    val epsilonRange = range.getRow(1L).sub(range.getRow(0L)).muli(epsilon)
     GaussianActor(
       dimension = dimension,
-      eta = create(Array(alphaMu, alphaSigma)),
+      epsilonMu = epsilonRange.getColumn(0L),
+      epsilonH = epsilonRange.getColumn(1L),
+      alphaDecay = alphaDecay,
       denormalize = fDenormalize,
       normalize = norm)
   }
