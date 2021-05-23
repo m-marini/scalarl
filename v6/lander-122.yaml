@@ -58,7 +58,7 @@ env:
   actionDimensions: 3
 agent:
   type: ActorCritic
-  #modelPath: lander-122
+  modelPath: lander-122
   stateEncoder:
     type: Tiles
     ranges:
@@ -69,7 +69,7 @@ agent:
     - [0, 8]
     - [-16, 16]
     noTiles: [3, 3, 3, 3, 3, 3]
-  avgReward: -0.6
+  avgReward: -0.52
   rewardDecay: 0.999 # tau = -dt / ln 0.999 = 250 s
   valueDecay: 0.99 # tau = -dt / ln 0.999 = 25 s
   rewardRange:
