@@ -7,18 +7,6 @@ function analyzeEpisodes(X,              # The trace data
   OutOfFuel = 8;
   NSC = [Landed : OutOfFuel];
 
-  StatusDescr = {
-  "flying"
-  "landed"
-  "landed out of platform"
-  "vertical crashed on platform"
-  "vertical crash out of platform"
-  "horizontal crash on platform"
-  "horizontal crash out of platform"
-  "out of range"
-  "out of fuel"
-  };
-  
   Step = 2;
   StatusCode = 4;
   POSX = 5;
@@ -82,7 +70,7 @@ function analyzeEpisodes(X,              # The trace data
       subplot(NR, NC, 2 + (I - 1) * NC);
       autoplot(Y(:, 1), Y(:, 2));
       grid on;
-      title(sprintf("Frequency of %s", StatusDescr{SC + 1}));
+      title(sprintf("Frequency of %s", statusDescr(SC)));
       ylabel("1/episodes");
       xlabel("Step");
     endif
@@ -95,7 +83,7 @@ function analyzeEpisodes(X,              # The trace data
   for I = 1 : length(NSCHIST)
     SC = NSCHIST(I);
     if SCHIST(I) > 0
-      printf("%d cases of %s.\n", SCHIST(I), StatusDescr{SC+1});
+      printf("%d cases of %s.\n", SCHIST(I), statusDescr(SC));
     endif
   endfor
    
