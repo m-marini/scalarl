@@ -15,7 +15,7 @@ function episodesStats(
   M = size(H, 1);
   
   for I = 1 : M
-    printf("%d cases of %s.\n", H(I, 2), statusDescr(H(I, 1)));
+    printf("%4.d cases of (%d)-%s.\n", H(I, 2), H(I, 1), statusDescr(H(I, 1)));
   endfor
 
 endfunction
