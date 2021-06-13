@@ -23,38 +23,38 @@ env:
     - [0, 3.2]
   rewards:
     flying:
-      base: -0.55
-      direction: 0.15
+      base: -0.08
+      direction: 6.67e-3
     landed:
       base: 1
     hCrashedOnPlatform:
-      base: -0.2
-      hspeed: -0.5
-      vspeed: -0.25
+      base: -24.4
+      hspeed: -0.25
+      vspeed: -0.125
     vCrashedOnPlatform:
-      base: -0.2
-      hspeed: -0.5
-      vspeed: -0.25
+      base: -24.4
+      hspeed: -0.25
+      vspeed: -0.125
     landedOutOfPlatform:
-      base: -0.219
-      distance: -0.0111
+      base: -25.3
+      distance: -0.011
     hCrashedOutOfPlatform:
-      base: -0.49
-      distance: -0.0111
-      hspeed: -0.5
-      vspeed: -0.25
+      base: -26.4
+      distance: -0.00366
+      hspeed: -0.167
+      vspeed: -0.0833
     vCrashedOutOfPlatform:
-      base: -0.49
-      distance: -0.0111
-      hspeed: -0.5
-      vspeed: -0.25
+      base: -26.4
+      distance: -0.00366
+      hspeed: -0.167
+      vspeed: -0.0833
     outOfFuel:
-      base: -0.8
-      distance: -0.1
-      height: -6.67e-3
+      base: -27.4
+      distance: -0.005
+      height: -0.00333
     outOfRange:
-      base: -1
-      distance: -0.0943
+      base: -28.4
+      distance: -0.00943
   actionDimensions: 3
 agent:
   type: ActorCritic
@@ -68,19 +68,19 @@ agent:
     - [0, 16]
     - [0, 8]
     - [-16, 16]
-  avgReward: -0.5
+  avgReward: -0.23
   rewardDecay: 0.999 # tau = -dt / ln 0.999 = 250 s
   valueDecay: 0.99 # tau = -dt / ln 0.999 = 25 s
   rewardRange:
-  - [-30, -4]
+  - [-50, 50]
   network:
 #    seed: 1234
-    learningRate: 30e-3
+    learningRate: 10e-3
     activation: SOFTPLUS
     numHidden:
-    - 100
-    - 30
-    - 30
+    - 3000
+    - 120
+    - 120
     shortcuts:
       - [ 1, 4 ]
     updater: Sgd
@@ -138,7 +138,7 @@ agent:
         - [0, 3]
         - [-6, 6]
 session:
-  numSteps: 100000
+  numSteps: 30000
 #  seed: 1234
   kpisOnPlanning: true
   modelPath: lander-112
