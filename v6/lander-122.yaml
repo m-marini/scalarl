@@ -24,7 +24,7 @@ env:
   rewards:
     flying:
       base: -0.55
-      direction: 0.45
+      direction: 0.15
     landed:
       base: 1
     hCrashedOnPlatform:

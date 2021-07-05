@@ -155,14 +155,15 @@ case class LanderStatus(pos: INDArray,
     val d2 = d1.sub(conf.dv)
     val deltaV = Transforms.max(d2, 0.0)
     val hDistance = pos.getColumns(0, 1).norm2()
-    val result = hstack(ones(1), rho, hDistance, pos.getColumn(2), deltaV)
+    val result = hstack(ones(1), vp, hDistance, pos.getColumn(2), deltaV)
     result
   }
+
   /** Returns the direction coefficient */
-  lazy val rho: INDArray = {
+  lazy val vp: INDArray = {
     val dir = pos.getColumns(0, 1)
     val vDir = speed.getColumns(0, 1)
-    val prod = dir.norm2().muli(vDir.norm2())
+    val prod = dir.norm2()
     val result = if (prod.getDouble(0L) > EPS_THRESHOLD) {
       dir.mmul(vDir.transpose()).negi().divi(prod)
     } else {
@@ -170,8 +171,10 @@ case class LanderStatus(pos: INDArray,
     }
     result
   }
+
   /** Returns the reward */
   lazy val reward: INDArray = conf.rewardFunctionTable(status)(this)
+
   /** Returns the action configuration */
   override val actionDimensions: Int = LanderConf.NumActors
 
