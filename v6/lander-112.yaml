@@ -36,25 +36,25 @@ env:
       hspeed: -0.25
       vspeed: -0.125
     landedOutOfPlatform:
-      base: -25.3
-      distance: -0.011
+      base: -21.3
+      distance: -0.4
     hCrashedOutOfPlatform:
-      base: -26.4
-      distance: -0.00366
-      hspeed: -0.167
-      vspeed: -0.0833
+      base: -22.4
+      distance: -0.4
+      hspeed: -0.25
+      vspeed: -0.125
     vCrashedOutOfPlatform:
-      base: -26.4
-      distance: -0.00366
-      hspeed: -0.167
-      vspeed: -0.0833
+      base: -22.4
+      distance: -0.4
+      hspeed: -0.25
+      vspeed: -0.125
     outOfFuel:
       base: -27.4
-      distance: -0.005
-      height: -0.00333
+      distance: -0.4
+      height: -0.2
     outOfRange:
       base: -28.4
-      distance: -0.00943
+      distance: -0.4
   actionDimensions: 3
 agent:
   type: ActorCritic
@@ -68,11 +68,11 @@ agent:
     - [0, 16]
     - [0, 8]
     - [-16, 16]
-  avgReward: -0.23
+  avgReward: -0.45
   rewardDecay: 0.999 # tau = -dt / ln 0.999 = 250 s
   valueDecay: 0.99 # tau = -dt / ln 0.999 = 25 s
   rewardRange:
-  - [-50, 50]
+  - [-100, 10]
   network:
 #    seed: 1234
     learningRate: 10e-3
@@ -92,7 +92,7 @@ agent:
       noValues: 8
       range: 
         - [0, 6.09]
-      alpha: 1000e-3
+      alpha: 300e-3
       epsilon: 0.05
       alphaDecay: 0.999
       prefRange:
@@ -101,7 +101,7 @@ agent:
       noValues: 3
       range:
         - [0, 3]
-      alpha: 1000e-3
+      alpha: 300e-3
       epsilon: 0.05
       alphaDecay: 0.999
       prefRange:
@@ -110,7 +110,7 @@ agent:
       noValues: 5
       range:
         - [-6, 6]
-      alpha: 1000e-3
+      alpha: 300e-3
       epsilon: 0.05
       alphaDecay: 0.999
       prefRange:

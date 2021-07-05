@@ -23,56 +23,56 @@ env:
     - [0, 3.2]
   rewards:
     flying:
-      base: -0.1
+      base: -0.06
+      direction: -284e-6
     landed:
       base: 1
     hCrashedOnPlatform:
-      base: -0.2
-      hspeed: -0.5
-      vspeed: -0.25
+      base: -24.4
+      hspeed: -0.25
+      vspeed: -0.125
     vCrashedOnPlatform:
-      base: -0.2
-      hspeed: -0.5
-      vspeed: -0.25
+      base: -24.4
+      hspeed: -0.25
+      vspeed: -0.125
     landedOutOfPlatform:
-      base: -0.219
-      distance: -0.0111
+      base: -21.3
+      distance: -0.4
     hCrashedOutOfPlatform:
-      base: -0.49
-      distance: -0.0111
-      hspeed: -0.5
-      vspeed: -0.25
+      base: -22.4
+      distance: -0.4
+      hspeed: -0.25
+      vspeed: -0.125
     vCrashedOutOfPlatform:
-      base: -0.49
-      distance: -0.0111
-      hspeed: -0.5
-      vspeed: -0.25
+      base: -22.4
+      distance: -0.4
+      hspeed: -0.25
+      vspeed: -0.125
     outOfFuel:
-      base: -0.8
-      distance: -0.1
-      height: -6.67e-3
+      base: -27.4
+      distance: -0.4
+      height: -0.2
     outOfRange:
-      base: -1
-      distance: -0.0943
+      base: -28.4
+      distance: -0.4
   actionDimensions: 3
 agent:
   type: ActorCritic
-  #modelPath: lander-232
+  #modelPath: lander-132
   stateEncoder:
-    type: Tiles
+    type: Continuous
     ranges:
     - [-3.14, 3.14]
     - [-3.14, 3.14]
-    - [0, 64]
-    - [0, 16]
+    - [0, 100]
+    - [0, 150]
     - [0, 8]
-    - [-16, 16]
-    noTiles: [3, 3, 3, 3, 3, 3]
-  avgReward: -0.1
+    - [-8, 8]
+  avgReward: -0.45
   rewardDecay: 0.999 # tau = -dt / ln 0.999 = 250 s
   valueDecay: 0.99 # tau = -dt / ln 0.999 = 25 s
   rewardRange:
-  - [-30, -4]
+  - [-100, 10]
   network:
 #    seed: 1234
     learningRate: 10e-3
@@ -81,11 +81,8 @@ agent:
     - 3000
     - 120
     - 120
-    - 120
-    - 120
     shortcuts:
       - [ 1, 4 ]
-      - [ 4, 6 ]
     updater: Sgd
     maxAbsGradient: 100
     maxAbsParameter: 10e3
@@ -95,7 +92,7 @@ agent:
       noValues: 8
       range: 
         - [0, 6.09]
-      alpha: 1000e-3
+      alpha: 300e-3
       epsilon: 0.05
       alphaDecay: 0.999
       prefRange:
@@ -104,7 +101,7 @@ agent:
       noValues: 3
       range:
         - [0, 3]
-      alpha: 1000e-3
+      alpha: 300e-3
       epsilon: 0.05
       alphaDecay: 0.999
       prefRange:
@@ -113,7 +110,7 @@ agent:
       noValues: 5
       range:
         - [-6, 6]
-      alpha: 1000e-3
+      alpha: 300e-3
       epsilon: 0.05
       alphaDecay: 0.999
       prefRange:
@@ -125,14 +122,14 @@ agent:
     maxModelSize: 1000
     stateKey:
       type: Discrete
-      noValues: [32, 32, 32, 32, 32, 32]
+      noValues: [32, 32, 32, 64, 32, 32]
       ranges:
       - [-3.14, 3.14]
       - [-3.14, 3.14]
-      - [0, 64]
-      - [0, 16]
+      - [0, 100]
+      - [0, 150]
       - [0, 8]
-      - [-16, 16]
+      - [-8, 8]
     actionsKey:
       type: Discrete
       noValues: [8, 3, 5]
@@ -141,7 +138,7 @@ agent:
         - [0, 3]
         - [-6, 6]
 session:
-  numSteps: 100000
+  numSteps: 30000
 #  seed: 1234
-  kpisOnPlanning: false
-  modelPath: lander-232
+  kpisOnPlanning: true
+  modelPath: lander-132

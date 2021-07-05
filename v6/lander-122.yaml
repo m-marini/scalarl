@@ -36,29 +36,29 @@ env:
       hspeed: -0.5
       vspeed: -0.25
     landedOutOfPlatform:
-      base: -0.219
-      distance: -0.0111
+      base: 0.933
+      distance: -0.133
     hCrashedOutOfPlatform:
-      base: -0.49
-      distance: -0.0111
+      base: 0.733
+      distance: -0.133
       hspeed: -0.5
       vspeed: -0.25
     vCrashedOutOfPlatform:
-      base: -0.49
-      distance: -0.0111
+      base: 0.733
+      distance: -0.133
       hspeed: -0.5
       vspeed: -0.25
     outOfFuel:
       base: -0.8
-      distance: -0.1
-      height: -6.67e-3
+      distance: -0.133
+      height: -0.0667
     outOfRange:
-      base: -1
-      distance: -0.0943
+      base: -10
+      distance: -0.133
   actionDimensions: 3
 agent:
   type: ActorCritic
-  modelPath: lander-122
+  #modelPath: lander-121
   stateEncoder:
     type: Tiles
     ranges:
@@ -69,7 +69,7 @@ agent:
     - [0, 8]
     - [-16, 16]
     noTiles: [3, 3, 3, 3, 3, 3]
-  avgReward: -0.34
+  avgReward: -0.1
   rewardDecay: 0.999 # tau = -dt / ln 0.999 = 250 s
   valueDecay: 0.99 # tau = -dt / ln 0.999 = 25 s
   rewardRange:
@@ -79,9 +79,9 @@ agent:
     learningRate: 10e-3
     activation: SOFTPLUS
     numHidden:
-    - 100
-    - 30
-    - 30
+    - 300
+    - 120
+    - 120
     shortcuts:
       - [ 1, 4 ]
     updater: Sgd
