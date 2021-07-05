@@ -103,7 +103,7 @@ class LanderStatusTest2 extends FunSpec with Matchers {
         s1.speed shouldBe vector(0.75, 0.75, 0)
       }
       it("should reward") {
-        reward shouldBe ones(1).muli(-1)
+        reward shouldBe ones(1).muli(-0.55 - 0.45 * Math.sqrt(2 * 0.75 * 0.75))
       }
       it("should change the pos") {
         s1.pos shouldBe vector(100.25, 100.25, 50)

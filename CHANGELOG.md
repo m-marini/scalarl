@@ -34,19 +34,23 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #82: more detailed crash states
 - Issue #84: Multiprocess benchmark
 - Issue #86: VCrash priority
-- Issue #89: KPI review
 - Issue #91: Dump output on kpi
 - Issue #93: Report session duration
 - Issue #95: ANN Output Normalization and Relu
-- Issue #97: Redesign rewards
 - Issue #100: Automatic jet controls
-- Issue #102: Final states rewards depending on platform distance and speed
-- Issue #106: New reward model
-- Issue #111: Enqueue only by threshold on priority planner
 - Issue #112: Separate the observation from encoder (v6)
 - Issue #119: dynamic actor alpha
 - Issue #120: Saving model parameters
+
+### Changed
+
+- Issue #89: KPI review
+- Issue #97: Redesign rewards
+- Issue #106: New reward model
+- Issue #111: Enqueue only by threshold on priority planner
 - Issue #125: More test on environment
+- Issue #102: Final states rewards depending on platform distance and speed
+- Issue #128: Speed to platform reward
 
 ### Fixed
 

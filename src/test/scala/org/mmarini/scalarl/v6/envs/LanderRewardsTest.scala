@@ -444,14 +444,15 @@ class LanderRewardsTest extends FunSpec with Matchers {
         speed = vector(VX, VY, VZ))
 
       val dist = Math.sqrt(X * X + Y * Y)
+      val vp = Math.sqrt(VX * VX + VY * VY)
       it("should compute rewardVector") {
         val rv = s.rewardVector
-        rv shouldBe vector(1, 1, dist, Z, 0, 0)
+        rv shouldBe vector(1, vp, dist, Z, 0, 0)
       }
       it("should compute reward") {
         val r = s.reward
         r.getDouble(0L) shouldBe
-          (FlyingReward + DirectionReward + Z * HeightReward + dist * DistanceReward) +- 1e-4
+          (FlyingReward + DirectionReward * vp + Z * HeightReward + dist * DistanceReward) +- 1e-4
       }
     }
 
@@ -470,12 +471,12 @@ class LanderRewardsTest extends FunSpec with Matchers {
       val hv = Math.sqrt(VX * VX + VY * VY)
       it("should compute rewardVector") {
         val rv = s.rewardVector
-        rv shouldBe vector(1, -1, dist, Z, hv - LandingVH, VZ)
+        rv shouldBe vector(1, -hv, dist, Z, hv - LandingVH, VZ)
       }
       it("should compute reward") {
         val r = s.reward
         r.getDouble(0L) shouldBe
-          (FlyingReward - DirectionReward + Z * HeightReward + (hv - LandingVH) * HSpeedReward + dist * DistanceReward + VZ * VSpeedReward) +- 1e-4
+          (FlyingReward - DirectionReward * hv + Z * HeightReward + (hv - LandingVH) * HSpeedReward + dist * DistanceReward + VZ * VSpeedReward) +- 1e-4
       }
     }
 
@@ -491,14 +492,15 @@ class LanderRewardsTest extends FunSpec with Matchers {
         speed = vector(VX, VY, VZ))
 
       val dist = Math.sqrt(X * X + Y * Y)
+      val vp = Math.sqrt(VX * VX + VY * VY)
       it("should compute rewardVector") {
         val rv = s.rewardVector
-        rv shouldBe vector(1, -1, dist, Z, 0, VZ)
+        rv shouldBe vector(1, -vp, dist, Z, 0, VZ)
       }
       it("should compute reward") {
         val r = s.reward
         r.getDouble(0L) shouldBe
-          (FlyingReward - DirectionReward + Z * HeightReward + dist * DistanceReward + VZ * VSpeedReward) +- 1e-4
+          (FlyingReward - DirectionReward * vp + Z * HeightReward + dist * DistanceReward + VZ * VSpeedReward) +- 1e-4
       }
     }
 
@@ -509,12 +511,12 @@ class LanderRewardsTest extends FunSpec with Matchers {
 
         it("should compute rewardVector") {
           val rv = s.rewardVector
-          rv shouldBe vector(1, -1, M50, M50, 0, 0)
+          rv shouldBe vector(1, -LandingVH, M50, M50, 0, 0)
         }
         it("should compute reward") {
           val r = s.reward
           r.getDouble(0L) shouldBe
-            (FlyingReward - DirectionReward + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
+            (FlyingReward - DirectionReward * LandingVH + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
         }
       }
 
@@ -537,12 +539,12 @@ class LanderRewardsTest extends FunSpec with Matchers {
 
         it("should compute rewardVector") {
           val rv = s.rewardVector
-          rv shouldBe vector(1, 1, M50, M50, 0, 0)
+          rv shouldBe vector(1, LandingVH, M50, M50, 0, 0)
         }
         it("should compute reward") {
           val r = s.reward
           r.getDouble(0L) shouldBe
-            (FlyingReward + DirectionReward + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
+            (FlyingReward + DirectionReward * LandingVH + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
         }
       }
 
@@ -569,12 +571,12 @@ class LanderRewardsTest extends FunSpec with Matchers {
 
         it("should compute rewardVector") {
           val rv = s.rewardVector
-          rv shouldBe vector(1, -1, M50, M50, 0, 0)
+          rv shouldBe vector(1, -LandingVH, M50, M50, 0, 0)
         }
         it("should compute reward") {
           val r = s.reward
           r.getDouble(0L) shouldBe
-            (FlyingReward - DirectionReward + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
+            (FlyingReward - DirectionReward * LandingVH + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
         }
       }
 
@@ -597,12 +599,12 @@ class LanderRewardsTest extends FunSpec with Matchers {
 
         it("should compute rewardVector") {
           val rv = s.rewardVector
-          rv shouldBe vector(1, 1, M50, M50, 0, 0)
+          rv shouldBe vector(1, LandingVH, M50, M50, 0, 0)
         }
         it("should compute reward") {
           val r = s.reward
           r.getDouble(0L) shouldBe
-            (FlyingReward + DirectionReward + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
+            (FlyingReward + DirectionReward * LandingVH + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
         }
       }
 
