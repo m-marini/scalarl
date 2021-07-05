@@ -23,50 +23,52 @@ env:
     - [0, 3.2]
   rewards:
     flying:
-      base: -0.1
+      base: -0.06
+      direction: -284e-6
     landed:
       base: 1
     hCrashedOnPlatform:
-      base: -0.2
-      hspeed: -0.5
-      vspeed: -0.25
+      base: -24.4
+      hspeed: -0.25
+      vspeed: -0.125
     vCrashedOnPlatform:
-      base: -0.2
-      hspeed: -0.5
-      vspeed: -0.25
+      base: -24.4
+      hspeed: -0.25
+      vspeed: -0.125
     landedOutOfPlatform:
-      base: -0.219
-      distance: -0.0111
+      base: -21.3
+      distance: -0.4
     hCrashedOutOfPlatform:
-      base: -0.49
-      distance: -0.0111
-      hspeed: -0.5
-      vspeed: -0.25
+      base: -22.4
+      distance: -0.4
+      hspeed: -0.25
+      vspeed: -0.125
     vCrashedOutOfPlatform:
-      base: -0.49
-      distance: -0.0111
-      hspeed: -0.5
-      vspeed: -0.25
+      base: -22.4
+      distance: -0.4
+      hspeed: -0.25
+      vspeed: -0.125
     outOfFuel:
-      base: -0.8
-      distance: -0.1
-      height: -6.67e-3
+      base: -27.4
+      distance: -0.4
+      height: -0.2
     outOfRange:
-      base: -1
-      distance: -0.0943
+      base: -28.4
+      distance: -0.4
   actionDimensions: 3
 agent:
   type: ActorCritic
-  #modelPath: lander-212
+  #modelPath: lander-142
   stateEncoder:
-    type: Continuous
+    type: Tiles
     ranges:
     - [-3.14, 3.14]
     - [-3.14, 3.14]
-    - [0, 64]
-    - [0, 16]
+    - [0, 100]
+    - [0, 150]
     - [0, 8]
-    - [-16, 16]
+    - [-8, 8]
+    noTiles: [3, 3, 3, 3, 3, 3]
   avgReward: -0.1
   rewardDecay: 0.999 # tau = -dt / ln 0.999 = 250 s
   valueDecay: 0.99 # tau = -dt / ln 0.999 = 25 s
@@ -74,14 +76,10 @@ agent:
   - [-30, -4]
   network:
 #    seed: 1234
-    learningRate: 30e-3
+    learningRate: 10e-3
     activation: SOFTPLUS
-    numHidden:
-    - 3000
-    - 120
-    - 120
-    shortcuts:
-      - [ 1, 4 ]
+    numHidden: []
+    shortcuts: []
     updater: Sgd
     maxAbsGradient: 100
     maxAbsParameter: 10e3
@@ -137,7 +135,7 @@ agent:
         - [0, 3]
         - [-6, 6]
 session:
-  numSteps: 100000
+  numSteps: 30000
 #  seed: 1234
-  kpisOnPlanning: true
-  modelPath: lander-212
+  kpisOnPlanning: false
+  modelPath: lander-142
