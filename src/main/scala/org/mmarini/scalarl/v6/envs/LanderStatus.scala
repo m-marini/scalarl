@@ -35,7 +35,6 @@ import org.mmarini.scalarl.v6.envs.StatusCode._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
-import org.nd4j.linalg.ops.transforms.Transforms
 import org.nd4j.linalg.ops.transforms.Transforms._
 
 /**
@@ -62,6 +61,7 @@ case class LanderStatus(pos: INDArray,
 
   /** Returns true if the status is final */
   lazy val isFinal: Boolean = status != Flying
+
   /**
    * Returns the direction of target
    * The direction is in the range of -Pi, Pi
@@ -71,8 +71,12 @@ case class LanderStatus(pos: INDArray,
    * -Pi/2 backward y axis
    */
   lazy val direction: INDArray = atan2(pos.getColumn(1).neg(), pos.getColumn(0).neg())
+
   /** Returns the distance from platform */
-  lazy val distance: INDArray = pos.getColumns(0, 1).norm2()
+  lazy val hDistance: INDArray = pos.getColumns(0, 1).norm2()
+
+  /** Returns the distance from platform */
+  lazy val distance: INDArray = pos.norm2()
   /**
    * Returns the speed direction
    * The direction is in the range of -Pi, Pi
@@ -82,10 +86,13 @@ case class LanderStatus(pos: INDArray,
    * -Pi/2 backward y axis
    */
   lazy val speedDirection: INDArray = atan2(speed.getColumn(1), speed.getColumn(0))
+
   /** Returns the horizontal speed */
   lazy val hSpeed: INDArray = speed.getColumns(0, 1).norm2()
+
   /** Returns the height from ground */
   lazy val height: INDArray = pos.getColumn(2)
+
   /** Returns the vertical speed */
   lazy val vSpeed: INDArray = speed.getColumn(2)
 
@@ -100,7 +107,7 @@ case class LanderStatus(pos: INDArray,
    *  - vertical speed
    */
   lazy val baseSignals: INDArray = {
-    val signals = hstack(direction, speedDirection, distance, height, hSpeed, vSpeed)
+    val signals = hstack(direction, speedDirection, hDistance, height, hSpeed, vSpeed)
     signals
   }
   /** Returns the status of lander */
@@ -109,7 +116,7 @@ case class LanderStatus(pos: INDArray,
       // has touched ground
       val vh = hSpeed.getDouble(0L)
       val vz = vSpeed.getDouble(0L)
-      val dist = distance.getDouble(0L)
+      val dist = hDistance.getDouble(0L)
       val isLandPosition = dist <= conf.landingRadius.getDouble(0L)
       if (vz < conf.landingSpeed.getDouble(1L)) {
         if (isLandPosition) {
@@ -138,42 +145,6 @@ case class LanderStatus(pos: INDArray,
       Flying
     }
   }
-  /**
-   * Returns the vector for reward in the order:
-   * <ul>
-   * <li>1</li>
-   * <li>rho (-1, 1)</li>
-   * <li>hDistance (m)</li>
-   * <li>deltaHSpeed (m/s)</li>
-   * <li>deltaVSpeed (m/s)</li>
-   * </li>
-   * </ul>
-   */
-  lazy val rewardVector: INDArray = {
-    val v = hstack(hSpeed, vSpeed)
-    val d1 = abs(v.sub(conf.v0))
-    val d2 = d1.sub(conf.dv)
-    val deltaV = Transforms.max(d2, 0.0)
-    val hDistance = pos.getColumns(0, 1).norm2()
-    val result = hstack(ones(1), vp, hDistance, pos.getColumn(2), deltaV)
-    result
-  }
-
-  /** Returns the direction coefficient */
-  lazy val vp: INDArray = {
-    val dir = pos.getColumns(0, 1)
-    val vDir = speed.getColumns(0, 1)
-    val prod = dir.norm2()
-    val result = if (prod.getDouble(0L) > EPS_THRESHOLD) {
-      dir.mmul(vDir.transpose()).negi().divi(prod)
-    } else {
-      zeros(1)
-    }
-    result
-  }
-
-  /** Returns the reward */
-  lazy val reward: INDArray = conf.rewardFunctionTable(status)(this)
 
   /** Returns the action configuration */
   override val actionDimensions: Int = LanderConf.NumActors
@@ -188,13 +159,15 @@ case class LanderStatus(pos: INDArray,
    *         - the environment in the next status,
    *         - the reward for the actions,
    */
-  override def change(actions: INDArray, random: Random): (Env, INDArray) = status match {
-    case Flying =>
-      val newEnv = drive(actions)
-      (newEnv, newEnv.reward)
-    case _ =>
-      (initial(random), zeros(1))
-  }
+  override def change(actions: INDArray, random: Random): (Env, INDArray) =
+    status match {
+      case Flying =>
+        val s1 = drive(actions)
+        val r = conf.reward(this, s1)
+        (s1, r)
+      case _ =>
+        (initial(random), zeros(1))
+    }
 
   /**
    * Returns a new initial status
@@ -245,6 +218,7 @@ case class LanderStatus(pos: INDArray,
 
 /** Factory for [[LanderStatus]] instances */
 object LanderStatus {
+  val DistanceThreshold = 0.1
 
   /**
    * Returns the initial environment

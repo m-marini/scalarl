@@ -90,6 +90,13 @@ class LanderStatusTest2 extends FunSpec with Matchers {
 
   private def random = getRandomFactory.getNewRandomInstance(1234)
 
+  private def expectedRewardVector(dDis: Double = 0,
+                                   distance: Double = 0,
+                                   height: Double = 0,
+                                   dvh: Double = 0,
+                                   dvz: Double = 0): INDArray =
+    vector(1, dDis, distance, height, dvh, dvz)
+
   private def vector(data: Double*): INDArray = create(data.toArray)
 
   describe("Lander status changeing on action") {
@@ -101,9 +108,6 @@ class LanderStatusTest2 extends FunSpec with Matchers {
       val (s1: LanderStatus, reward) = s0.change(actions = vector(-Math.PI * 3 / 4, 1, 0), random = random)
       it("should change the speed") {
         s1.speed shouldBe vector(0.75, 0.75, 0)
-      }
-      it("should reward") {
-        reward shouldBe ones(1).muli(-0.55 - 0.45 * Math.sqrt(2 * 0.75 * 0.75))
       }
       it("should change the pos") {
         s1.pos shouldBe vector(100.25, 100.25, 50)
