@@ -43,7 +43,7 @@ object LanderRewards {
    *
    * @param conf the json configuration
    */
-  def fromJson(conf: ACursor): Try[LanderStatus => INDArray] =
+  def fromJson(conf: ACursor): Try[INDArray => INDArray] =
     paramsFromJson(conf).map(apply)
 
   /**
@@ -69,7 +69,7 @@ object LanderRewards {
    *
    * @param params the parameters
    */
-  def apply(params: INDArray): LanderStatus => INDArray =
-    (s: LanderStatus) =>
-      params.mmul(s.rewardVector.transpose())
+  def apply(params: INDArray): INDArray => INDArray =
+    (s: INDArray) =>
+      params.mmul(s.transpose())
 }

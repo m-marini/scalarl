@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #125: More test on environment
 - Issue #102: Final states rewards depending on platform distance and speed
 - Issue #128: Speed to platform reward
+- Issue #130: Fix direction rewards when lower distance
 
 ### Fixed
 

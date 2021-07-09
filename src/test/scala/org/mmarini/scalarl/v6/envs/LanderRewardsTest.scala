@@ -30,14 +30,15 @@
 package org.mmarini.scalarl.v6.envs
 
 import org.mmarini.scalarl.v6.Utils
-import org.mmarini.scalarl.v6.envs.StatusCode._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j._
 import org.scalatest.{FunSpec, Matchers}
 
-import scala.math.{cos, sin, toRadians}
+import scala.math._
 
 class LanderRewardsTest extends FunSpec with Matchers {
+  private val Ds = 0.1
+  private val Dh = 0.1
   private val Dt = 0.25
   private val DefaultFuel = 10.0
   private val H0Range = 5.0
@@ -49,27 +50,30 @@ class LanderRewardsTest extends FunSpec with Matchers {
   private val LandingVZ = 4.0
   private val G = 1.6
   private val MaxAZ = 3.2
-  private val LandedReward = 100.0
-  private val VCrashReward = -100.0
-  private val HCrashReward = -100.0
-  private val OutOfPlatformReward = -100.0
-  private val OutOfRangeReward = -100.0
-  private val OutOfFuelReward = -100.0
-  private val FlyingReward = -1.0
+  private val LandedReward = 1.0
+  private val VCrashReward = -1.0
+  private val HCrashReward = -2.0
+  private val OutOfPlatformReward = -3.0
+  private val OutOfRangeReward = -4.0
+  private val OutOfFuelReward = -5.0
+  private val FlyingReward = -6.0
   private val DirectionReward = 2.0
   private val DistanceReward = 3.0
   private val HeightReward = 4.0
   private val HSpeedReward = 5.0
   private val VSpeedReward = 6.0
-  private val DEG0 = 0.0
-  private val DEG45 = toRadians(45)
-  private val DEG90 = toRadians(90)
-  private val DEG135 = toRadians(135)
-  private val DEG180 = toRadians(180)
-  private val DEG225 = toRadians(225)
-  private val DEG270 = toRadians(270)
-  private val DEG315 = toRadians(315)
+  private val DEG0 = 0
+  private val DEG45 = 45
+  private val DEG90 = 90
+  private val DEG135 = 135
+  private val DEG180 = 180
+  private val DEG225 = 225
+  private val DEG270 = 270
+  private val DEG315 = 315
   private val M50 = 50.0
+  private val Epsilon = 0.01
+
+  private val AllAngles = Seq(DEG0, DEG45, DEG90, DEG135, DEG180, DEG225, DEG270, DEG315)
 
   create()
   private val defaultFuel: INDArray = ones(1).mul(DefaultFuel)
@@ -122,505 +126,259 @@ class LanderRewardsTest extends FunSpec with Matchers {
       conf
     )
 
-  private def cyl(angle: Double, radius: Double, z: Double) = vector(radius * cos(angle), radius * sin(angle), z)
+  private def cyl(angle: Double, radius: Double, z: Double) = {
+    val rad = toRadians(angle)
+    vector(radius * cos(rad), radius * sin(rad), z)
+  }
 
   private def vector(data: Double*): INDArray = create(data.toArray)
 
-  describe("LanderConf at land point") {
-    describe("at (0,0,-0.1), (0,0,1)") {
-      val s = status(
-        pos = vector(0.0, 0.0, -0.1),
-        speed = vector(0, 0, -1))
+  private def expectedRewardVector(dDis: Double = 0,
+                                   distance: Double = 0,
+                                   height: Double = 0,
+                                   dvh: Double = 0,
+                                   dvz: Double = 0): INDArray =
+    vector(1, dDis, distance, height, dvh, dvz)
 
+  private def expectedReward(base: Double,
+                             dDis: Double = 0,
+                             distance: Double = 0,
+                             height: Double = 0,
+                             dvh: Double = 0,
+                             dvz: Double = 0): Double =
+    base + dDis * DirectionReward + distance * DistanceReward + height * HeightReward + dvh * HSpeedReward + dvz * VSpeedReward
+
+  private def transitionCase(distance: Double = 0, direction: Double = 0, height: Double = 0,
+                             dDist: Double = 0, dDir: Double = 0, dh: Double = 0,
+                             vh: Double = 0, vDir: Double = 0, vz: Double = 0): (LanderStatus, LanderStatus) = {
+    val pos = cyl(direction, distance, height)
+    val speed = cyl(vDir, vh, vz)
+    val s0 = status(pos = pos, speed = speed)
+    val s1 = status(pos = pos.add(cyl(dDir, dDist, dh)),
+      speed = speed)
+    (s0, s1)
+  }
+
+  describe(s"LanderConf Landed") {
+    describe("at(0,0), v=(0,0,-1)") {
+      val (s0, s1) = transitionCase(dh = -0.1, vz = -1)
       it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, 0, -0.1, 0, 0)
+        val rv = conf.rewardVector(s0, s1)
+        rv shouldBe expectedRewardVector(dDis = 0.1, height = -0.1)
       }
       it("should compute reward") {
-        val r = s.reward
-        r shouldBe vector(LandedReward - 0.1 * HeightReward)
+        val r = conf.reward(s0, s1)
+        r.getDouble(0l) shouldBe expectedReward(LandedReward, dDis = 0.1, height = -0.1) +- Epsilon
       }
     }
 
-    describe("at (0,0,-0.1) speed (0,0,-4)") {
-      val s = status(
-        pos = vector(0, 0, -0.1),
-        speed = vector(0, 0, -4.0))
+    describe("at (0,0) speed (0,0,-4)") {
+      val (s0, s1) = transitionCase(dh = -0.1, vz = -4)
       it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, 0, -0.1, 0, 0)
+        val rv = conf.rewardVector(s0, s1)
+        rv shouldBe expectedRewardVector(dDis = 0.1, height = -0.1)
       }
       it("should compute reward") {
-        val r = s.reward
-        r shouldBe vector(LandedReward - 0.1 * HeightReward)
+        val r = conf.reward(s0, s1)
+        r.getDouble(0l) shouldBe expectedReward(LandedReward, dDis = 0.1, height = -0.1) +- Epsilon
       }
     }
 
-    describe("a at (0,0,-0.1) speed (0.5,0,-4)") {
-      val s = status(
-        pos = vector(0, 0, -0.1),
-        speed = vector(0.5, 0, -4.0))
+    describe(s"at (0,0,-0.1)") {
+      AllAngles.foreach(angle => {
+        describe(s"speed(0.5,R${angle},-4)") {
+          val (s0, s1) = transitionCase(dh = -0.1, vh = 0.5, vDir = angle, vz = -4)
 
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, 0, -0.1, 0, 0)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r shouldBe vector(LandedReward - 0.1 * HeightReward)
-      }
+          it("should compute rewardVector") {
+            val rv = conf.rewardVector(s0, s1)
+            rv shouldBe expectedRewardVector(dDis = 0.1, height = -0.1)
+          }
+          it("should compute reward") {
+            val r = conf.reward(s0, s1)
+            r.getDouble(0l) shouldBe expectedReward(LandedReward, dDis = 0.1, height = -0.1) +- Epsilon
+          }
+        }
+      })
     }
 
-    describe("at (0,0,-0.1) speed (-0.5,0,-4)") {
-      val s = status(
-        pos = vector(0, 0, -0.1),
-        speed = vector(-0.5, 0, -4.0))
-
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, 0, -0.1, 0, 0)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r shouldBe vector(LandedReward - 0.1 * HeightReward)
-      }
+    describe(s"speed (0,0,-4)") {
+      AllAngles.foreach(angle => {
+        describe(s"at(10,R${angle})") {
+          val (s0, s1) = transitionCase(distance = 10, direction = angle,
+            dh = -0.1,
+            vz = -4)
+          it("should compute rewardVector") {
+            val rv = conf.rewardVector(s0, s1)
+            rv shouldBe expectedRewardVector(dDis = 0.5e-3, height = -0.1, distance = 10)
+          }
+          it("should compute reward") {
+            val r = conf.reward(s0, s1)
+            r.getDouble(0l) shouldBe expectedReward(LandedReward, dDis = 0.5e-3, height = -0.1, distance = 10) +- Epsilon
+          }
+        }
+      })
     }
 
-    describe("at(0,0,0) speed (0,0.5,-4)") {
-      val s = status(
-        pos = vector(0, 0, -0.1),
-        speed = vector(0, 0.5, -4.0))
-
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, 0, -0.1, 0, 0)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r shouldBe vector(LandedReward - 0.1 * HeightReward)
-      }
-    }
-
-    describe("at(0,0,-0.1) speed (0,-0.5,-4)") {
-      val s = status(
-        pos = vector(0, 0, -0.1),
-        speed = vector(0, -0.5, -4.0))
-
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, 0, -0.1, 0, 0)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r shouldBe vector(LandedReward - 0.1 * HeightReward)
-      }
-    }
-
-    describe("at(10,0,-0.1) speed (0,0,-4)") {
-      val s = status(
-        pos = vector(10.0, 0, -0.1),
-        speed = vector(0, 0, -4.0))
-
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, 10, -0.1, 0, 0)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r shouldBe vector(LandedReward + DistanceReward * 10 - 0.1 * HeightReward)
-      }
-    }
-
-    describe("at(-10,0,-0.1) speed (0,0,-4)") {
-      val s = status(
-        pos = vector(-10.0, 0, -0.1),
-        speed = vector(0, 0, -4.0))
-
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, 10, -0.1, 0, 0)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r shouldBe vector(LandedReward + DistanceReward * 10 - 0.1 * HeightReward)
-      }
-    }
-
-    describe("at(0,10,-0.1) speed (0,0,-4)") {
-      val s = status(
-        pos = vector(0, 10.0, -0.1),
-        speed = vector(0, 0, -4.0))
-
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, 10, -0.1, 0, 0)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r shouldBe vector(LandedReward + DistanceReward * 10 - 0.1 * HeightReward)
-      }
-    }
-
-    describe("at(0,-10,-0.1) speed (0,0,-4)") {
-      val s = status(
-        pos = vector(0, 10.0, -0.1),
-        speed = vector(0, 0, -4.0))
-      it("should be landed") {
-        s.status shouldBe Landed
-      }
-    }
-
-    describe("at(7.07,7.07,-0.1) speed (0,0,-4)") {
-      val Pos = 7.07
-      val s = status(
-        pos = vector(Pos, Pos, -0.1),
-        speed = vector(0, 0, -4.0)
-      )
-      val distance = Pos * Math.sqrt(2)
-
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, distance, -0.1, 0, 0)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r shouldBe vector(LandedReward + DistanceReward * distance - 0.1 * HeightReward)
-      }
-    }
-
-    describe("at(0,0,-0.1) speed (0.353,0.353,-4)") {
-      val Speed = 0.353
-      val s = status(
-        pos = vector(0, 0, -0.1),
-        speed = vector(Speed, Speed, -4.0))
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, 0, -0.1, 0, 0)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r shouldBe vector(LandedReward - 0.1 * HeightReward)
-      }
+    describe(s"at(0,0,-0.1)") {
+      AllAngles.foreach(angle => {
+        val Speed = 0.5
+        describe(s"speed (0.5,R${angle},-4)") {
+          val (s0, s1) = transitionCase(dh = -0.1,
+            vh = Speed, vDir = angle,
+            vz = -4)
+          it("should compute rewardVector") {
+            val rv = conf.rewardVector(s0, s1)
+            rv shouldBe expectedRewardVector(dDis = 0.1, height = -0.1)
+          }
+          it("should compute reward") {
+            val r = conf.reward(s0, s1)
+            r.getDouble(0l) shouldBe expectedReward(LandedReward, dDis = 0.1, height = -0.1) +- Epsilon
+          }
+        }
+      })
     }
   }
 
-  describe("LanderConf at crash point") {
-    //    describe("at (0,0,-0.1) speed (0,0,-4.1)") {
-    //      val pos = create(vector(0, 0, -0.1))
-    //      val speed = create(vector(0, 0, -4.1))
-    //      it("should be crashed") {
-    //        conf.status(pos, speed, DefaultFuel) shouldBe Crashed
-    //      }
-    //    }
-
-    //    describe("at (0,0,-0.1) speed (0.354,0.354,-4.1)") {
-    //      val pos = create(vector(0, 0, -0.1))
-    //      val speed = create(vector(0.354, 0.354, -4.1))
-    //      it("should be crashed") {
-    //        conf.status(pos, speed, DefaultFuel) shouldBe Crashed
-    //      }
-    //    }
-
-    describe("at (7.08,7-08,-0.1) speed (0, 0, 0)") {
-      val Pos = 7.08
-      val s = status(
-        pos = vector(Pos, Pos, -0.1))
-      val dist = Math.sqrt(2) * Pos
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, dist, -0.1, 0, 0)
+  describe(s"LanderConf OutOfPlatform") {
+    val Distance = 10.1
+    AllAngles.foreach(angle => {
+      describe(s"at (D$Distance, R$angle,-0.1) speed(0,0,0)") {
+        val (s0, s1) = transitionCase(distance = Distance, direction = angle, dh = -0.1)
+        it("should compute rewardVector") {
+          val rv = conf.rewardVector(s0, s1)
+          rv shouldBe expectedRewardVector(dDis = 500e-6, distance = Distance, height = -0.1)
+        }
+        it("should compute reward") {
+          val r = conf.reward(s0, s1)
+          r.getDouble(0l) shouldBe expectedReward(OutOfPlatformReward, dDis = 500e-6, distance = Distance, height = -0.1) +- Epsilon
+        }
       }
-      it("should compute reward") {
-        val r = s.reward
-        r shouldBe vector(OutOfPlatformReward - 0.1 * HeightReward + dist * DistanceReward)
-      }
-    }
+    })
   }
 
-  describe("LanderConf at out of range point") {
+  describe("LanderConf out of range") {
     describe("at (0,0,100.1) speed (0,0,0)") {
-      val H = 100.1
-      val s = status(
-        pos = vector(0, 0, H))
+      val H = 100
+      val (s0, s1) = transitionCase(height = H, dh = Dh)
+
+      /**
+       * val s0 = status(
+       * pos = vector(0 - Ds, 0 - Ds, H))
+       * val s1 = status(
+       * pos = vector(0, 0, H))
+       */
       it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, 0, H, 0, 0)
+        val rv = conf.rewardVector(s0, s1)
+        rv shouldBe expectedRewardVector(dDis = Dh, height = H + Dh)
       }
       it("should compute reward") {
-        val r = s.reward
-        r shouldBe vector(OutOfPlatformReward + H * HeightReward)
+        val r = conf.reward(s0, s1)
+        r.getDouble(0L) shouldBe expectedReward(OutOfRangeReward, dDis = Dh, height = H + Dh) +- Epsilon
       }
     }
 
-    describe("at (600.1,0,10) speed (0,0,0)") {
-      val X = 600.1
-      val Z = 10.0
-      val s = status(
-        pos = vector(X, 0, Z))
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, X, Z, 0, 0)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r.getDouble(0L) shouldBe
-          (OutOfRangeReward + X * DistanceReward + Z * HeightReward) +- 1e-4
-      }
-    }
-
-    describe("at (-600.1,0,10) speed (0,0,0)") {
-      val X = 600.1
-      val Z = 10.0
-      val s = status(
-        pos = vector(-X, 0, Z))
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, X, Z, 0, 0)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r.getDouble(0L) shouldBe
-          (OutOfRangeReward + X * DistanceReward + Z * HeightReward) +- 1e-4
-      }
-    }
-
-    describe("at (0, 600.1,10) speed (0,0,0)") {
-      val Y = 600.1
-      val Z = 10.0
-      val s = status(
-        pos = vector(0, Y, Z))
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, Y, Z, 0, 0)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r.getDouble(0L) shouldBe
-          (OutOfRangeReward + Y * DistanceReward + Z * HeightReward) +- 1e-4
-      }
-    }
-
-    describe("a lander status at (0, -600.1,10) speed (0,0,0)") {
-      val Y = 600.1
-      val Z = 10.0
-      val s = status(
-        pos = vector(0, -Y, Z))
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, Y, Z, 0, 0)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r.getDouble(0L) shouldBe
-          (OutOfRangeReward + Y * DistanceReward + Z * HeightReward) +- 1e-4
-      }
+    //          describe("at (600.1,0,10) speed (0,0,0)") {
+    val Distance = 707.2
+    describe(s"at D${Distance} speed (0,0,0)") {
+      AllAngles.foreach(angle => {
+        val Z = 10.0
+        describe(s"at (D${Distance},R${angle},100.1)") {
+          val (s0, s1) = transitionCase(distance = Distance, direction = angle, height = Z)
+          it("should compute rewardVector") {
+            val rv = conf.rewardVector(s0, s1)
+            rv shouldBe expectedRewardVector(distance = Distance, height = Z)
+          }
+          it("should compute reward") {
+            val r = conf.reward(s0, s1)
+            r.getDouble(0L) shouldBe expectedReward(OutOfRangeReward, distance = Distance, height = Z) +- Epsilon
+          }
+        }
+      })
     }
   }
   describe("LanderConf flying") {
     describe("at (0,0,10.0) speed (0,0,0)") {
       val H = 10.0
-      val s = status(
-        pos = vector(0, 0, H))
+      val (s0, s1) = transitionCase(height = H)
 
       it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, 0, 0, H, 0, 0)
+        val rv = conf.rewardVector(s0, s1)
+        rv shouldBe expectedRewardVector(height = H)
       }
       it("should compute reward") {
-        val r = s.reward
-        r.getDouble(0L) shouldBe
-          (FlyingReward + H * HeightReward) +- 1e-4
+        val r = conf.reward(s0, s1)
+        r.getDouble(0L) shouldBe expectedReward(FlyingReward, height = H) +- Epsilon
       }
     }
-    describe("at (1,2,10.0) speed (-0.1,-0.2,-1)") {
-      val X = 1.0
-      val Y = 2.0
+
+    describe("at D5") {
+      val Distance = 5
+      val Ds = 0.1
       val Z = 10.0
-      val VX = -0.1
-      val VY = -0.2
-      val VZ = -1.0
-      val s = status(
-        pos = vector(X, Y, Z),
-        speed = vector(VX, VY, VZ))
-
-      val dist = Math.sqrt(X * X + Y * Y)
-      val vp = Math.sqrt(VX * VX + VY * VY)
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, vp, dist, Z, 0, 0)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r.getDouble(0L) shouldBe
-          (FlyingReward + DirectionReward * vp + Z * HeightReward + dist * DistanceReward) +- 1e-4
-      }
-    }
-
-    describe("at (10,20,10.0) speed (1,2,1)") {
-      val X = 10.0
-      val Y = 20.0
-      val Z = 10.0
-      val VX = 1.0
-      val VY = 2.0
-      val VZ = 1.0
-      val s = status(
-        pos = vector(X, Y, Z),
-        speed = vector(VX, VY, VZ))
-
-      val dist = Math.sqrt(X * X + Y * Y)
-      val hv = Math.sqrt(VX * VX + VY * VY)
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, -hv, dist, Z, hv - LandingVH, VZ)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r.getDouble(0L) shouldBe
-          (FlyingReward - DirectionReward * hv + Z * HeightReward + (hv - LandingVH) * HSpeedReward + dist * DistanceReward + VZ * VSpeedReward) +- 1e-4
-      }
-    }
-
-    describe("at (1,2,10.0) speed (0.1,0.2,1)") {
-      val X = 1.0
-      val Y = 2.0
-      val Z = 10.0
-      val VX = 0.1
-      val VY = 0.2
-      val VZ = 1.0
-      val s = status(
-        pos = vector(X, Y, Z),
-        speed = vector(VX, VY, VZ))
-
-      val dist = Math.sqrt(X * X + Y * Y)
-      val vp = Math.sqrt(VX * VX + VY * VY)
-      it("should compute rewardVector") {
-        val rv = s.rewardVector
-        rv shouldBe vector(1, -vp, dist, Z, 0, VZ)
-      }
-      it("should compute reward") {
-        val r = s.reward
-        r.getDouble(0L) shouldBe
-          (FlyingReward - DirectionReward * vp + Z * HeightReward + dist * DistanceReward + VZ * VSpeedReward) +- 1e-4
-      }
-    }
-
-    describe("at (100 m, 0 DEG)") {
-      val pos = cyl(DEG0, M50, M50)
-      describe("v=(0.5, 0 DEG)") {
-        val s = status(pos = pos, speed = cyl(DEG0, LandingVH, -LandingVZ))
-
-        it("should compute rewardVector") {
-          val rv = s.rewardVector
-          rv shouldBe vector(1, -LandingVH, M50, M50, 0, 0)
+      AllAngles.foreach(direction => {
+        val r = sqrt(Z * Z + Distance * Distance)
+        describe(s"at (D$Distance,R$direction,10.0) ds (D$Ds,R$direction)") {
+          val (s0, s1) = transitionCase(distance = Distance, direction = direction, height = Z,
+            dDist = Ds, dDir = direction)
+          val r0 = sqrt(pow(Distance + Ds, 2) + Z * Z)
+          val ds = r0 - r
+          it("should compute rewardVector") {
+            val rv = conf.rewardVector(s0, s1)
+            rv shouldBe expectedRewardVector(dDis = ds, distance = Distance + Ds, height = Z)
+          }
+          it("should compute reward") {
+            val r = conf.reward(s0, s1)
+            r.getDouble(0L) shouldBe expectedReward(FlyingReward, dDis = ds, distance = Distance + Ds, height = Z) +- Epsilon
+          }
         }
-        it("should compute reward") {
-          val r = s.reward
-          r.getDouble(0L) shouldBe
-            (FlyingReward - DirectionReward * LandingVH + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
-        }
-      }
 
-      describe("v=(0.5, 90 DEG)") {
-        val s = status(pos = pos, speed = cyl(DEG90, LandingVH, -LandingVZ))
-
-        it("should compute rewardVector") {
-          val rv = s.rewardVector
-          rv shouldBe vector(1, 0, M50, M50, 0, 0)
+        describe(s"at (D$Distance,R$direction,10.0) ds (D$Ds,R${direction + 180})") {
+          val (s0, s1) = transitionCase(distance = Distance, direction = direction, height = Z,
+            dDist = Ds, dDir = direction + 180)
+          val r180 = sqrt(pow(Distance - Ds, 2) + Z * Z)
+          val ds = r180 - r
+          it("should compute rewardVector") {
+            val rv = conf.rewardVector(s0, s1)
+            rv shouldBe expectedRewardVector(dDis = ds, distance = Distance - Ds, height = Z)
+          }
+          it("should compute reward") {
+            val r = conf.reward(s0, s1)
+            r.getDouble(0L) shouldBe expectedReward(FlyingReward, dDis = ds, distance = Distance - Ds, height = Z) +- Epsilon
+          }
         }
-        it("should compute reward") {
-          val r = s.reward
-          r.getDouble(0L) shouldBe
-            (FlyingReward + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
-        }
-      }
 
-      describe("v=(0.5, 180 DEG)") {
-        val s = status(pos, speed = cyl(DEG180, LandingVH, -LandingVZ))
-
-        it("should compute rewardVector") {
-          val rv = s.rewardVector
-          rv shouldBe vector(1, LandingVH, M50, M50, 0, 0)
+        describe(s"at (D$Distance,R$direction,10.0) ds (D$Ds,R${direction + 90})") {
+          val (s0, s1) = transitionCase(distance = Distance, direction = direction, height = Z,
+            dDist = Ds, dDir = direction + 90)
+          val r180 = sqrt(pow(Distance, 2) + pow(Ds, 2) + Z * Z)
+          val dh = sqrt(Distance * Distance + Ds * Ds)
+          val ds = r180 - r
+          it("should compute rewardVector") {
+            val rv = conf.rewardVector(s0, s1)
+            rv shouldBe expectedRewardVector(dDis = ds, distance = dh, height = Z)
+          }
+          it("should compute reward") {
+            val r = conf.reward(s0, s1)
+            r.getDouble(0L) shouldBe expectedReward(FlyingReward, dDis = ds, distance = dh, height = Z) +- Epsilon
+          }
         }
-        it("should compute reward") {
-          val r = s.reward
-          r.getDouble(0L) shouldBe
-            (FlyingReward + DirectionReward * LandingVH + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
-        }
-      }
 
-      describe("v=(0.5, 270 DEG)") {
-        val s = status(pos, speed = cyl(DEG270, LandingVH, -LandingVZ))
-
-        it("should compute rewardVector") {
-          val rv = s.rewardVector
-          rv shouldBe vector(1, 0, M50, M50, 0, 0)
+        describe(s"at (D$Distance,R$direction,10.0) ds (D$Ds,R${direction - 90})") {
+          val (s0, s1) = transitionCase(distance = Distance, direction = direction, height = Z,
+            dDist = Ds, dDir = direction - 90)
+          val r180 = sqrt(pow(Distance, 2) + pow(Ds, 2) + Z * Z)
+          val dh = sqrt(Distance * Distance + Ds * Ds)
+          val ds = r180 - r
+          it("should compute rewardVector") {
+            val rv = conf.rewardVector(s0, s1)
+            rv shouldBe expectedRewardVector(dDis = ds, distance = dh, height = Z)
+          }
+          it("should compute reward") {
+            val r = conf.reward(s0, s1)
+            r.getDouble(0L) shouldBe expectedReward(FlyingReward, dDis = ds, distance = dh, height = Z) +- Epsilon
+          }
         }
-        it("should compute reward") {
-          val r = s.reward
-          r.getDouble(0L) shouldBe
-            (FlyingReward + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
-        }
-      }
-    }
-
-    describe("at (100 m, 45 DEG)") {
-      val pos = cyl(DEG45, M50, M50)
-
-      describe("v=(0.5, 45 DEG)") {
-        val s = status(pos, speed = cyl(DEG45, LandingVH, -LandingVZ))
-
-        it("should compute rewardVector") {
-          val rv = s.rewardVector
-          rv shouldBe vector(1, -LandingVH, M50, M50, 0, 0)
-        }
-        it("should compute reward") {
-          val r = s.reward
-          r.getDouble(0L) shouldBe
-            (FlyingReward - DirectionReward * LandingVH + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
-        }
-      }
-
-      describe("v=(0.5, 135 DEG)") {
-        val s = status(pos, speed = cyl(DEG135, LandingVH, -LandingVZ))
-
-        it("should compute rewardVector") {
-          val rv = s.rewardVector
-          rv shouldBe vector(1, 0, M50, M50, 0, 0)
-        }
-        it("should compute reward") {
-          val r = s.reward
-          r.getDouble(0L) shouldBe
-            (FlyingReward + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
-        }
-      }
-
-      describe("v=(0.5, 225 DEG)") {
-        val s = status(pos, speed = cyl(DEG225, LandingVH, -LandingVZ))
-
-        it("should compute rewardVector") {
-          val rv = s.rewardVector
-          rv shouldBe vector(1, LandingVH, M50, M50, 0, 0)
-        }
-        it("should compute reward") {
-          val r = s.reward
-          r.getDouble(0L) shouldBe
-            (FlyingReward + DirectionReward * LandingVH + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
-        }
-      }
-
-      describe("v=(0.5, 315 DEG)") {
-        val s = status(pos, speed = cyl(DEG315, LandingVH, -LandingVZ))
-
-        it("should compute rewardVector") {
-          val rv = s.rewardVector
-          rv shouldBe vector(1, 0, M50, M50, 0, 0)
-        }
-        it("should compute reward") {
-          val r = s.reward
-          r.getDouble(0L) shouldBe
-            (FlyingReward + M50 * HeightReward + M50 * DistanceReward) +- 1e-4
-        }
-      }
+      })
     }
   }
 }

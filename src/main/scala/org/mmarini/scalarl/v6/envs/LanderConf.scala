@@ -35,6 +35,8 @@ import org.mmarini.scalarl.v6.Utils._
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.rng.Random
 import org.nd4j.linalg.factory.Nd4j._
+import org.nd4j.linalg.ops.transforms.Transforms
+import org.nd4j.linalg.ops.transforms.Transforms.abs
 
 import scala.util.Try
 
@@ -68,15 +70,15 @@ class LanderConf(val dt: INDArray,
                  val landingSpeed: INDArray,
                  val optimalSpeed: INDArray,
                  val jetAccRange: INDArray,
-                 val landedReward: LanderStatus => INDArray,
-                 val landedOutOfPlatformReward: LanderStatus => INDArray,
-                 val hCrashedOnPlatformReward: LanderStatus => INDArray,
-                 val vCrashedOnPlatformReward: LanderStatus => INDArray,
-                 val outOfRangeReward: LanderStatus => INDArray,
-                 val outOfFuelReward: LanderStatus => INDArray,
-                 val hCrashedOutOfPlatformReward: LanderStatus => INDArray,
-                 val vCrashedOutOfPlatformReward: LanderStatus => INDArray,
-                 val flyingReward: LanderStatus => INDArray) {
+                 val landedReward: INDArray => INDArray,
+                 val landedOutOfPlatformReward: INDArray => INDArray,
+                 val hCrashedOnPlatformReward: INDArray => INDArray,
+                 val vCrashedOnPlatformReward: INDArray => INDArray,
+                 val outOfRangeReward: INDArray => INDArray,
+                 val outOfFuelReward: INDArray => INDArray,
+                 val hCrashedOutOfPlatformReward: INDArray => INDArray,
+                 val vCrashedOutOfPlatformReward: INDArray => INDArray,
+                 val flyingReward: INDArray => INDArray) {
 
   import StatusCode._
 
@@ -96,11 +98,6 @@ class LanderConf(val dt: INDArray,
     Flying -> flyingReward
   )
 
-  //  private val ActionRange = create(Array(
-  //    Array(-Pi, 0.0, -landingSpeed.getDouble(1L)),
-  //    Array(Pi, landingSpeed.getDouble(0L), landingSpeed.getDouble(1L))
-  //  ))
-
   /**
    *
    * @param random the random generator
@@ -108,6 +105,41 @@ class LanderConf(val dt: INDArray,
   def initial(random: Random): INDArray = {
     val pos = initialLocationTrans(random.nextDouble(Array(1, 3)).muli(2).subi(1))
     pos
+  }
+
+  /**
+   * Returns the reward given the transition states
+   *
+   * @param s0 the initial transition status
+   * @param s1 the final transition status
+   */
+  def reward(s0: LanderStatus, s1: LanderStatus): INDArray = {
+    val rv = rewardVector(s0, s1)
+    val r = rewardFunctionTable(s1.status)(rv)
+    r
+  }
+
+  /**
+   * Returns the vector for reward in the order:
+   * <ul>
+   * <li>1</li>
+   * <li>rho (-1, 1)</li>
+   * <li>hDistance (m)</li>
+   * <li>deltaHSpeed (m/s)</li>
+   * <li>deltaVSpeed (m/s)</li>
+   * </li>
+   * </ul>
+   */
+  def rewardVector(s0: LanderStatus, s1: LanderStatus): INDArray = {
+    val v = hstack(s1.hSpeed, s1.vSpeed)
+    val d1 = abs(v.sub(v0))
+    val d2 = d1.sub(dv)
+    val deltaV = Transforms.max(d2, 0.0)
+    val hDistance = s1.distance
+    val hDistance0 = s0.distance
+    val dh = hDistance.sub(hDistance0)
+    val result = hstack(ones(1), dh, s1.hDistance, s1.pos.getColumn(2), deltaV)
+    result
   }
 }
 
